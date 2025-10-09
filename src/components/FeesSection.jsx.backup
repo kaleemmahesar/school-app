@@ -1,0 +1,1502 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { fetchStudents, payFees, generateChallan } from '../store/studentsSlice';
+import { fetchClasses } from '../store/classesSlice';
+import { FaSearch, FaPlus, FaDollarSign, FaCalendar, FaUser, FaReceipt, FaCheck, FaTimes, FaFilter, FaEye, FaChartBar, FaEdit, FaPrint } from 'react-icons/fa';
+import ChallanPrintView from './ChallanPrintView';
+import { printChallanAsPDF } from '../utils/challanPrinter';
+import PageHeader from './common/PageHeader';
+import BulkOperationsToolbar from './common/BulkOperationsToolbar';
+
+const FeesSection = () => {
+  const dispatch = useDispatch();
+  const { students, loading, error } = useSelector(state => state.students);
+  const { classes } = useSelector(state => state.classes);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [showGenerateModal, setShowGenerateModal] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [showStatusModal, setShowStatusModal] = useState(false);
+  const [showStudentDetails, setShowStudentDetails] = useState(false);
+  const [selectedStudent, setSelectedStudent] = useState(null);
+  const [selectedChallan, setSelectedChallan] = useState(null);
+  const [detailViewStudent, setDetailViewStudent] = useState(null);
+  const [challanData, setChallanData] = useState({
+    studentId: '',
+    month: '',
+    amount: '',
+    dueDate: '',
+    description: ''
+  });
+  const [paymentData, setPaymentData] = useState({
+    amount: '',
+    paymentDate: '',
+    paymentMethod: 'cash'
+  });
+  const [filterStatus, setFilterStatus] = useState('all');
+  const [filterClass, setFilterClass] = useState('all');
+  const [showPrintView, setShowPrintView] = useState(false); // For challan print view
+  const [printChallan, setPrintChallan] = useState(null); // Challan to print
+  const [printStudent, setPrintStudent] = useState(null); // Student for print
+  const [showExportModal, setShowExportModal] = useState(false); // For export modal
+  const [refreshTrigger, setRefreshTrigger] = useState(0); // For triggering refresh
+  
+  // Bulk operation states
+  const [showBulkGenerateModal, setShowBulkGenerateModal] = useState(false);
+  const [showBulkUpdateModal, setShowBulkUpdateModal] = useState(false);
+  const [bulkSelectedChallans, setBulkSelectedChallans] = useState([]); // For bulk selected challans
+  const [bulkSelectedStudents, setBulkSelectedStudents] = useState([]); // For bulk selected students
+  const [bulkGenerateData, setBulkGenerateData] = useState({
+    month: new Date().toISOString().slice(0, 7),
+    dueDate: (() => {
+      const date = new Date();
+      date.setDate(date.getDate() + 7);
+      return date.toISOString().split('T')[0];
+    })(),
+    description: ''
+  });
+  const [bulkUpdateData, setBulkUpdateData] = useState({
+    paymentMethod: 'cash',
+    paymentDate: new Date().toISOString().split('T')[0]
+  });
+  const [bulkOperationProgress, setBulkOperationProgress] = useState({
+    inProgress: false,
+    current: 0,
+    total: 0,
+    message: ''
+  });
+  
+  const printRef = useRef(); // Ref for print element
+
+  useEffect(() => {
+    dispatch(fetchStudents());
+    dispatch(fetchClasses());
+  }, [dispatch]);
+
+  // Update detailViewStudent when students data changes
+  useEffect(() => {
+    if (detailViewStudent && showStudentDetails) {
+      const updatedStudent = students.find(s => s.id === detailViewStudent.id);
+      if (updatedStudent) {
+        // Generate stats for the updated student
+        const totalChallans = updatedStudent.feesHistory ? updatedStudent.feesHistory.length : 0;
+        const paidChallans = updatedStudent.feesHistory ? updatedStudent.feesHistory.filter(challan => challan.status === 'paid').length : 0;
+        const pendingChallans = totalChallans - paidChallans;
+        
+        // Calculate total amount
+        const totalAmount = updatedStudent.feesHistory ? 
+          updatedStudent.feesHistory.reduce((sum, challan) => sum + (challan.amount || 0), 0) : 0;
+        
+        const paidAmount = updatedStudent.feesHistory ? 
+          updatedStudent.feesHistory
+            .filter(challan => challan.status === 'paid')
+            .reduce((sum, challan) => sum + (challan.amount || 0), 0) : 0;
+        
+        const pendingAmount = totalAmount - paidAmount;
+        
+        setDetailViewStudent({
+          ...updatedStudent,
+          totalChallans,
+          paidChallans,
+          pendingChallans,
+          totalAmount,
+          paidAmount,
+          pendingAmount,
+          completionRate: totalChallans > 0 ? Math.round((paidChallans / totalChallans) * 100) : 0
+        });
+      }
+    }
+  }, [students, detailViewStudent, showStudentDetails, refreshTrigger]);
+
+  // Generate fee statistics for all students
+  const generateStudentFeeStats = () => {
+    return students.map(student => {
+      // Filter out admission fees for monthly challan calculations
+      const monthlyChallans = student.feesHistory ? student.feesHistory.filter(challan => challan.type !== 'admission') : [];
+      const admissionChallans = student.feesHistory ? student.feesHistory.filter(challan => challan.type === 'admission') : [];
+      
+      const totalChallans = monthlyChallans.length;
+      const paidChallans = monthlyChallans.filter(challan => challan.status === 'paid').length;
+      const pendingChallans = totalChallans - paidChallans;
+      
+      // Calculate total amount for monthly fees only
+      const totalAmount = monthlyChallans.reduce((sum, challan) => sum + (challan.amount || 0), 0);
+      
+      const paidAmount = monthlyChallans
+        .filter(challan => challan.status === 'paid')
+        .reduce((sum, challan) => sum + (challan.amount || 0), 0);
+      
+      const pendingAmount = totalAmount - paidAmount;
+      
+      // Check if admission fees have been paid
+      const admissionPaid = admissionChallans.length > 0 && admissionChallans.every(challan => challan.status === 'paid');
+      
+      return {
+        ...student,
+        totalChallans,
+        paidChallans,
+        pendingChallans,
+        totalAmount,
+        paidAmount,
+        pendingAmount,
+        admissionPaid,
+        completionRate: totalChallans > 0 ? Math.round((paidChallans / totalChallans) * 100) : 0
+      };
+    });
+  };
+
+  const studentStats = generateStudentFeeStats();
+
+  const filteredStudents = studentStats.filter(student => {
+    const matchesSearch = 
+      `${student.firstName} ${student.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      student.class.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      student.section.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesStatus = filterStatus === 'all' || 
+      (filterStatus === 'paid' && student.completionRate === 100 && student.admissionPaid) || 
+      (filterStatus === 'pending' && (student.completionRate < 100 || !student.admissionPaid));
+    
+    const matchesClass = filterClass === 'all' || student.class === filterClass;
+    
+    return matchesSearch && matchesStatus && matchesClass;
+  });
+
+  const handleGenerateChallan = () => {
+    // Set default values for the current month and due date
+    const today = new Date();
+    const currentMonth = today.toISOString().slice(0, 7); // YYYY-MM format
+    const dueDate = new Date(today);
+    dueDate.setDate(today.getDate() + 7); // Add 7 days for due date
+    
+    setChallanData({
+      studentId: '',
+      month: currentMonth,
+      amount: '',
+      dueDate: dueDate.toISOString().split('T')[0],
+      description: ''
+    });
+    setShowGenerateModal(true);
+  };
+
+  // Handle student selection to auto-populate amount
+  const handleStudentChange = (e) => {
+    const studentId = e.target.value;
+    setChallanData(prev => ({
+      ...prev,
+      studentId: studentId
+    }));
+    
+    if (studentId) {
+      const student = students.find(s => s.id === studentId);
+      if (student) {
+        setChallanData(prev => ({
+          ...prev,
+          studentId: studentId,
+          amount: student.monthlyFees || ''
+        }));
+      }
+    }
+  };
+
+  // Export to CSV function
+  const exportToCSV = (data, filename) => {
+    const csvContent = [
+      Object.keys(data[0]).join(','),
+      ...data.map(item => Object.values(item).map(value => 
+        typeof value === 'string' ? `"${value.replace(/"/g, '""')}"` : value
+      ).join(','))
+    ].join('\n');
+    
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `${filename}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // Export students data to CSV
+  const exportStudentsToCSV = () => {
+    const exportData = filteredStudents.map(student => ({
+      'Student ID': student.id,
+      'Name': `${student.firstName} ${student.lastName}`,
+      'Class': student.class,
+      'Section': student.section,
+      'Email': student.email,
+      'Phone': student.phone,
+      'Total Challans': student.totalChallans,
+      'Paid Challans': student.paidChallans,
+      'Pending Challans': student.pendingChallans,
+      'Total Amount': student.totalAmount,
+      'Paid Amount': student.paidAmount,
+      'Pending Amount': student.pendingAmount,
+      'Completion Rate': `${student.completionRate}%`
+    }));
+    
+    exportToCSV(exportData, 'students_fees_report');
+  };
+
+  // Export challans data to CSV
+  const exportChallansToCSV = () => {
+    const allChallans = [];
+    filteredStudents.forEach(student => {
+      if (student.feesHistory) {
+        student.feesHistory.forEach(challan => {
+          allChallans.push({
+            'Student ID': student.id,
+            'Student Name': `${student.firstName} ${student.lastName}`,
+            'Class': student.class,
+            'Section': student.section,
+            'Month': challan.month,
+            'Amount': challan.amount,
+            'Due Date': challan.dueDate,
+            'Status': challan.status,
+            'Payment Date': challan.date || 'N/A'
+          });
+        });
+      }
+    });
+    
+    exportToCSV(allChallans, 'challans_report');
+  };
+
+  // Export summary report to CSV
+  const exportSummaryToCSV = () => {
+    const summaryData = [{
+      'Report Type': 'Fees Summary',
+      'Total Students': filteredStudents.length,
+      'Total Challans': filteredStudents.reduce((sum, student) => sum + student.totalChallans, 0),
+      'Total Paid Challans': filteredStudents.reduce((sum, student) => sum + student.paidChallans, 0),
+      'Total Pending Challans': filteredStudents.reduce((sum, student) => sum + student.pendingChallans, 0),
+      'Total Amount': filteredStudents.reduce((sum, student) => sum + student.totalAmount, 0),
+      'Total Paid Amount': filteredStudents.reduce((sum, student) => sum + student.paidAmount, 0),
+      'Total Pending Amount': filteredStudents.reduce((sum, student) => sum + student.pendingAmount, 0)
+    }];
+    
+    exportToCSV(summaryData, 'fees_summary_report');
+  };
+
+  // Handle export option selection
+  const handleExportOption = (option) => {
+    switch (option) {
+      case 'students':
+        exportStudentsToCSV();
+        break;
+      case 'challans':
+        exportChallansToCSV();
+        break;
+      case 'summary':
+        exportSummaryToCSV();
+        break;
+      default:
+        break;
+    }
+    setShowExportModal(false);
+  };
+
+  // Print all filtered students
+  const printAllFilteredStudents = () => {
+    window.print();
+  };
+
+  const submitChallan = (e) => {
+    e.preventDefault();
+    dispatch(generateChallan(challanData));
+    setShowGenerateModal(false);
+    
+    // Find the student to pass to print function
+    const student = students.find(s => s.id === challanData.studentId);
+    if (student) {
+      // Create a temporary challan object for printing
+      // Convert month format from YYYY-MM to Month YYYY for display
+      const monthNames = ["January", "February", "March", "April", "May", "June",
+        "July", "August", "September", "October", "November", "December"];
+      const [year, monthIndex] = challanData.month.split('-');
+      const monthName = monthNames[parseInt(monthIndex) - 1];
+      const formattedMonth = `${monthName} ${year}`;
+      
+      const tempChallan = {
+        id: `challan-${challanData.studentId}-${Date.now()}`,
+        month: formattedMonth,
+        amount: challanData.amount,
+        dueDate: challanData.dueDate,
+        description: challanData.description,
+        status: 'pending',
+        date: new Date().toISOString().split('T')[0]
+      };
+      
+      // Show the print view after a short delay to ensure state update
+      setTimeout(() => {
+        handlePrintChallan(tempChallan, student);
+      }, 500);
+    }
+    
+    setChallanData({
+      studentId: '',
+      month: '',
+      amount: '',
+      dueDate: '',
+      description: ''
+    });
+  };
+
+  const handlePayChallan = (challan) => {
+    setSelectedChallan(challan);
+    setPaymentData({
+      amount: challan.amount,
+      paymentDate: new Date().toISOString().split('T')[0],
+      paymentMethod: 'cash'
+    });
+    setShowPaymentModal(true);
+  };
+
+  // New function to update challan status directly
+  const handleUpdateStatus = (challan) => {
+    setSelectedChallan(challan);
+    setPaymentData({
+      amount: challan.amount,
+      paymentDate: new Date().toISOString().split('T')[0],
+      paymentMethod: 'cash'
+    });
+    setShowStatusModal(true);
+  };
+
+  // New function to show student details
+  const handleViewDetails = (student) => {
+    setDetailViewStudent(student);
+    setShowStudentDetails(true);
+  };
+
+  const submitPayment = (e) => {
+    e.preventDefault();
+    if (selectedChallan && paymentData.amount) {
+      dispatch(payFees({ 
+        studentId: selectedChallan.studentId, 
+        amount: parseFloat(paymentData.amount), 
+        month: selectedChallan.month,
+        paymentMethod: paymentData.paymentMethod,
+        paymentDate: paymentData.paymentDate
+      }));
+      
+      // Show the paid challan in print view
+      const student = students.find(s => s.id === selectedChallan.studentId);
+      if (student) {
+        const updatedChallan = {
+          ...selectedChallan,
+          status: 'paid',
+          date: paymentData.paymentDate,
+          paymentMethod: paymentData.paymentMethod
+        };
+        
+        setTimeout(() => {
+          handlePrintChallan(updatedChallan, student);
+        }, 500);
+      }
+      
+      setShowPaymentModal(false);
+      setPaymentData({
+        amount: '',
+        paymentDate: '',
+        paymentMethod: 'cash'
+      });
+    }
+  };
+
+  // New function to submit status update
+  const submitStatusUpdate = (e) => {
+    e.preventDefault();
+    if (selectedChallan) {
+      dispatch(payFees({ 
+        studentId: selectedChallan.studentId, 
+        amount: parseFloat(selectedChallan.amount), 
+        month: selectedChallan.month,
+        paymentMethod: paymentData.paymentMethod,
+        paymentDate: paymentData.paymentDate
+      }));
+      
+      // Show the paid challan in print view
+      const student = students.find(s => s.id === selectedChallan.studentId);
+      if (student) {
+        const updatedChallan = {
+          ...selectedChallan,
+          status: 'paid',
+          date: paymentData.paymentDate,
+          paymentMethod: paymentData.paymentMethod
+        };
+        
+        setTimeout(() => {
+          handlePrintChallan(updatedChallan, student);
+        }, 500);
+      }
+      
+      setShowStatusModal(false);
+      setSelectedChallan(null);
+      setPaymentData({
+        amount: '',
+        paymentDate: '',
+        paymentMethod: 'cash'
+      });
+    }
+  };
+
+  // Function to handle challan printing
+  const handlePrintChallan = async (challan, student) => {
+    setPrintChallan(challan);
+    setPrintStudent(student);
+    setShowPrintView(true);
+    // Don't automatically print, just show the view
+  };
+
+  // Function to actually print the challan
+  const handlePrintAction = async () => {
+    if (printRef.current && printChallan && printStudent) {
+      try {
+        // Create a simplified, print-optimized HTML version
+        const printContent = `
+          <div style="width: 80mm; font-family: Arial, Helvetica, sans-serif; font-size: 12px; padding: 10px;">
+            <!-- School Header -->
+            <div style="text-align: center; border-bottom: 1px solid #ccc; padding-bottom: 10px; margin-bottom: 10px;">
+              <h1 style="font-size: 16px; font-weight: bold; margin: 0 0 5px 0;">School Management System</h1>
+              <p style="font-size: 10px; margin: 0 0 2px 0;">123 Education Street, Learning City</p>
+              <p style="font-size: 10px; margin: 0;">Phone: +1 (555) 123-4567</p>
+            </div>
+
+            <!-- Challan Header -->
+            <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+              <div>
+                <h2 style="font-size: 14px; font-weight: bold; margin: 0 0 3px 0;">Fee Challan</h2>
+                <p style="font-size: 10px; margin: 0;">ID: ${printChallan.id}</p>
+              </div>
+              <div style="background: ${printChallan.status === 'paid' ? '#d1fae5' : '#fef3c7'}; 
+                          color: ${printChallan.status === 'paid' ? '#065f46' : '#92400e'}; 
+                          padding: 4px 8px; border-radius: 4px; font-size: 10px; font-weight: bold;">
+                ${printChallan.status === 'paid' ? 'PAID' : 'PENDING'}
+              </div>
+            </div>
+
+            <!-- Student Information -->
+            <div style="margin-bottom: 10px;">
+              <h3 style="font-size: 12px; font-weight: bold; margin: 0 0 5px 0;">Student Information</h3>
+              <div style="background: #f9fafb; padding: 8px; border-radius: 4px;">
+                <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 2px; font-size: 10px;">
+                  <span style="font-weight: bold;">Name:</span>
+                  <span>${printStudent.firstName} ${printStudent.lastName}</span>
+                  
+                  <span style="font-weight: bold;">Class:</span>
+                  <span>${printStudent.class} - Section ${printStudent.section}</span>
+                  
+                  <span style="font-weight: bold;">Month:</span>
+                  <span>${printChallan.month}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Fee Details -->
+            <div style="margin-bottom: 10px;">
+              <h3 style="font-size: 12px; font-weight: bold; margin: 0 0 5px 0;">Fee Details</h3>
+              <div style="border: 1px solid #ccc; border-radius: 4px;">
+                <div style="display: flex; justify-content: space-between; padding: 6px; background: #f9fafb; border-bottom: 1px solid #ccc; font-size: 10px; font-weight: bold;">
+                  <span>Description</span>
+                  <span>Amount</span>
+                </div>
+                <div style="padding: 6px; font-size: 10px;">
+                  <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
+                    <span>Monthly Tuition Fee</span>
+                    <span>$${printChallan.amount}</span>
+                  </div>
+                  ${printChallan.description ? `
+                  <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
+                    <span>${printChallan.description}</span>
+                    <span>$0.00</span>
+                  </div>
+                  ` : ''}
+                  <div style="display: flex; justify-content: space-between; margin-top: 5px; padding-top: 5px; border-top: 1px solid #ccc; font-weight: bold;">
+                    <span>Total Amount</span>
+                    <span>$${printChallan.amount}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Dates -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-bottom: 10px;">
+              <div>
+                <h4 style="font-size: 10px; font-weight: bold; margin: 0 0 3px 0;">Issue Date</h4>
+                <div style="background: #f9fafb; padding: 6px; border-radius: 4px; border: 1px solid #ccc; font-size: 10px;">
+                  ${new Date(printChallan.date || new Date()).toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric'
+                  })}
+                </div>
+              </div>
+              <div>
+                <h4 style="font-size: 10px; font-weight: bold; margin: 0 0 3px 0;">Due Date</h4>
+                <div style="background: #f9fafb; padding: 6px; border-radius: 4px; border: 1px solid #ccc; font-size: 10px;">
+                  ${new Date(printChallan.dueDate).toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric'
+                  })}
+                </div>
+              </div>
+            </div>
+
+            <!-- Payment Information -->
+            ${printChallan.status === 'paid' && printChallan.paymentMethod ? `
+            <div style="margin-bottom: 10px;">
+              <h3 style="font-size: 12px; font-weight: bold; margin: 0 0 5px 0;">Payment Information</h3>
+              <div style="background: #d1fae5; padding: 8px; border-radius: 4px; border: 1px solid #10b981; font-size: 10px;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2px; margin-bottom: 2px;">
+                  <div style="font-weight: bold;">Payment Method:</div>
+                  <div style="text-transform: capitalize;">${printChallan.paymentMethod}</div>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2px;">
+                  <div style="font-weight: bold;">Payment Date:</div>
+                  <div>${new Date(printChallan.date).toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric'
+                  })}</div>
+                </div>
+              </div>
+            </div>
+            ` : ''}
+
+            <!-- Footer -->
+            <div style="text-align: center; font-size: 10px; color: #6b7280; padding-top: 8px; border-top: 1px solid #ccc;">
+              ${printChallan.status === 'paid' ? 
+                '<p>Thank you for your payment.</p>' : 
+                '<p>Please pay by the due date.</p>'}
+              <p style="margin-top: 3px;">Generated on ${new Date().toLocaleDateString()}</p>
+            </div>
+          </div>
+        `;
+
+        // Use browser print dialog with thermal printer optimized styles
+        const printWindow = window.open('', '_blank');
+        printWindow.document.write(`
+          <html>
+            <head>
+              <title>Challan Print</title>
+              <style>
+                @media print {
+                  @page {
+                    size: 80mm auto;
+                    margin: 0;
+                  }
+                  body {
+                    margin: 0;
+                    padding: 0;
+                    font-family: Arial, Helvetica, sans-serif;
+                    font-size: 12px;
+                    width: 80mm;
+                  }
+                }
+              </style>
+            </head>
+            <body>
+              ${printContent}
+            </body>
+          </html>
+        `);
+        printWindow.document.close();
+        printWindow.focus();
+        printWindow.print();
+        printWindow.close();
+      } catch (error) {
+        console.error('Error printing challan:', error);
+      }
+    }
+  };
+
+  // Function to download the challan as PDF
+  const handleDownloadAction = async () => {
+    if (printChallan && printStudent) {
+      try {
+        const filename = `challan_${printStudent.firstName}_${printStudent.lastName}_${printChallan.month.replace(/\s+/g, '_')}.pdf`;
+        const success = await printChallanAsPDF(printChallan, printStudent, filename);
+        if (success) {
+          console.log('Challan downloaded successfully');
+        } else {
+          console.error('Failed to download challan');
+        }
+      } catch (error) {
+        console.error('Error downloading challan:', error);
+      }
+    }
+  };
+
+  // Function to close the print view
+  const handleClosePrintView = () => {
+    setShowPrintView(false);
+    setPrintChallan(null);
+    setPrintStudent(null);
+  };
+
+  const getStatusBadge = (completionRate, admissionPaid) => {
+    if (completionRate === 100 && admissionPaid) {
+      return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+        <FaCheck className="mr-1" /> Fully Paid
+      </span>;
+    } else {
+      return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+        <FaTimes className="mr-1" /> Pending
+      </span>;
+    }
+  };
+
+  if (loading) return <div className="flex justify-center items-center h-64"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div></div>;
+  if (error) return <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded">
+    <div className="flex">
+      <div className="flex-shrink-0">
+        <svg className="h-5 w-5 text-red-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+        </svg>
+      </div>
+      <div className="ml-3">
+        <p className="text-sm text-red-700">Error: {error}</p>
+      </div>
+    </div>
+  </div>;
+
+  return (
+    <>
+      {/* Challan Print View */}
+      {showPrintView && printChallan && printStudent && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-screen overflow-y-auto">
+            <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center">
+              <h3 className="text-lg font-semibold text-gray-900">Challan Preview</h3>
+              <button 
+                onClick={handleClosePrintView}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="py-4 px-6">
+              <div ref={printRef} className="mb-4 flex justify-center">
+                <ChallanPrintView 
+                  challan={printChallan} 
+                  student={printStudent} 
+                  schoolInfo={{
+                    name: "School Management System",
+                    address: "123 Education Street, Learning City",
+                    phone: "+1 (555) 123-4567",
+                    email: "info@schoolmanagement.com"
+                  }} 
+                  onPrint={handlePrintAction}
+                  onDownload={handleDownloadAction}
+                />
+              </div>
+              
+            </div>
+          </div>
+        </div>
+      )}
+
+      <PageHeader
+        title="Fees Management"
+        subtitle="Manage student fees, challans, and payments"
+        actionButton={
+          <div className="flex space-x-2">
+            <button
+              onClick={handleGenerateChallan}
+              className="inline-flex items-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200"
+            >
+              <FaPlus className="mr-2" /> Generate Challan
+            </button>
+            <button
+              onClick={() => setShowExportModal(true)}
+              className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200"
+            >
+              <FaPrint className="mr-2" /> Export
+            </button>
+          </div>
+        }
+      />
+
+      {/* Summary Statistics */}
+      <div className="my-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl shadow p-4 text-white">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-blue-100 text-xs font-medium">Total Students</p>
+                <p className="text-2xl font-bold mt-1">{filteredStudents.length}</p>
+              </div>
+              <div className="p-2 bg-blue-400 bg-opacity-30 rounded-full">
+                <FaUser size={20} />
+              </div>
+            </div>
+          </div>
+          
+          <div className="bg-gradient-to-r from-green-500 to-green-600 rounded-xl shadow p-4 text-white">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-green-100 text-xs font-medium">Fully Paid</p>
+                <p className="text-2xl font-bold mt-1">{filteredStudents.filter(s => s.completionRate === 100).length}</p>
+              </div>
+              <div className="p-2 bg-green-400 bg-opacity-30 rounded-full">
+                <FaCheck size={20} />
+              </div>
+            </div>
+          </div>
+          
+          <div className="bg-gradient-to-r from-red-500 to-red-600 rounded-xl shadow p-4 text-white">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-red-100 text-xs font-medium">Pending</p>
+                <p className="text-2xl font-bold mt-1">{filteredStudents.filter(s => s.completionRate < 100).length}</p>
+              </div>
+              <div className="p-2 bg-red-400 bg-opacity-30 rounded-full">
+                <FaTimes size={20} />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Student Fees Summary Table */}
+      {!showStudentDetails ? (
+        <div className="bg-white rounded-2xl shadow-lg p-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Student Fees Summary</h3>
+          <BulkOperationsToolbar 
+            filteredStudents={filteredStudents}
+            onBulkGenerate={handleBulkGenerate}
+            bulkSelectedChallans={bulkSelectedChallans}
+            onBulkUpdate={handleBulkUpdate}
+          />
+          <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+              <div className="relative flex-grow max-w-md">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <FaSearch className="h-5 w-5 text-gray-400" />
+                </div>
+                <input
+                  type="text"
+                  placeholder="Search by student name, class, or section..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+              
+              <div className="flex flex-wrap gap-2">
+                <div className="flex items-center space-x-2">
+                  <FaFilter className="text-gray-400" />
+                  <select
+                    value={filterStatus}
+                    onChange={(e) => setFilterStatus(e.target.value)}
+                    className="block w-full pl-3 pr-10 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="all">All Status</option>
+                    <option value="paid">Fully Paid</option>
+                    <option value="pending">Pending</option>
+                  </select>
+                </div>
+                
+                <div className="flex items-center space-x-2">
+                  <FaFilter className="text-gray-400" />
+                  <select
+                    value={filterClass}
+                    onChange={(e) => setFilterClass(e.target.value)}
+                    className="block w-full pl-3 pr-10 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="all">All Classes</option>
+                    {classes && classes.map(cls => (
+                      <option key={cls.id} value={cls.name}>{cls.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div className="overflow-hidden rounded-lg border border-gray-200">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Student</th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Class/Section</th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Challans</th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Completion</th>
+                  <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {filteredStudents.map((student) => (
+                  <tr key={student.id} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <div className="bg-gray-200 border-2 border-dashed rounded-xl w-8 h-8" />
+                        <div className="ml-3">
+                          <div className="text-sm font-medium text-gray-900">{student.firstName} {student.lastName}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">{student.class}</div>
+                      <div className="text-sm text-gray-500">Section {student.section}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">
+                        {student.paidChallans} / {student.totalChallans}
+                      </div>
+                      <div className="text-sm text-gray-500">Challans Paid</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">
+                        ${student.paidAmount} / ${student.totalAmount}
+                      </div>
+                      <div className="text-sm text-gray-500">Amount Paid</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <div className="w-full bg-gray-200 rounded-full h-2">
+                          <div 
+                            className="bg-blue-600 h-2 rounded-full" 
+                            style={{ width: `${student.completionRate}%` }}
+                          ></div>
+                        </div>
+                        <span className="ml-2 text-sm font-medium text-gray-700">{student.completionRate}%</span>
+                      </div>
+                      <div className="mt-1">
+                        {getStatusBadge(student.completionRate, student.admissionPaid)}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <button
+                        onClick={() => handleViewDetails(student)}
+                        className="inline-flex items-center px-3 py-1 border border-gray-300 text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                      >
+                        <FaEye className="mr-1" /> View Details
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {filteredStudents.length === 0 && (
+              <div className="text-center py-12">
+                <FaUser className="mx-auto h-12 w-12 text-gray-400" />
+                <h3 className="mt-2 text-sm font-medium text-gray-900">No students found</h3>
+                <p className="mt-1 text-sm text-gray-500">Try adjusting your search or filter criteria</p>
+              </div>
+            )}
+          </div>
+        </div>
+      ) : (
+        // Student Details View
+        <div className="bg-white rounded-2xl shadow-lg p-6">
+          {detailViewStudent && (
+            <>
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center">
+                  <button
+                    onClick={() => setShowStudentDetails(false)}
+                    className="mr-4 text-gray-500 hover:text-gray-700"
+                  >
+                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                    </svg>
+                  </button>
+                  <div className="flex items-center">
+                    <div className="bg-gray-200 border-2 border-dashed rounded-xl w-12 h-12" />
+                    <div className="ml-4">
+                      <h3 className="text-xl font-bold text-gray-900">
+                        {detailViewStudent.firstName} {detailViewStudent.lastName}
+                      </h3>
+                      <p className="text-sm text-gray-500">
+                        {detailViewStudent.class} - Section {detailViewStudent.section}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm text-gray-500">Completion Rate</p>
+                  <p className="text-2xl font-bold text-gray-900">{detailViewStudent.completionRate}%</p>
+                </div>
+              </div>
+
+              {/* Student Stats */}
+              <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
+                <div className="bg-blue-50 rounded-lg p-4">
+                  <p className="text-sm text-blue-800">Total Challans</p>
+                  <p className="text-2xl font-bold text-blue-900">{detailViewStudent.totalChallans || 0}</p>
+                </div>
+                <div className="bg-green-50 rounded-lg p-4">
+                  <p className="text-sm text-green-800">Paid Challans</p>
+                  <p className="text-2xl font-bold text-green-900">{detailViewStudent.paidChallans || 0}</p>
+                </div>
+                <div className="bg-yellow-50 rounded-lg p-4">
+                  <p className="text-sm text-yellow-800">Pending Challans</p>
+                  <p className="text-2xl font-bold text-yellow-900">{detailViewStudent.pendingChallans || 0}</p>
+                </div>
+                <div className="bg-purple-50 rounded-lg p-4">
+                  <p className="text-sm text-purple-800">Total Amount</p>
+                  <p className="text-2xl font-bold text-purple-900">${detailViewStudent.totalAmount || 0}</p>
+                </div>
+                <div className="bg-red-50 rounded-lg p-4">
+                  <p className="text-sm text-red-800">Pending Amount</p>
+                  <p className="text-2xl font-bold text-red-900">${detailViewStudent.pendingAmount || 0}</p>
+                </div>
+              </div>
+
+              {/* Detailed Challans Table */}
+              <div className="flex justify-between items-center mb-4">
+                <h4 className="text-lg font-semibold text-gray-900">Challan Details</h4>
+                <div>
+                  {bulkSelectedChallans.length > 0 && (
+                    <button
+                      onClick={handleBulkUpdate}
+                      className="inline-flex items-center px-3 py-1 border border-transparent text-sm font-medium rounded-lg text-white bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                    >
+                      <FaEdit className="mr-1" /> Update {bulkSelectedChallans.length} Selected
+                    </button>
+                  )}
+                </div>
+              </div>
+              <div className="overflow-hidden rounded-lg border border-gray-200">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <BulkSelectionHeader 
+                      student={detailViewStudent}
+                      areAllChallansSelected={areAllChallansSelected}
+                      handleSelectAllChallans={handleSelectAllChallans}
+                    />
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {detailViewStudent.feesHistory && detailViewStudent.feesHistory.map((challan) => (
+                      <BulkSelectionRow
+                        key={challan.id}
+                        challan={challan}
+                        student={detailViewStudent}
+                        isChallanSelected={isChallanSelected}
+                        handleSelectChallan={handleSelectChallan}
+                        handlePayChallan={handlePayChallan}
+                        handleUpdateStatus={handleUpdateStatus}
+                        handlePrintChallan={handlePrintChallan}
+                      />
+                    ))}
+                  </tbody>
+                </table>
+                                className="inline-flex items-center px-2 py-1 border border-gray-300 text-xs font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                              >
+                                <FaPrint className="mr-1" /> Print
+                              </button>
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {(!detailViewStudent.feesHistory || detailViewStudent.feesHistory.length === 0) && (
+                  <div className="text-center py-12">
+                    <FaReceipt className="mx-auto h-12 w-12 text-gray-400" />
+                    <h3 className="mt-2 text-sm font-medium text-gray-900">No challans found</h3>
+                    <p className="mt-1 text-sm text-gray-500">This student has no fee challans yet</p>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* Generate Challan Modal */}
+      {showGenerateModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md">
+            <h3 className="text-xl font-semibold text-gray-900 mb-4">Generate New Challan</h3>
+            <form onSubmit={submitChallan} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Student</label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <FaUser className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <select
+                    value={challanData.studentId}
+                    onChange={handleStudentChange}
+                    className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                    required
+                  >
+                    <option value="">Select Student</option>
+                    {students.map(student => (
+                      <option key={student.id} value={student.id}>
+                        {student.firstName} {student.lastName} - {student.class} {student.section}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Month</label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <FaCalendar className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <input
+                    type="month"
+                    value={challanData.month}
+                    onChange={(e) => setChallanData({...challanData, month: e.target.value})}
+                    className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                    required
+                  />
+                </div>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Amount</label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <FaDollarSign className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <input
+                    type="number"
+                    value={challanData.amount}
+                    onChange={(e) => setChallanData({...challanData, amount: e.target.value})}
+                    className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Enter amount"
+                    required
+                  />
+                </div>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Due Date</label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <FaCalendar className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <input
+                    type="date"
+                    value={challanData.dueDate}
+                    onChange={(e) => setChallanData({...challanData, dueDate: e.target.value})}
+                    className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                    required
+                  />
+                </div>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                <textarea
+                  value={challanData.description}
+                  onChange={(e) => setChallanData({...challanData, description: e.target.value})}
+                  className="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Enter description (optional)"
+                  rows="2"
+                />
+              </div>
+              
+              <div className="flex justify-end space-x-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setShowGenerateModal(false)}
+                  className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="inline-flex items-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                >
+                  <FaReceipt className="mr-2" /> Generate Challan
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Payment Modal */}
+      {showPaymentModal && selectedChallan && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md">
+            <h3 className="text-xl font-semibold text-gray-900 mb-4">Pay Challan</h3>
+            <div className="mb-4 p-4 bg-blue-50 rounded-lg">
+              <div className="flex justify-between">
+                <span className="text-sm text-gray-600">Student:</span>
+                <span className="font-medium">
+                  {students.find(s => s.id === selectedChallan.studentId)?.firstName}{' '}
+                  {students.find(s => s.id === selectedChallan.studentId)?.lastName}
+                </span>
+              </div>
+              <div className="flex justify-between mt-2">
+                <span className="text-sm text-gray-600">Month:</span>
+                <span className="font-medium">{selectedChallan.month}</span>
+              </div>
+              <div className="flex justify-between mt-2">
+                <span className="text-sm text-gray-600">Amount:</span>
+                <span className="font-medium">${selectedChallan.amount}</span>
+              </div>
+            </div>
+            
+            <form onSubmit={submitPayment} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Amount</label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <FaDollarSign className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <input
+                    type="number"
+                    value={paymentData.amount}
+                    onChange={(e) => setPaymentData({...paymentData, amount: e.target.value})}
+                    className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Enter amount"
+                    required
+                  />
+                </div>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Payment Method</label>
+                <select
+                  value={paymentData.paymentMethod}
+                  onChange={(e) => setPaymentData({...paymentData, paymentMethod: e.target.value})}
+                  className="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="cash">Cash</option>
+                  <option value="bank">Bank Transfer</option>
+                  <option value="easypaisa">EasyPaisa</option>
+                  <option value="jazzcash">JazzCash</option>
+                </select>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Payment Date</label>
+                <input
+                  type="date"
+                  value={paymentData.paymentDate}
+                  onChange={(e) => setPaymentData({...paymentData, paymentDate: e.target.value})}
+                  className="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                  required
+                />
+              </div>
+              
+              <div className="flex justify-end space-x-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setShowPaymentModal(false)}
+                  className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="inline-flex items-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                >
+                  <FaDollarSign className="mr-2" /> Pay Challan
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Status Update Modal */}
+      {showStatusModal && selectedChallan && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md">
+            <h3 className="text-xl font-semibold text-gray-900 mb-4">Update Challan Status</h3>
+            <div className="mb-4 p-4 bg-blue-50 rounded-lg">
+              <div className="flex justify-between">
+                <span className="text-sm text-gray-600">Student:</span>
+                <span className="font-medium">
+                  {students.find(s => s.id === selectedChallan.studentId)?.firstName}{' '}
+                  {students.find(s => s.id === selectedChallan.studentId)?.lastName}
+                </span>
+              </div>
+              <div className="flex justify-between mt-2">
+                <span className="text-sm text-gray-600">Month:</span>
+                <span className="font-medium">{selectedChallan.month}</span>
+              </div>
+              <div className="flex justify-between mt-2">
+                <span className="text-sm text-gray-600">Amount:</span>
+                <span className="font-medium">${selectedChallan.amount}</span>
+              </div>
+            </div>
+            
+            <form onSubmit={submitStatusUpdate} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Payment Method</label>
+                <select
+                  value={paymentData.paymentMethod}
+                  onChange={(e) => setPaymentData({...paymentData, paymentMethod: e.target.value})}
+                  className="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="cash">Cash</option>
+                  <option value="bank">Bank Transfer</option>
+                  <option value="easypaisa">EasyPaisa</option>
+                  <option value="jazzcash">JazzCash</option>
+                </select>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Payment Date</label>
+                <input
+                  type="date"
+                  value={paymentData.paymentDate}
+                  onChange={(e) => setPaymentData({...paymentData, paymentDate: e.target.value})}
+                  className="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                  required
+                />
+              </div>
+              
+              <div className="flex justify-end space-x-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setShowStatusModal(false)}
+                  className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="inline-flex items-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                >
+                  <FaEdit className="mr-2" /> Update Status
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Export Modal */}
+      {showExportModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md">
+            <h3 className="text-xl font-semibold text-gray-900 mb-4">Export Data</h3>
+            <p className="text-gray-600 mb-6">Choose what data you want to export</p>
+            
+            <div className="space-y-3">
+              <button
+                onClick={() => handleExportOption('students')}
+                className="w-full text-left px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              >
+                <div className="font-medium text-gray-900">Students Report</div>
+                <div className="text-sm text-gray-500">Export student fees summary with completion rates</div>
+              </button>
+              
+              <button
+                onClick={() => handleExportOption('challans')}
+                className="w-full text-left px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              >
+                <div className="font-medium text-gray-900">Challans Report</div>
+                <div className="text-sm text-gray-500">Export detailed challan records for all students</div>
+              </button>
+              
+              <button
+                onClick={() => handleExportOption('summary')}
+                className="w-full text-left px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              >
+                <div className="font-medium text-gray-900">Summary Report</div>
+                <div className="text-sm text-gray-500">Export overall fees collection summary</div>
+              </button>
+            </div>
+            
+            <div className="flex justify-end space-x-3 mt-6">
+              <button
+                onClick={() => setShowExportModal(false)}
+                className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Bulk Generate Modal */}
+      {showBulkGenerateModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md">
+            <h3 className="text-xl font-semibold text-gray-900 mb-4">Bulk Generate Challans</h3>
+            
+            {bulkOperationProgress.inProgress ? (
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+                <p className="text-gray-600 mb-2">{bulkOperationProgress.message}</p>
+                <p className="text-sm text-gray-500">
+                  {bulkOperationProgress.current} / {bulkOperationProgress.total} students processed
+                </p>
+                <div className="w-full bg-gray-200 rounded-full h-2 mt-4">
+                  <div 
+                    className="bg-blue-600 h-2 rounded-full" 
+                    style={{ width: `${(bulkOperationProgress.current / bulkOperationProgress.total) * 100}%` }}
+                  ></div>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="mb-4 p-4 bg-blue-50 rounded-lg">
+                  <p className="text-sm text-gray-600">
+                    Generating challans for {filteredStudents.length} students
+                  </p>
+                </div>
+                
+                <form onSubmit={(e) => {
+                  e.preventDefault();
+                  submitBulkGenerate(bulkGenerateData);
+                }} className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Month</label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <FaCalendar className="h-5 w-5 text-gray-400" />
+                      </div>
+                      <input
+                        type="month"
+                        value={bulkGenerateData.month}
+                        onChange={(e) => setBulkGenerateData({...bulkGenerateData, month: e.target.value})}
+                        className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                        required
+                      />
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Due Date</label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <FaCalendar className="h-5 w-5 text-gray-400" />
+                      </div>
+                      <input
+                        type="date"
+                        value={bulkGenerateData.dueDate}
+                        onChange={(e) => setBulkGenerateData({...bulkGenerateData, dueDate: e.target.value})}
+                        className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                        required
+                      />
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                    <textarea
+                      value={bulkGenerateData.description}
+                      onChange={(e) => setBulkGenerateData({...bulkGenerateData, description: e.target.value})}
+                      className="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="Enter description (optional)"
+                      rows="2"
+                    />
+                  </div>
+                  
+                  <div className="flex justify-end space-x-3 pt-4">
+                    <button
+                      type="button"
+                      onClick={() => setShowBulkGenerateModal(false)}
+                      className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="inline-flex items-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                    >
+                      <FaReceipt className="mr-2" /> Generate Challans
+                    </button>
+                  </div>
+                </form>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+      
+      {/* Bulk Update Modal */}
+      {showBulkUpdateModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md">
+            <h3 className="text-xl font-semibold text-gray-900 mb-4">Bulk Update Challan Status</h3>
+            
+            {bulkOperationProgress.inProgress ? (
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+                <p className="text-gray-600 mb-2">{bulkOperationProgress.message}</p>
+                <p className="text-sm text-gray-500">
+                  {bulkOperationProgress.current} / {bulkOperationProgress.total} challans processed
+                </p>
+                <div className="w-full bg-gray-200 rounded-full h-2 mt-4">
+                  <div 
+                    className="bg-blue-600 h-2 rounded-full" 
+                    style={{ width: `${(bulkOperationProgress.current / bulkOperationProgress.total) * 100}%` }}
+                  ></div>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="mb-4 p-4 bg-blue-50 rounded-lg">
+                  <p className="text-sm text-gray-600">
+                    Updating status for {bulkSelectedChallans.length} challans
+                  </p>
+                </div>
+                
+                <form onSubmit={(e) => {
+                  e.preventDefault();
+                  submitBulkUpdate(bulkUpdateData);
+                }} className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Payment Method</label>
+                    <select
+                      value={bulkUpdateData.paymentMethod}
+                      onChange={(e) => setBulkUpdateData({...bulkUpdateData, paymentMethod: e.target.value})}
+                      className="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                    >
+                      <option value="cash">Cash</option>
+                      <option value="bank">Bank Transfer</option>
+                      <option value="easypaisa">EasyPaisa</option>
+                      <option value="jazzcash">JazzCash</option>
+                    </select>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Payment Date</label>
+                    <input
+                      type="date"
+                      value={bulkUpdateData.paymentDate}
+                      onChange={(e) => setBulkUpdateData({...bulkUpdateData, paymentDate: e.target.value})}
+                      className="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                      required
+                    />
+                  </div>
+                  
+                  <div className="flex justify-end space-x-3 pt-4">
+                    <button
+                      type="button"
+                      onClick={() => setShowBulkUpdateModal(false)}
+                      className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="inline-flex items-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                    >
+                      <FaEdit className="mr-2" /> Update All
+                    </button>
+                  </div>
+                </form>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+    </>
+  );
+};
+
+export default FeesSection;
