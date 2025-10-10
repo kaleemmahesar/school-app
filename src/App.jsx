@@ -9,7 +9,12 @@ import StaffSection from './components/StaffSection'
 import ClassesSection from './components/ClassesSection'
 import FeesSection from './components/FeesSection'
 import MarksheetsSection from './components/MarksheetsSection'
-import AdmissionFormPage from './components/AdmissionFormPage'
+import CertificatesSection from './components/CertificatesSection'
+import AdmissionPage from './components/AdmissionPage'
+import LoginPage from './components/LoginPage'
+import SettingsPage from './components/SettingsPage'
+import { ToastContainer } from 'react-toastify'
+import 'react-toastify/dist/ReactToastify.css'
 import './index.css'
 
 function App() {
@@ -18,47 +23,29 @@ function App() {
       <Router>
         <div className="min-h-screen bg-gray-100">
           <Routes>
-            <Route path="/" element={
-              <Layout>
-                <Dashboard />
-              </Layout>
-            } />
-            <Route path="/students" element={
-              <Layout>
-                <StudentsSection />
-              </Layout>
-            } />
-            <Route path="/students/admission" element={
-              <Layout>
-                <AdmissionFormPage />
-              </Layout>
-            } />
-            <Route path="/expenses" element={
-              <Layout>
-                <ExpensesSection />
-              </Layout>
-            } />
-            <Route path="/staff" element={
-              <Layout>
-                <StaffSection />
-              </Layout>
-            } />
-            <Route path="/classes" element={
-              <Layout>
-                <ClassesSection />
-              </Layout>
-            } />
-            <Route path="/fees" element={
-              <Layout>
-                <FeesSection />
-              </Layout>
-            } />
-            <Route path="/marksheets" element={
-              <Layout>
-                <MarksheetsSection />
-              </Layout>
-            } />
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/" element={<Layout><Dashboard /></Layout>} />
+            <Route path="/students" element={<Layout><StudentsSection /></Layout>} />
+            <Route path="/students/admission" element={<Layout><AdmissionPage /></Layout>} />
+            <Route path="/expenses" element={<Layout><ExpensesSection /></Layout>} />
+            <Route path="/staff" element={<Layout><StaffSection /></Layout>} />
+            <Route path="/classes" element={<Layout><ClassesSection /></Layout>} />
+            <Route path="/fees" element={<Layout><FeesSection /></Layout>} />
+            <Route path="/marksheets" element={<Layout><MarksheetsSection /></Layout>} />
+            <Route path="/certificates" element={<Layout><CertificatesSection /></Layout>} />
+            <Route path="/settings" element={<Layout><SettingsPage /></Layout>} />
           </Routes>
+          <ToastContainer 
+            position="top-right"
+            autoClose={5000}
+            hideProgressBar={false}
+            newestOnTop={false}
+            closeOnClick
+            rtl={false}
+            pauseOnFocusLoss
+            draggable
+            pauseOnHover
+          />
         </div>
       </Router>
     </Provider>

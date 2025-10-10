@@ -78,47 +78,65 @@ export const deleteUser = createAsyncThunk('users/deleteUser', async (userId) =>
   return userId;
 });
 
-export const loginUser = createAsyncThunk('users/loginUser', async ({ username, password }) => {
-  // Simulate API delay
-  await new Promise(resolve => setTimeout(resolve, 500));
-  
-  // In a real implementation, this would validate credentials
-  // For demo purposes, we'll just find the user by username
-  const user = mockUsers.find(u => u.username === username);
-  
-  if (user) {
-    // Add a new login record
-    const loginRecord = {
-      id: `login-${Date.now()}`,
-      timestamp: new Date().toISOString(),
-      status: 'success',
-      ip: '192.168.1.104' // Mock IP
-    };
+export const loginUser = createAsyncThunk('users/loginUser', async ({ username, password }, { rejectWithValue }) => {
+  try {
+    // Simulate API delay
+    await new Promise(resolve => setTimeout(resolve, 500));
     
-    return {
-      ...user,
-      lastLogin: new Date().toISOString(),
-      loginHistory: [loginRecord, ...user.loginHistory.slice(0, 9)] // Keep only last 10 records
-    };
+    // In a real implementation, this would validate credentials against a backend
+    // For demo purposes, we'll validate against mock users
+    let user = null;
+    
+    // Check for demo credentials
+    if (username === 'admin' && password === 'admin123') {
+      user = mockUsers.find(u => u.username === 'admin');
+    } else if (username === 'staff' && password === 'staff123') {
+      user = mockUsers.find(u => u.username === 'accountant'); // Using accountant as staff demo
+    } else {
+      // Check against actual mock users
+      user = mockUsers.find(u => u.username === username);
+      // In a real app, we would also verify the password
+    }
+    
+    if (user) {
+      // Add a new login record
+      const loginRecord = {
+        id: `login-${Date.now()}`,
+        timestamp: new Date().toISOString(),
+        status: 'success',
+        ip: '192.168.1.104' // Mock IP
+      };
+      
+      // Update localStorage to indicate authentication
+      localStorage.setItem('isAuthenticated', 'true');
+      
+      return {
+        ...user,
+        lastLogin: new Date().toISOString(),
+        loginHistory: [loginRecord, ...user.loginHistory.slice(0, 9)] // Keep only last 10 records
+      };
+    }
+    
+    throw new Error('Invalid credentials');
+  } catch (error) {
+    return rejectWithValue(error.message);
   }
-  
-  throw new Error('Invalid credentials');
+});
+
+export const logoutUser = createAsyncThunk('users/logoutUser', async () => {
+  // Simulate API delay
+  await new Promise(resolve => setTimeout(resolve, 300));
+  // Remove authentication from localStorage
+  localStorage.removeItem('isAuthenticated');
+  return true;
 });
 
 const usersSlice = createSlice({
   name: 'users',
   initialState,
   reducers: {
-    logoutUser: (state) => {
-      state.currentUser = null;
-    },
-    addLoginRecord: (state, action) => {
-      const { userId, record } = action.payload;
-      const user = state.users.find(u => u.id === userId);
-      if (user) {
-        user.loginHistory = [record, ...user.loginHistory.slice(0, 9)];
-        user.lastLogin = record.timestamp;
-      }
+    clearError: (state) => {
+      state.error = null;
     }
   },
   extraReducers: (builder) => {
@@ -147,14 +165,23 @@ const usersSlice = createSlice({
       .addCase(deleteUser.fulfilled, (state, action) => {
         state.users = state.users.filter(user => user.id !== action.payload);
       })
+      .addCase(loginUser.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
       .addCase(loginUser.fulfilled, (state, action) => {
+        state.loading = false;
         state.currentUser = action.payload;
       })
       .addCase(loginUser.rejected, (state, action) => {
-        state.error = action.error.message;
+        state.loading = false;
+        state.error = action.payload || action.error.message;
+      })
+      .addCase(logoutUser.fulfilled, (state) => {
+        state.currentUser = null;
       });
   },
 });
 
-export const { logoutUser, addLoginRecord } = usersSlice.actions;
+export const { clearError } = usersSlice.actions;
 export default usersSlice.reducer;

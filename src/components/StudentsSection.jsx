@@ -14,12 +14,17 @@ const StudentsSection = () => {
   const { classes } = useSelector(state => state.classes);
 
   useEffect(() => {
-    dispatch(fetchStudents());
+    console.log('StudentsSection mounted, current students count:', students.length);
+    // Only fetch students if the store is empty (initial load)
+    if (students.length === 0) {
+      console.log('Fetching students and classes for initial load');
+      dispatch(fetchStudents());
+    }
     dispatch(fetchClasses());
-  }, [dispatch]);
+  }, [dispatch, students.length]);
 
-  if (loading) return <div className="flex justify-center items-center h-64"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div></div>;
-  if (error) return <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded">
+  if (loading && students.length === 0) return <div className="flex justify-center items-center h-64"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div></div>;
+  if (error && students.length === 0) return <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded">
     <div className="flex">
       <div className="flex-shrink-0">
         <svg className="h-5 w-5 text-red-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">

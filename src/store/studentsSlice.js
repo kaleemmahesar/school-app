@@ -1,6 +1,10 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+import { toast } from 'react-toastify';
+import { createAsyncThunkWithToast, createAddThunk, createUpdateThunk, createDeleteThunk } from '../utils/asyncThunkUtils';
 
-// Mock data for students with enhanced fees structure and family relationships
+/**
+ * Mock data for students with enhanced fees structure and family relationships
+ */
 const mockStudents = [
   {
     id: '1',
@@ -36,7 +40,7 @@ const mockStudents = [
         amount: 4000, 
         paid: true, 
         date: '2023-09-15',
-        dueDate: '2023-09-10',
+        dueDate: '2023-10-10',
         status: 'paid',
         type: 'monthly'
       },
@@ -46,7 +50,7 @@ const mockStudents = [
         amount: 4000, 
         paid: false, 
         date: null,
-        dueDate: '2023-10-10',
+        dueDate: '2023-11-10',
         status: 'pending',
         type: 'monthly'
       },
@@ -55,28 +59,28 @@ const mockStudents = [
   {
     id: '2',
     firstName: 'Jane',
-    lastName: 'Doe',
-    email: 'jane.doe@example.com',
+    lastName: 'Smith',
+    email: 'jane.smith@example.com',
     phone: '098-765-4321',
     dateOfBirth: '2006-08-22',
-    admissionDate: '2023-09-01',
+    admissionDate: '2023-09-05',
     class: 'Class 9',
     section: 'B',
     monthlyFees: 3500,
-    admissionFees: 5000,
-    feesPaid: 8500,
-    totalFees: 8500,
-    familyId: 'family-1', // Same family as John Doe
+    admissionFees: 4500,
+    feesPaid: 4500,
+    totalFees: 8000,
+    familyId: 'family-1',
     relationship: 'sister',
-    parentId: '1', // Sister of John Doe
+    parentId: '1',
     feesHistory: [
       { 
         id: 'challan-2-0',
         month: 'Admission Fees',
-        amount: 5000,
+        amount: 4500,
         paid: true,
-        date: '2023-09-01',
-        dueDate: '2023-09-01',
+        date: '2023-09-05',
+        dueDate: '2023-09-05',
         status: 'paid',
         type: 'admission'
       },
@@ -84,89 +88,79 @@ const mockStudents = [
         id: 'challan-2-1', 
         month: 'September 2023', 
         amount: 3500, 
-        paid: true, 
-        date: '2023-09-20',
-        dueDate: '2023-09-10',
-        status: 'paid',
+        paid: false, 
+        date: null,
+        dueDate: '2023-10-10',
+        status: 'pending',
         type: 'monthly'
       },
-    ]
-  },
-  {
-    id: '12',
-    firstName: 'James',
-    lastName: 'Bond',
-    email: 'jane.doe@example.com',
-    phone: '098-765-4321',
-    dateOfBirth: '2006-08-22',
-    admissionDate: '2023-09-01',
-    class: 'Class 9',
-    section: 'B',
-    monthlyFees: 3500,
-    admissionFees: 5000,
-    feesPaid: 8500,
-    totalFees: 8500,
-    familyId: 'family-1', // Same family as John Doe
-    relationship: 'sister',
-    parentId: '1', // Sister of John Doe
-    feesHistory: [
       { 
-        id: 'challan-2-0',
-        month: 'Admission Fees',
-        amount: 5000,
-        paid: true,
-        date: '2023-09-01',
-        dueDate: '2023-09-01',
-        status: 'paid',
-        type: 'admission'
-      },
-      { 
-        id: 'challan-2-1', 
-        month: 'September 2023', 
+        id: 'challan-2-2', 
+        month: 'October 2023', 
         amount: 3500, 
-        paid: true, 
-        date: '2023-09-20',
-        dueDate: '2023-09-10',
-        status: 'paid',
+        paid: false, 
+        date: null,
+        dueDate: '2023-11-10',
+        status: 'pending',
         type: 'monthly'
       },
     ]
   },
   {
     id: '3',
-    firstName: 'Michael',
+    firstName: 'Robert',
     lastName: 'Johnson',
-    email: 'michael.johnson@example.com',
+    email: 'robert.johnson@example.com',
     phone: '555-123-4567',
     dateOfBirth: '2007-03-10',
-    admissionDate: '2023-09-15',
+    admissionDate: '2023-08-20',
     class: 'Class 8',
     section: 'A',
     monthlyFees: 3000,
-    admissionFees: 4500,
-    feesPaid: 4500,
-    totalFees: 7500,
+    admissionFees: 4000,
+    feesPaid: 7000,
+    totalFees: 7000,
     familyId: 'family-2',
-    relationship: 'brother',
+    relationship: 'self',
     parentId: null,
     feesHistory: [
       { 
         id: 'challan-3-0',
         month: 'Admission Fees',
-        amount: 4500,
+        amount: 4000,
         paid: true,
-        date: '2023-09-15',
-        dueDate: '2023-09-15',
+        date: '2023-08-20',
+        dueDate: '2023-08-20',
         status: 'paid',
         type: 'admission'
       },
       { 
         id: 'challan-3-1', 
+        month: 'August 2023', 
+        amount: 3000, 
+        paid: true, 
+        date: '2023-08-25',
+        dueDate: '2023-09-10',
+        status: 'paid',
+        type: 'monthly'
+      },
+      { 
+        id: 'challan-3-2', 
         month: 'September 2023', 
+        amount: 3000, 
+        paid: true, 
+        date: '2023-09-12',
+        dueDate: '2023-10-10',
+        status: 'paid',
+        type: 'monthly'
+      },
+      { 
+        id: 'challan-3-3', 
+        month: 'October 2023', 
         amount: 3000, 
         paid: false, 
         date: null,
-        dueDate: '2023-10-10',
+        dueDate: '2023-11-10',
         status: 'pending',
         type: 'monthly'
       },
@@ -179,7 +173,7 @@ const mockStudents = [
     email: 'emily.williams@example.com',
     phone: '444-987-6543',
     dateOfBirth: '2005-12-05',
-    admissionDate: '2023-09-20',
+    admissionDate: '2023-09-10',
     class: 'Class 10',
     section: 'B',
     monthlyFees: 4000,
@@ -187,7 +181,7 @@ const mockStudents = [
     feesPaid: 5000,
     totalFees: 9000,
     familyId: 'family-3',
-    relationship: 'cousin',
+    relationship: 'self',
     parentId: null,
     feesHistory: [
       { 
@@ -195,8 +189,8 @@ const mockStudents = [
         month: 'Admission Fees',
         amount: 5000,
         paid: true,
-        date: '2023-09-20',
-        dueDate: '2023-09-20',
+        date: '2023-09-10',
+        dueDate: '2023-09-10',
         status: 'paid',
         type: 'admission'
       },
@@ -224,34 +218,54 @@ const mockStudents = [
   },
   {
     id: '5',
-    firstName: 'David',
+    firstName: 'Michael',
     lastName: 'Brown',
-    email: 'david.brown@example.com',
-    phone: '333-456-7890',
+    email: 'michael.brown@example.com',
+    phone: '333-555-7777',
     dateOfBirth: '2006-07-18',
-    admissionDate: '2023-10-01',
+    admissionDate: '2023-08-15',
     class: 'Class 9',
     section: 'A',
     monthlyFees: 3500,
-    admissionFees: 5000,
-    feesPaid: 0,
-    totalFees: 8500,
+    admissionFees: 4500,
+    feesPaid: 8000,
+    totalFees: 8000,
     familyId: 'family-4',
-    relationship: 'brother',
+    relationship: 'self',
     parentId: null,
     feesHistory: [
       { 
         id: 'challan-5-0',
         month: 'Admission Fees',
-        amount: 5000,
-        paid: false,
-        date: null,
-        dueDate: '2023-10-01',
-        status: 'pending',
+        amount: 4500,
+        paid: true,
+        date: '2023-08-15',
+        dueDate: '2023-08-15',
+        status: 'paid',
         type: 'admission'
       },
       { 
         id: 'challan-5-1', 
+        month: 'August 2023', 
+        amount: 3500, 
+        paid: true, 
+        date: '2023-08-20',
+        dueDate: '2023-09-10',
+        status: 'paid',
+        type: 'monthly'
+      },
+      { 
+        id: 'challan-5-2', 
+        month: 'September 2023', 
+        amount: 3500, 
+        paid: true, 
+        date: '2023-09-18',
+        dueDate: '2023-10-10',
+        status: 'paid',
+        type: 'monthly'
+      },
+      { 
+        id: 'challan-5-3', 
         month: 'October 2023', 
         amount: 3500, 
         paid: false, 
@@ -302,95 +316,314 @@ const mockStudents = [
       },
     ]
   },
+  {
+    id: '7',
+    firstName: 'David',
+    lastName: 'Miller',
+    email: 'david.miller@example.com',
+    phone: '111-222-3333',
+    dateOfBirth: '2005-04-30',
+    admissionDate: '2023-08-01',
+    class: 'Class 10',
+    section: 'A',
+    monthlyFees: 4000,
+    admissionFees: 5000,
+    feesPaid: 9000,
+    totalFees: 9000,
+    familyId: 'family-6',
+    relationship: 'self',
+    parentId: null,
+    feesHistory: [
+      { 
+        id: 'challan-7-0',
+        month: 'Admission Fees',
+        amount: 5000,
+        paid: true,
+        date: '2023-08-01',
+        dueDate: '2023-08-01',
+        status: 'paid',
+        type: 'admission'
+      },
+      { 
+        id: 'challan-7-1', 
+        month: 'August 2023', 
+        amount: 4000, 
+        paid: true, 
+        date: '2023-08-08',
+        dueDate: '2023-09-10',
+        status: 'paid',
+        type: 'monthly'
+      },
+      { 
+        id: 'challan-7-2', 
+        month: 'September 2023', 
+        amount: 4000, 
+        paid: true, 
+        date: '2023-09-12',
+        dueDate: '2023-10-10',
+        status: 'paid',
+        type: 'monthly'
+      },
+      { 
+        id: 'challan-7-3', 
+        month: 'October 2023', 
+        amount: 4000, 
+        paid: false, 
+        date: null,
+        dueDate: '2023-11-10',
+        status: 'pending',
+        type: 'monthly'
+      },
+    ]
+  },
+  {
+    id: '8',
+    firstName: 'Lisa',
+    lastName: 'Wilson',
+    email: 'lisa.wilson@example.com',
+    phone: '666-777-8888',
+    dateOfBirth: '2006-11-12',
+    admissionDate: '2023-09-20',
+    class: 'Class 9',
+    section: 'B',
+    monthlyFees: 3500,
+    admissionFees: 4500,
+    feesPaid: 4500,
+    totalFees: 8000,
+    familyId: 'family-7',
+    relationship: 'self',
+    parentId: null,
+    feesHistory: [
+      { 
+        id: 'challan-8-0',
+        month: 'Admission Fees',
+        amount: 4500,
+        paid: true,
+        date: '2023-09-20',
+        dueDate: '2023-09-20',
+        status: 'paid',
+        type: 'admission'
+      },
+      { 
+        id: 'challan-8-1', 
+        month: 'September 2023', 
+        amount: 3500, 
+        paid: false, 
+        date: null,
+        dueDate: '2023-10-10',
+        status: 'pending',
+        type: 'monthly'
+      },
+      { 
+        id: 'challan-8-2', 
+        month: 'October 2023', 
+        amount: 3500, 
+        paid: false, 
+        date: null,
+        dueDate: '2023-11-10',
+        status: 'pending',
+        type: 'monthly'
+      },
+    ]
+  },
 ];
 
+/**
+ * Initial state for the students slice
+ */
 const initialState = {
   students: mockStudents,
   loading: false,
   error: null,
 };
 
-// Async thunks for mock API calls
-export const fetchStudents = createAsyncThunk('students/fetchStudents', async () => {
-  // Simulate API delay
-  await new Promise(resolve => setTimeout(resolve, 500));
-  return mockStudents;
-});
-
-export const addStudent = createAsyncThunk('students/addStudent', async (studentData) => {
-  // Simulate API delay
-  await new Promise(resolve => setTimeout(resolve, 500));
-  
-  // Create fees history with admission fees
-  const feesHistory = [];
-  
-  // Add admission fees record if admission fees are specified
-  if (studentData.admissionFees && parseFloat(studentData.admissionFees) > 0) {
-    feesHistory.push({
-      id: `challan-${Date.now()}-0`,
-      month: 'Admission Fees',
-      amount: parseFloat(studentData.admissionFees),
-      paid: studentData.feesPaid && parseFloat(studentData.feesPaid) >= parseFloat(studentData.admissionFees),
-      date: studentData.admissionDate || new Date().toISOString().split('T')[0],
-      dueDate: studentData.admissionDate || new Date().toISOString().split('T')[0],
-      status: studentData.feesPaid && parseFloat(studentData.feesPaid) >= parseFloat(studentData.admissionFees) ? 'paid' : 'pending',
-      type: 'admission'
-    });
+/**
+ * Async thunk to fetch students from the server
+ * @returns {Promise<Array>} Promise that resolves to an array of students
+ */
+export const fetchStudents = createAsyncThunkWithToast(
+  'students/fetchStudents',
+  async () => {
+    return mockStudents;
+  },
+  {
+    delay: 500
   }
-  
-  // Generate a family ID if not provided (for new families)
-  const familyId = studentData.familyId || `family-${Date.now()}`;
-  
-  const newStudent = {
-    id: Date.now().toString(),
-    ...studentData,
-    familyId,
-    feesHistory,
-  };
-  
-  return newStudent;
-});
+);
 
-export const updateStudent = createAsyncThunk('students/updateStudent', async (studentData) => {
-  // Simulate API delay
-  await new Promise(resolve => setTimeout(resolve, 500));
-  return studentData;
-});
+/**
+ * Async thunk to add a new student
+ * @param {Object} studentData - The student data to add
+ * @returns {Promise<Object>} Promise that resolves to the new student object
+ */
+export const addStudent = createAddThunk(
+  'students/addStudent',
+  async (studentData) => {
+    // Calculate totalFees if not provided
+    let totalFees = parseFloat(studentData.totalFees) || 0;
+    const monthlyFees = parseFloat(studentData.monthlyFees) || 0;
+    const admissionFees = parseFloat(studentData.admissionFees) || 0;
+    const feesPaid = parseFloat(studentData.feesPaid) || 0;
+    
+    // If totalFees is not provided or is 0, calculate it from monthly and admission fees
+    if (totalFees <= 0) {
+      totalFees = monthlyFees + admissionFees;
+    }
+    
+    // Create fees history with admission fees
+    const feesHistory = [];
+    
+    // Add admission fees record if admission fees are specified
+    if (admissionFees > 0) {
+      feesHistory.push({
+        id: `challan-${Date.now()}-0`,
+        month: 'Admission Fees',
+        amount: admissionFees,
+        paid: feesPaid >= admissionFees,
+        date: studentData.dateOfAdmission || new Date().toISOString().split('T')[0],
+        dueDate: studentData.dateOfAdmission || new Date().toISOString().split('T')[0],
+        status: feesPaid >= admissionFees ? 'paid' : 'pending',
+        type: 'admission'
+      });
+    }
+    
+    // Generate a family ID if not provided (for new families)
+    const familyId = studentData.familyId || `family-${Date.now()}`;
+    
+    const newStudent = {
+      id: Date.now().toString(),
+      ...studentData,
+      monthlyFees,
+      admissionFees,
+      feesPaid,
+      totalFees,
+      familyId,
+      feesHistory,
+    };
+    
+    console.log('New student object:', newStudent);
+    return newStudent;
+  },
+  {
+    successMessage: 'Student added successfully',
+    errorMessage: 'Failed to add student',
+    delay: 500
+  }
+);
 
-export const deleteStudent = createAsyncThunk('students/deleteStudent', async (studentId) => {
-  // Simulate API delay
-  await new Promise(resolve => setTimeout(resolve, 500));
-  return studentId;
-});
+/**
+ * Async thunk to update an existing student
+ * @param {Object} studentData - The updated student data
+ * @returns {Promise<Object>} Promise that resolves to the updated student object
+ */
+export const updateStudent = createUpdateThunk(
+  'students/updateStudent',
+  async (studentData) => {
+    return studentData;
+  },
+  {
+    successMessage: 'Student updated successfully',
+    errorMessage: 'Failed to update student',
+    delay: 500
+  }
+);
 
-// New thunk for paying fees
-export const payFees = createAsyncThunk('students/payFees', async ({ studentId, amount, month, paymentMethod, paymentDate }) => {
-  // Simulate API delay
-  await new Promise(resolve => setTimeout(resolve, 500));
-  return { studentId, amount, month, paymentMethod, paymentDate };
-});
+/**
+ * Async thunk to delete a student
+ * @param {string} studentId - The ID of the student to delete
+ * @returns {Promise<string>} Promise that resolves to the deleted student ID
+ */
+export const deleteStudent = createDeleteThunk(
+  'students/deleteStudent',
+  async (studentId) => {
+    return studentId;
+  },
+  {
+    successMessage: 'Student deleted successfully',
+    errorMessage: 'Failed to delete student',
+    delay: 500
+  }
+);
 
-// New thunk for generating challans
-export const generateChallan = createAsyncThunk('students/generateChallan', async (challanData) => {
-  // Simulate API delay
-  await new Promise(resolve => setTimeout(resolve, 500));
-  return challanData;
-});
+/**
+ * Async thunk to pay student fees
+ * @param {Object} paymentData - The payment data
+ * @param {string} paymentData.studentId - The student ID
+ * @param {number} paymentData.amount - The amount paid
+ * @param {string} paymentData.month - The month for which fees are paid
+ * @param {string} paymentData.paymentMethod - The payment method
+ * @param {string} paymentData.paymentDate - The payment date
+ * @returns {Promise<Object>} Promise that resolves to the payment data
+ */
+export const payFees = createAsyncThunkWithToast(
+  'students/payFees',
+  async ({ studentId, amount, month, paymentMethod, paymentDate }) => {
+    return { studentId, amount, month, paymentMethod, paymentDate };
+  },
+  {
+    successMessage: 'Fees paid successfully',
+    errorMessage: 'Failed to pay fees',
+    delay: 500
+  }
+);
 
-// New thunk for bulk generating challans
-export const bulkGenerateChallans = createAsyncThunk('students/bulkGenerateChallans', async ({ studentIds, challanTemplate }) => {
-  // Simulate API delay
-  await new Promise(resolve => setTimeout(resolve, 1000));
-  return { studentIds, challanTemplate };
-});
+/**
+ * Async thunk to generate a challan for a student
+ * @param {Object} challanData - The challan data
+ * @returns {Promise<Object>} Promise that resolves to the challan data
+ */
+export const generateChallan = createAsyncThunkWithToast(
+  'students/generateChallan',
+  async (challanData) => {
+    return challanData;
+  },
+  {
+    successMessage: 'Challan generated successfully',
+    errorMessage: 'Failed to generate challan',
+    delay: 500
+  }
+);
 
-// New thunk for bulk updating challan statuses
-export const bulkUpdateChallanStatuses = createAsyncThunk('students/bulkUpdateChallanStatuses', async ({ challanUpdates }) => {
-  // Simulate API delay
-  await new Promise(resolve => setTimeout(resolve, 1000));
-  return { challanUpdates };
-});
+/**
+ * Async thunk to bulk generate challans for multiple students
+ * @param {Object} bulkData - The bulk challan data
+ * @param {Array<string>} bulkData.studentIds - Array of student IDs
+ * @param {Object} bulkData.challanTemplate - The challan template
+ * @returns {Promise<Object>} Promise that resolves to the bulk challan data
+ */
+export const bulkGenerateChallans = createAsyncThunkWithToast(
+  'students/bulkGenerateChallans',
+  async ({ studentIds, challanTemplate }) => {
+    return { studentIds, challanTemplate };
+  },
+  {
+    successMessage: 'Challans generated successfully',
+    errorMessage: 'Failed to generate challans',
+    delay: 1000
+  }
+);
 
+/**
+ * Async thunk to bulk update challan statuses
+ * @param {Object} updateData - The update data
+ * @param {Array<Object>} updateData.challanUpdates - Array of challan updates
+ * @returns {Promise<Object>} Promise that resolves to the update data
+ */
+export const bulkUpdateChallanStatuses = createAsyncThunkWithToast(
+  'students/bulkUpdateChallanStatuses',
+  async ({ challanUpdates }) => {
+    return { challanUpdates };
+  },
+  {
+    successMessage: 'Challan statuses updated successfully',
+    errorMessage: 'Failed to update challan statuses',
+    delay: 1000
+  }
+);
+
+/**
+ * Redux slice for managing students state
+ */
 const studentsSlice = createSlice({
   name: 'students',
   initialState,
@@ -410,7 +643,9 @@ const studentsSlice = createSlice({
         state.error = action.error.message;
       })
       .addCase(addStudent.fulfilled, (state, action) => {
+        console.log('Adding student to state:', action.payload);
         state.students.push(action.payload);
+        console.log('Students array after adding:', state.students);
       })
       .addCase(updateStudent.fulfilled, (state, action) => {
         const index = state.students.findIndex(student => student.id === action.payload.id);

@@ -1,10 +1,16 @@
 import React, { useState, useEffect } from 'react';
-
 import { useDispatch, useSelector } from 'react-redux';
-import { fetchStudents, generateChallan, bulkGenerateChallans, bulkUpdateChallanStatuses, payFees } from '../store/studentsSlice';
-import { FaSearch, FaPlus, FaDollarSign, FaCalendar, FaUser, FaReceipt, FaCheck, FaTimes, FaFilter, FaPrint, FaDownload, FaEye, FaUsers, FaUserFriends } from 'react-icons/fa';
-import ChallanPrintView from './ChallanPrintView';
-import { printChallanAsPDF } from '../utils/challanPrinter';
+import { fetchStudents, generateChallan, bulkGenerateChallans, bulkUpdateChallanStatuses, payFees } from '../../store/studentsSlice';
+import { FaEye, FaReceipt, FaCheck, FaDollarSign, FaPrint, FaUser, FaUsers } from 'react-icons/fa';
+import FeesHeader from './FeesHeader';
+import FeesStats from './FeesStats';
+import ViewTabs from './ViewTabs';
+import FeesFilters from './FeesFilters';
+import StudentFeesView from './StudentFeesView';
+import FamilyFeesView from './FamilyFeesView';
+import ChallanModals from './ChallanModals';
+import ChallanPrintView from '../ChallanPrintView';
+import { printChallanAsPDF } from '../../utils/challanPrinter';
 
 const FeesSection = () => {
   const dispatch = useDispatch();
@@ -44,6 +50,8 @@ const FeesSection = () => {
   const [selectedSection, setSelectedSection] = useState('');
   // Add state for view mode (student or family)
   const [viewMode, setViewMode] = useState('student'); // 'student' or 'family'
+  // Add state for family management view
+  const [showFamilyManagement, setShowFamilyManagement] = useState(false);
 
   useEffect(() => {
     dispatch(fetchStudents());
@@ -89,57 +97,11 @@ const FeesSection = () => {
     }
   }, [students, detailViewStudent, showStudentDetails]);
 
-  // Bulk operation functions
-  const handleBulkGenerate = () => {
-    setShowBulkGenerateModal(true);
-  };
-
-  const handleBulkUpdate = () => {
-    setShowBulkUpdateModal(true);
-  };
-
-  // Challan selection functions
-  const isChallanSelected = (challanId) => {
-    return bulkSelectedChallans.includes(challanId);
-  };
-
-  const handleSelectChallan = (challanId) => {
-    // Prevent selecting paid challans
-    if (detailViewStudent && detailViewStudent.feesHistory) {
-      const challan = detailViewStudent.feesHistory.find(c => c.id === challanId);
-      if (challan && challan.status === 'paid') {
-        return; // Don't allow selecting paid challans
-      }
-    }
-    
-    if (isChallanSelected(challanId)) {
-      setBulkSelectedChallans(bulkSelectedChallans.filter(id => id !== challanId));
-    } else {
-      setBulkSelectedChallans([...bulkSelectedChallans, challanId]);
-    }
-  };
-
-  const areAllChallansSelected = detailViewStudent && 
-    detailViewStudent.feesHistory && 
-    detailViewStudent.feesHistory.length > 0 &&
-    detailViewStudent.feesHistory
-      .filter(challan => challan.status !== 'paid')
-      .every(challan => isChallanSelected(challan.id));
-
-  const handleSelectAllChallans = () => {
-    if (areAllChallansSelected) {
-      // Deselect all
-      setBulkSelectedChallans([]);
-    } else {
-      // Select only pending challans
-      if (detailViewStudent && detailViewStudent.feesHistory) {
-        const pendingChallanIds = detailViewStudent.feesHistory
-          .filter(challan => challan.status !== 'paid')
-          .map(challan => challan.id);
-        setBulkSelectedChallans(pendingChallanIds);
-      }
-    }
-  };
+  // Get unique classes and sections for filters
+  const uniqueClasses = [...new Set(students.map(student => student.class))];
+  const classSections = selectedClass 
+    ? [...new Set(students.filter(student => student.class === selectedClass).map(student => student.section))]
+    : [];
 
   // Generate fee statistics for all students
   const generateStudentFeeStats = () => {
@@ -176,12 +138,6 @@ const FeesSection = () => {
   };
 
   const studentStats = generateStudentFeeStats();
-
-  // Get unique classes and sections for filters
-  const uniqueClasses = [...new Set(students.map(student => student.class))];
-  const classSections = selectedClass 
-    ? [...new Set(students.filter(student => student.class === selectedClass).map(student => student.section))]
-    : [];
 
   const filteredStudents = studentStats.filter(student => {
     const matchesSearch = 
@@ -259,36 +215,56 @@ const FeesSection = () => {
   // Calculate family groups only when needed to avoid "Cannot access 'filteredStudents' before initialization"
   const familyGroups = viewMode === 'family' ? getFamilyChallans() : [];
 
-  // Function to handle family details view
-  const handleViewFamilyDetails = (family) => {
-    // Create a mock student object that contains all family challans
-    const familyChallans = family.students.flatMap(student => 
-      student.feesHistory ? student.feesHistory.map(challan => ({
-        ...challan,
-        studentName: `${student.firstName} ${student.lastName}`,
-        studentClass: student.class,
-        studentSection: student.section,
-        studentId: student.id
-      })) : []
-    );
+  // Bulk operation functions
+  const handleBulkGenerate = () => {
+    setShowBulkGenerateModal(true);
+  };
+
+  const handleBulkUpdate = () => {
+    setShowBulkUpdateModal(true);
+  };
+
+  // Challan selection functions
+  const isChallanSelected = (challanId) => {
+    return bulkSelectedChallans.includes(challanId);
+  };
+
+  const handleSelectChallan = (challanId) => {
+    // Prevent selecting paid challans
+    if (detailViewStudent && detailViewStudent.feesHistory) {
+      const challan = detailViewStudent.feesHistory.find(c => c.id === challanId);
+      if (challan && challan.status === 'paid') {
+        return; // Don't allow selecting paid challans
+      }
+    }
     
-    setDetailViewStudent({
-      ...family,
-      id: family.familyId,
-      firstName: family.familyName,
-      lastName: '',
-      class: 'Family',
-      section: '',
-      feesHistory: familyChallans,
-      totalChallans: family.totalChallans,
-      paidChallans: family.paidChallans,
-      pendingChallans: family.pendingChallans,
-      totalAmount: family.totalAmount,
-      paidAmount: family.paidAmount,
-      pendingAmount: family.pendingAmount,
-      completionRate: family.completionRate
-    });
-    setShowStudentDetails(true);
+    if (isChallanSelected(challanId)) {
+      setBulkSelectedChallans(bulkSelectedChallans.filter(id => id !== challanId));
+    } else {
+      setBulkSelectedChallans([...bulkSelectedChallans, challanId]);
+    }
+  };
+
+  const areAllChallansSelected = detailViewStudent && 
+    detailViewStudent.feesHistory && 
+    detailViewStudent.feesHistory.length > 0 &&
+    detailViewStudent.feesHistory
+      .filter(challan => challan.status !== 'paid')
+      .every(challan => isChallanSelected(challan.id));
+
+  const handleSelectAllChallans = () => {
+    if (areAllChallansSelected) {
+      // Deselect all
+      setBulkSelectedChallans([]);
+    } else {
+      // Select only pending challans
+      if (detailViewStudent && detailViewStudent.feesHistory) {
+        const pendingChallanIds = detailViewStudent.feesHistory
+          .filter(challan => challan.status !== 'paid')
+          .map(challan => challan.id);
+        setBulkSelectedChallans(pendingChallanIds);
+      }
+    }
   };
 
   // Submit bulk generate function
@@ -743,6 +719,24 @@ const FeesSection = () => {
     </div>
   </div>;
 
+  // If family management view is active, show the FamilyManagement component
+  if (showFamilyManagement) {
+    return (
+      <div className="p-6">
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-2xl font-bold text-gray-900">Family Management</h1>
+          <button
+            onClick={() => setShowFamilyManagement(false)}
+            className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          >
+            Back to Fees
+          </button>
+        </div>
+        <FamilyManagement />
+      </div>
+    );
+  }
+
   return (
     <>
       {/* Challan Print View */}
@@ -781,500 +775,71 @@ const FeesSection = () => {
         </div>
       )}
 
-      {/* Payment Modal */}
-      {showPaymentModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md">
-            <h3 className="text-xl font-semibold text-gray-900 mb-4">Process Payment</h3>
-            <form onSubmit={submitPayment} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Payment Method</label>
-                <select
-                  value={paymentData.paymentMethod}
-                  onChange={(e) => setPaymentData({...paymentData, paymentMethod: e.target.value})}
-                  className="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
-                  required
-                >
-                  <option value="cash">Cash</option>
-                  <option value="bank">Bank Transfer</option>
-                  <option value="easypaisa">EasyPaisa</option>
-                  <option value="jazzcash">JazzCash</option>
-                </select>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Payment Date</label>
-                <input
-                  type="date"
-                  value={paymentData.paymentDate}
-                  onChange={(e) => setPaymentData({...paymentData, paymentDate: e.target.value})}
-                  className="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
-                  required
-                />
-              </div>
-              
-              <div className="flex justify-end space-x-3 pt-4">
-                <button
-                  type="button"
-                  onClick={() => setShowPaymentModal(false)}
-                  className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="inline-flex items-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700"
-                >
-                  <FaDollarSign className="mr-2" /> Process Payment
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Generate Challan Modal */}
-      {showGenerateModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md">
-            <h3 className="text-xl font-semibold text-gray-900 mb-4">Generate New Challan</h3>
-            <form onSubmit={submitChallan} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Student</label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <FaUser className="h-5 w-5 text-gray-400" />
-                  </div>
-                  <select
-                    value={challanData.studentId}
-                    onChange={handleStudentChange}
-                    className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
-                    required
-                  >
-                    <option value="">Select Student</option>
-                    {students.map(student => (
-                      <option key={student.id} value={student.id}>
-                        {student.firstName} {student.lastName} - {student.class} {student.section}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Month</label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <FaCalendar className="h-5 w-5 text-gray-400" />
-                  </div>
-                  <input
-                    type="month"
-                    value={challanData.month}
-                    onChange={(e) => setChallanData({...challanData, month: e.target.value})}
-                    className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
-                    required
-                  />
-                </div>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Amount</label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <FaDollarSign className="h-5 w-5 text-gray-400" />
-                  </div>
-                  <input
-                    type="number"
-                    value={challanData.amount}
-                    onChange={(e) => setChallanData({...challanData, amount: e.target.value})}
-                    className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Enter amount"
-                    required
-                  />
-                </div>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Due Date</label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <FaCalendar className="h-5 w-5 text-gray-400" />
-                  </div>
-                  <input
-                    type="date"
-                    value={challanData.dueDate}
-                    onChange={(e) => setChallanData({...challanData, dueDate: e.target.value})}
-                    className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
-                    required
-                  />
-                </div>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                <textarea
-                  value={challanData.description}
-                  onChange={(e) => setChallanData({...challanData, description: e.target.value})}
-                  className="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Enter description (optional)"
-                  rows="2"
-                />
-              </div>
-              
-              <div className="flex justify-end space-x-3 pt-4">
-                <button
-                  type="button"
-                  onClick={() => setShowGenerateModal(false)}
-                  className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="inline-flex items-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700"
-                >
-                  <FaReceipt className="mr-2" /> Generate Challan
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Bulk Generate Modal */}
-      {showBulkGenerateModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md">
-            <h3 className="text-xl font-semibold text-gray-900 mb-4">Bulk Generate Challans</h3>
-            <form onSubmit={(e) => {
-              e.preventDefault();
-              const formData = new FormData(e.target);
-              const data = {
-                month: formData.get('month'),
-                amount: formData.get('amount'),
-                dueDate: formData.get('dueDate'),
-                description: formData.get('description')
-              };
-              submitBulkGenerate(data);
-            }} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Month</label>
-                <input
-                  type="month"
-                  name="month"
-                  defaultValue={new Date().toISOString().slice(0, 7)}
-                  className="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
-                  required
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Amount</label>
-                <input
-                  type="number"
-                  name="amount"
-                  placeholder="Enter amount"
-                  className="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
-                  required
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Due Date</label>
-                <input
-                  type="date"
-                  name="dueDate"
-                  defaultValue={new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]}
-                  className="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
-                  required
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                <input
-                  type="text"
-                  name="description"
-                  placeholder="Enter description (optional)"
-                  className="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
-                />
-              </div>
-              
-              <div className="flex justify-end space-x-3 pt-4">
-                <button
-                  type="button"
-                  onClick={() => setShowBulkGenerateModal(false)}
-                  className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="inline-flex items-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700"
-                >
-                  <FaReceipt className="mr-2" /> Generate Challans
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Bulk Update Modal */}
-      {showBulkUpdateModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md">
-            <h3 className="text-xl font-semibold text-gray-900 mb-4">Bulk Update Challans</h3>
-            <form onSubmit={(e) => {
-              e.preventDefault();
-              const formData = new FormData(e.target);
-              const data = {
-                paymentMethod: formData.get('paymentMethod'),
-                paymentDate: formData.get('paymentDate')
-              };
-              submitBulkUpdate(data);
-            }} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Payment Method</label>
-                <select
-                  name="paymentMethod"
-                  className="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
-                  required
-                >
-                  <option value="cash">Cash</option>
-                  <option value="bank">Bank Transfer</option>
-                  <option value="easypaisa">EasyPaisa</option>
-                  <option value="jazzcash">JazzCash</option>
-                </select>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Payment Date</label>
-                <input
-                  type="date"
-                  name="paymentDate"
-                  defaultValue={new Date().toISOString().split('T')[0]}
-                  className="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
-                  required
-                />
-              </div>
-              
-              <div className="flex justify-end space-x-3 pt-4">
-                <button
-                  type="button"
-                  onClick={() => setShowBulkUpdateModal(false)}
-                  className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="inline-flex items-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700"
-                >
-                  <FaCheck className="mr-2" /> Update {bulkSelectedChallans.length} Challans
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {/* Modals */}
+      <ChallanModals
+        showGenerateModal={showGenerateModal}
+        setShowGenerateModal={setShowGenerateModal}
+        challanData={challanData}
+        setChallanData={setChallanData}
+        students={students}
+        handleStudentChange={handleStudentChange}
+        submitChallan={submitChallan}
+        showBulkGenerateModal={showBulkGenerateModal}
+        setShowBulkGenerateModal={setShowBulkGenerateModal}
+        submitBulkGenerate={submitBulkGenerate}
+        showBulkUpdateModal={showBulkUpdateModal}
+        setShowBulkUpdateModal={setShowBulkUpdateModal}
+        submitBulkUpdate={submitBulkUpdate}
+        bulkSelectedChallans={bulkSelectedChallans}
+        showPaymentModal={showPaymentModal}
+        setShowPaymentModal={setShowPaymentModal}
+        paymentData={paymentData}
+        setPaymentData={setPaymentData}
+        submitPayment={submitPayment}
+        detailViewStudent={detailViewStudent}
+      />
 
       <div className="">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Fees Management</h1>
-            <p className="mt-1 text-sm text-gray-600">Manage student fees, challans, and payments</p>
-          </div>
-          <div className="mt-4 md:mt-0 flex space-x-2">
-            <button
-              onClick={handleGenerateChallan}
-              className="inline-flex items-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700"
-            >
-              <FaPlus className="mr-2" /> Generate Challan
-            </button>
-            <button
-              onClick={exportStudentsToCSV}
-              className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-            >
-              <FaDownload className="mr-2" /> Export CSV
-            </button>
-          </div>
-        </div>
-
-        {/* Summary Statistics */}
-        <div className="my-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl shadow p-4 text-white">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-blue-100 text-xs font-medium">Total Students</p>
-                  <p className="text-2xl font-bold mt-1">{filteredStudents.length}</p>
-                </div>
-                <div className="p-2 bg-blue-400 bg-opacity-30 rounded-full">
-                  <FaUser size={20} />
-                </div>
-              </div>
-            </div>
-            
-            <div className="bg-gradient-to-r from-green-500 to-green-600 rounded-xl shadow p-4 text-white">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-green-100 text-xs font-medium">Fully Paid</p>
-                  <p className="text-2xl font-bold mt-1">{filteredStudents.filter(s => s.completionRate === 100).length}</p>
-                </div>
-                <div className="p-2 bg-green-400 bg-opacity-30 rounded-full">
-                  <FaCheck size={20} />
-                </div>
-              </div>
-            </div>
-            
-            <div className="bg-gradient-to-r from-red-500 to-red-600 rounded-xl shadow p-4 text-white">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-red-100 text-xs font-medium">Pending</p>
-                  <p className="text-2xl font-bold mt-1">{filteredStudents.filter(s => s.completionRate < 100).length}</p>
-                </div>
-                <div className="p-2 bg-red-400 bg-opacity-30 rounded-full">
-                  <FaTimes size={20} />
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Tab Navigation */}
-        <div className="mb-6">
-          <div className="border-b border-gray-200">
-            <nav className="-mb-px flex space-x-8">
-              <button
-                onClick={() => setViewMode('student')}
-                className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                  viewMode === 'student'
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                <FaUser className="inline mr-2" />
-                Student View
-              </button>
-              <button
-                onClick={() => setViewMode('family')}
-                className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                  viewMode === 'family'
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                <FaUsers className="inline mr-2" />
-                Family View
-              </button>
-            </nav>
-          </div>
-        </div>
-
+        <FeesHeader 
+          onGenerateChallan={handleGenerateChallan}
+          onExportCSV={exportStudentsToCSV}
+        />
+        
+        <FeesStats filteredStudents={filteredStudents} />
+        
+        <ViewTabs 
+          viewMode={viewMode}
+          setViewMode={setViewMode}
+          setShowFamilyManagement={setShowFamilyManagement}
+        />
+        
         {/* Student Fees Summary Table */}
         {!showStudentDetails ? (
           <div className="bg-white rounded-2xl shadow-lg p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">
               {viewMode === 'student' ? 'Student Fees Summary' : 'Family Fees Summary'}
             </h3>
-            <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                <div className="relative flex-grow max-w-md">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <FaSearch className="h-5 w-5 text-gray-400" />
-                  </div>
-                  <input
-                    type="text"
-                    placeholder={viewMode === 'student' 
-                      ? "Search by student name, class, or section..." 
-                      : "Search by family name..."}
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
-                  />
-                </div>
-                
-                <div className="flex flex-wrap gap-2">
-                  {/* Status Filter */}
-                  <div className="flex items-center space-x-2">
-                    <FaFilter className="text-gray-400" />
-                    <select
-                      value={filterStatus}
-                      onChange={(e) => setFilterStatus(e.target.value)}
-                      className="block w-full pl-3 pr-10 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
-                    >
-                      <option value="all">All Status</option>
-                      <option value="paid">Fully Paid</option>
-                      <option value="pending">Pending</option>
-                    </select>
-                  </div>
-                  
-                  {/* Class Filter - only show in student view */}
-                  {viewMode === 'student' && (
-                    <div className="flex items-center space-x-2">
-                      <FaFilter className="text-gray-400" />
-                      <select
-                        value={selectedClass}
-                        onChange={(e) => {
-                          setSelectedClass(e.target.value);
-                          setSelectedSection(''); // Reset section when class changes
-                        }}
-                        className="block w-full pl-3 pr-10 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
-                      >
-                        <option value="">All Classes</option>
-                        {uniqueClasses.map((cls) => (
-                          <option key={cls} value={cls}>{cls}</option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
-                  
-                  {/* Section Filter - only show in student view */}
-                  {viewMode === 'student' && (
-                    <div className="flex items-center space-x-2">
-                      <FaFilter className="text-gray-400" />
-                      <select
-                        value={selectedSection}
-                        onChange={(e) => setSelectedSection(e.target.value)}
-                        disabled={!selectedClass}
-                        className="block w-full pl-3 pr-10 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
-                      >
-                        <option value="">All Sections</option>
-                        {classSections.map((section) => (
-                          <option key={section} value={section}>{section}</option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
-                  
-                  {/* Bulk Generate Button */}
-                  <div className="flex items-center space-x-2">
-                    <button
-                      onClick={handleBulkGenerate}
-                      className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-                    >
-                      <FaReceipt className="mr-1" /> Bulk Generate
-                    </button>
-                  </div>
-                  
-                  {/* Clear Filters Button */}
-                  <div className="flex items-center space-x-2">
-                    <button
-                      onClick={() => {
-                        setSearchTerm('');
-                        setFilterStatus('all');
-                        setSelectedClass('');
-                        setSelectedSection('');
-                      }}
-                      className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-                    >
-                      Clear Filters
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
+            
+            <FeesFilters
+              viewMode={viewMode}
+              searchTerm={searchTerm}
+              setSearchTerm={setSearchTerm}
+              filterStatus={filterStatus}
+              setFilterStatus={setFilterStatus}
+              selectedClass={selectedClass}
+              setSelectedClass={setSelectedClass}
+              selectedSection={selectedSection}
+              setSelectedSection={setSelectedSection}
+              uniqueClasses={uniqueClasses}
+              classSections={classSections}
+              onBulkGenerate={handleBulkGenerate}
+              onClearFilters={() => {
+                setSearchTerm('');
+                setFilterStatus('all');
+                setSelectedClass('');
+                setSelectedSection('');
+              }}
+            />
             
             <div className="overflow-hidden rounded-lg border border-gray-200">
               <table className="min-w-full divide-y divide-gray-200">
@@ -1301,160 +866,19 @@ const FeesSection = () => {
                     )}
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {viewMode === 'student' ? (
-                    filteredStudents.map((student) => (
-                      <tr key={student.id} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center">
-                            <div className="bg-gray-200 border-2 border-dashed rounded-xl w-10 h-10" />
-                            <div className="ml-4">
-                              <div className="text-sm font-medium text-gray-900">
-                                {student.firstName} {student.lastName}
-                              </div>
-                              <div className="text-sm text-gray-500">ID: {student.id}</div>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-900">{student.class}</div>
-                          <div className="text-sm text-gray-500">Section {student.section}</div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-900">{student.paidChallans}/{student.totalChallans}</div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-900">Rs {Math.round(student.paidAmount)}/{Math.round(student.totalAmount)}</div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center">
-                            <div className="w-24 bg-gray-200 rounded-full h-2 mr-2">
-                              <div 
-                                className="bg-blue-600 h-2 rounded-full" 
-                                style={{ width: `${student.completionRate}%` }}
-                              ></div>
-                            </div>
-                            <span className="text-sm font-medium text-gray-700">{student.completionRate}%</span>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                          <button
-                            onClick={() => handleViewDetails(student)}
-                            className="inline-flex items-center px-3 py-1 border border-gray-300 text-xs font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50"
-                          >
-                            <FaEye className="mr-1" /> View Details
-                          </button>
-                        </td>
-                      </tr>
-                    ))
-                  ) : (
-                    familyGroups.map((family) => (
-                      <React.Fragment key={family.familyId}>
-                        {/* Family Header Row */}
-                        <tr className="bg-gray-50">
-                          <td className="px-6 py-3" colSpan="6">
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center">
-                                <FaUserFriends className="text-gray-500 mr-2" />
-                                <div>
-                                  <div className="text-sm font-bold text-gray-900">
-                                    {family.familyName}
-                                  </div>
-                                  <div className="text-xs text-gray-500">Family ID: {family.familyId}</div>
-                                </div>
-                              </div>
-                              <div className="flex items-center space-x-4">
-                                <div className="text-sm">
-                                  <span className="text-gray-500">Students: </span>
-                                  <span className="font-medium">{family.students.length}</span>
-                                </div>
-                                <div className="text-sm">
-                                  <span className="text-gray-500">Challans: </span>
-                                  <span className="font-medium">{family.paidChallans}/{family.totalChallans}</span>
-                                </div>
-                                <div className="text-sm">
-                                  <span className="text-gray-500">Amount: </span>
-                                  <span className="font-medium">Rs {Math.round(family.paidAmount)}/{Math.round(family.totalAmount)}</span>
-                                </div>
-                                <div className="flex items-center">
-                                  <div className="w-20 bg-gray-200 rounded-full h-2 mr-2">
-                                    <div 
-                                      className="bg-blue-600 h-2 rounded-full" 
-                                      style={{ width: `${family.completionRate}%` }}
-                                    ></div>
-                                  </div>
-                                  <span className="text-xs font-medium text-gray-700">{family.completionRate}%</span>
-                                </div>
-                              </div>
-                            </div>
-                          </td>
-                        </tr>
-                        {/* Individual Challan Rows */}
-                        {family.challans.map((challan) => (
-                          <tr key={`${family.familyId}-${challan.id}`} className="hover:bg-gray-50">
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="text-sm font-medium text-gray-900">
-                                {challan.studentName}
-                              </div>
-                              <div className="text-sm text-gray-500">
-                                ID: {challan.studentId}
-                              </div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="text-sm text-gray-900">{challan.studentClass}</div>
-                              <div className="text-sm text-gray-500">Section {challan.studentSection}</div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="text-sm text-gray-900">{challan.month}</div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="text-sm text-gray-900">Rs {Math.round(challan.amount)}</div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                                challan.status === 'paid' 
-                                  ? 'bg-green-100 text-green-800' 
-                                  : 'bg-yellow-100 text-yellow-800'
-                              }`}>
-                                {challan.status}
-                              </span>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                              <div className="flex justify-end space-x-2">
-                                {challan.status !== 'paid' ? (
-                                  <button
-                                    onClick={() => {
-                                      // Find the student for this challan
-                                      const student = students.find(s => s.id === challan.studentId);
-                                      if (student) {
-                                        handlePayFees(challan.id);
-                                      }
-                                    }}
-                                    className="inline-flex items-center px-2 py-1 border border-transparent text-xs font-medium rounded-lg text-white bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700"
-                                  >
-                                    <FaDollarSign className="mr-1" /> Pay
-                                  </button>
-                                ) : null}
-                                <button
-                                  onClick={() => {
-                                    // Find the student for this challan
-                                    const student = students.find(s => s.id === challan.studentId);
-                                    if (student) {
-                                      handlePrintChallan(challan, student);
-                                    }
-                                  }}
-                                  className="inline-flex items-center px-2 py-1 border border-gray-300 text-xs font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50"
-                                >
-                                  <FaPrint className="mr-1" /> Print
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        ))}
-                      </React.Fragment>
-                    ))
-                  )}
-                </tbody>
+                {viewMode === 'student' ? (
+                  <StudentFeesView 
+                    filteredStudents={filteredStudents}
+                    onViewDetails={handleViewDetails}
+                  />
+                ) : (
+                  <FamilyFeesView 
+                    familyGroups={familyGroups}
+                    students={students}
+                    onPayFees={handlePayFees}
+                    onPrintChallan={handlePrintChallan}
+                  />
+                )}
               </table>
               {(viewMode === 'student' ? filteredStudents.length === 0 : familyGroups.every(f => f.challans.length === 0)) && (
                 <div className="text-center py-12">

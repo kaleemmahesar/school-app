@@ -1,18 +1,30 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { FaUserCheck, FaUserTimes, FaSearch, FaFilter, FaEdit } from 'react-icons/fa';
 
-const StudentAvailabilityLists = ({ activeTab: propActiveTab }) => {
+const StudentAvailabilityLists = ({ activeTab: propActiveTab, 
+                                  onFilterChange,
+                                  parentSearchTerm,
+                                  parentSelectedClass,
+                                  parentSelectedSection }) => {
   const navigate = useNavigate();
   const { students } = useSelector(state => state.students);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedClass, setSelectedClass] = useState('');
-  const [selectedSection, setSelectedSection] = useState('');
+  
+  const [searchTerm, setSearchTerm] = useState(parentSearchTerm || '');
+  const [selectedClass, setSelectedClass] = useState(parentSelectedClass || '');
+  const [selectedSection, setSelectedSection] = useState(parentSelectedSection || '');
   const [localActiveTab, setLocalActiveTab] = useState('available'); // 'available', 'unavailable', or 'left'
   
   // Use prop activeTab if provided, otherwise use local state
   const activeTab = propActiveTab !== undefined && propActiveTab !== null ? propActiveTab : localActiveTab;
+
+  // Update local state when parent props change
+  useEffect(() => {
+    if (parentSearchTerm !== undefined) setSearchTerm(parentSearchTerm);
+    if (parentSelectedClass !== undefined) setSelectedClass(parentSelectedClass);
+    if (parentSelectedSection !== undefined) setSelectedSection(parentSelectedSection);
+  }, [parentSearchTerm, parentSelectedClass, parentSelectedSection]);
 
   // Get unique classes for dropdown
   const uniqueClasses = [...new Set(students.map(student => student.class))];
@@ -91,6 +103,63 @@ const StudentAvailabilityLists = ({ activeTab: propActiveTab }) => {
   const handleEditStudent = (student) => {
     navigate('/students/admission', { state: { studentData: student } });
   };
+
+  // Notify parent of filter changes
+  const notifyParentOfFilterChange = () => {
+    if (onFilterChange) {
+      // Calculate filtered stats to send to parent
+      const allFilteredStudents = filterStudents(students);
+      
+      const filteredAvailableStudents = allFilteredStudents.filter(student => {
+        const totalFees = parseFloat(student.totalFees) || 0;
+        const feesPaid = parseFloat(student.feesPaid) || 0;
+        return feesPaid >= totalFees;
+      });
+
+      const filteredUnavailableStudents = allFilteredStudents.filter(student => {
+        const totalFees = parseFloat(student.totalFees) || 0;
+        const feesPaid = parseFloat(student.feesPaid) || 0;
+        const isLeft = student.status === 'left' || student.status === 'passed_out' || 
+                      (student.class && student.class.includes('Passed'));
+        return !isLeft && feesPaid < totalFees;
+      });
+
+      const filteredLeftStudents = allFilteredStudents.filter(student => {
+        const isLeft = student.status === 'left' || student.status === 'passed_out' || 
+                      (student.class && student.class.includes('Passed')) || 
+                      (student.graduationDate && new Date(student.graduationDate) < new Date());
+        return isLeft;
+      });
+
+      // Family groups based on filtered students
+      const familyGroups = {};
+      allFilteredStudents.forEach(student => {
+        const familyId = student.familyId || `unknown-${student.id}`;
+        if (!familyGroups[familyId]) {
+          familyGroups[familyId] = [];
+        }
+        familyGroups[familyId].push(student);
+      });
+      const familyCount = Object.keys(familyGroups).length;
+
+      onFilterChange({
+        stats: {
+          available: filteredAvailableStudents.length,
+          unavailable: filteredUnavailableStudents.length,
+          left: filteredLeftStudents.length,
+          families: familyCount
+        },
+        searchTerm,
+        selectedClass,
+        selectedSection
+      });
+    }
+  };
+
+  // Call notifyParentOfFilterChange when filters change
+  useEffect(() => {
+    notifyParentOfFilterChange();
+  }, [searchTerm, selectedClass, selectedSection]);
 
   return (
     <>
@@ -173,10 +242,7 @@ const StudentAvailabilityLists = ({ activeTab: propActiveTab }) => {
                 <FaFilter className="text-gray-400 h-4 w-4" />
                 <select
                   value={selectedClass}
-                  onChange={(e) => {
-                    setSelectedClass(e.target.value);
-                    setSelectedSection(''); // Reset section when class changes
-                  }}
+                  onChange={(e) => setSelectedClass(e.target.value)}
                   className="block w-full pl-3 pr-10 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-sm"
                 >
                   <option value="">All Classes</option>
@@ -296,12 +362,14 @@ const StudentAvailabilityLists = ({ activeTab: propActiveTab }) => {
                     </span>
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
-                    <button
-                      onClick={() => handleEditStudent(student)}
-                      className="text-blue-600 hover:text-blue-900 flex items-center"
-                    >
-                      <FaEdit className="mr-1" /> Edit
-                    </button>
+                    <div className="flex space-x-2">
+                      <button
+                        onClick={() => handleEditStudent(student)}
+                        className="text-blue-600 hover:text-blue-900 flex items-center"
+                      >
+                        <FaEdit className="mr-1" /> Edit
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}

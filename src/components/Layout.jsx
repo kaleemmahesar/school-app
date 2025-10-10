@@ -1,15 +1,27 @@
-import React, { useState } from 'react';
-import { useSelector } from 'react-redux';
-import { Link, useLocation } from 'react-router-dom';
-import { FaUsers, FaMoneyBillWave, FaChalkboardTeacher, FaBook, FaGraduationCap, FaChartLine, FaDollarSign, FaClipboardList, FaChevronDown, FaQrcode, FaUsersCog, FaFileInvoice, FaTasks, FaListOl, FaFileAlt, FaEdit, FaGraduationCap as FaGraduationCapIcon, FaCalendarAlt } from 'react-icons/fa';
+import React, { useState, useEffect } from 'react';
+import { useSelector, useDispatch } from 'react-redux';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { FaUsers, FaMoneyBillWave, FaChalkboardTeacher, FaBook, FaGraduationCap, FaChartLine, FaDollarSign, FaClipboardList, FaChevronDown, FaQrcode, FaUsersCog, FaFileInvoice, FaTasks, FaListOl, FaFileAlt, FaEdit, FaGraduationCap as FaGraduationCapIcon, FaCalendarAlt, FaCertificate, FaUser, FaSignOutAlt, FaCog } from 'react-icons/fa';
+import { logoutUser } from '../store/usersSlice';
 
 const Layout = ({ children }) => {
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
   const location = useLocation();
   const students = useSelector(state => state.students.students);
   const expenses = useSelector(state => state.expenses.expenses);
   const staff = useSelector(state => state.staff.staff);
   const classes = useSelector(state => state.classes.classes);
+  const currentUser = useSelector(state => state.users.currentUser);
   const [openDropdown, setOpenDropdown] = useState(null);
+  const [showUserMenu, setShowUserMenu] = useState(false);
+
+  // Redirect to login if not authenticated (except for login page)
+  useEffect(() => {
+    if (!currentUser && location.pathname !== '/login') {
+      navigate('/login');
+    }
+  }, [currentUser, location.pathname, navigate]);
 
   const isActive = (path) => {
     return location.pathname === path;
@@ -23,11 +35,21 @@ const Layout = ({ children }) => {
     setOpenDropdown(null);
   };
 
+  const handleLogout = async () => {
+    try {
+      await dispatch(logoutUser());
+      navigate('/login');
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
+  };
+
   // Close dropdowns when clicking outside
-  React.useEffect(() => {
+  useEffect(() => {
     const handleClickOutside = (e) => {
-      if (!e.target.closest('.dropdown-container')) {
+      if (!e.target.closest('.dropdown-container') && !e.target.closest('.user-menu')) {
         closeDropdowns();
+        setShowUserMenu(false);
       }
     };
     
@@ -74,8 +96,32 @@ const Layout = ({ children }) => {
       name: 'Marksheets',
       path: '/marksheets',
       icon: <FaClipboardList className="mr-2" />
-    }
+    },
+    {
+      name: 'Certificates',
+      path: '/certificates',
+      icon: <FaCertificate className="mr-2" />
+    },
+    // Only show settings for admin users
+    ...(currentUser && currentUser.role === 'Administrator' ? [{
+      name: 'Settings',
+      path: '/settings',
+      icon: <FaCog className="mr-2" />
+    }] : [])
   ];
+
+  // Don't show navigation for login page
+  const isLoginPage = location.pathname === '/login';
+  
+  // If not authenticated and not on login page, don't render the layout content
+  if (!currentUser && !isLoginPage) {
+    return null;
+  }
+
+  // For login page, just render children without layout
+  if (isLoginPage) {
+    return <div>{children}</div>;
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -90,9 +136,42 @@ const Layout = ({ children }) => {
               <h1 className="ml-3 text-2xl font-bold text-gray-900">School Management System</h1>
             </div>
             <div className="flex items-center space-x-4">
-              <div className="relative">
-                <div className="bg-gray-200 border-2 border-dashed rounded-xl w-10 h-10" />
-              </div>
+              {currentUser ? (
+                <div className="relative user-menu">
+                  <button
+                    onClick={() => setShowUserMenu(!showUserMenu)}
+                    className="flex items-center space-x-2 focus:outline-none"
+                  >
+                    <div className="bg-gradient-to-r from-blue-500 to-indigo-600 p-2 rounded-full">
+                      <FaUser className="text-white" />
+                    </div>
+                    <div className="hidden md:block text-left">
+                      <p className="text-sm font-medium text-gray-900">{currentUser.username}</p>
+                      <p className="text-xs text-gray-500">{currentUser.role}</p>
+                    </div>
+                  </button>
+                  
+                  {showUserMenu && (
+                    <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50 border border-gray-200">
+                      <div className="px-4 py-2 border-b border-gray-100">
+                        <p className="text-sm font-medium text-gray-900">{currentUser.username}</p>
+                        <p className="text-xs text-gray-500">{currentUser.role}</p>
+                      </div>
+                      <button
+                        onClick={handleLogout}
+                        className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
+                      >
+                        <FaSignOutAlt className="mr-2" />
+                        Logout
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="relative">
+                  <div className="bg-gray-200 border-2 border-dashed rounded-xl w-10 h-10" />
+                </div>
+              )}
             </div>
           </div>
         </div>

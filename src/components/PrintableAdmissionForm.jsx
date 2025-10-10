@@ -3,6 +3,16 @@ import { FaUserGraduate, FaIdCard, FaPhone, FaEnvelope, FaCalendar, FaSchool, Fa
 
 const PrintableAdmissionForm = ({ formData, photoPreview }) => {
   const today = new Date().toLocaleDateString();
+  
+  // Helper function to format dates
+  const formatDate = (date) => {
+    if (!date) return '';
+    if (date instanceof Date) {
+      return date.toLocaleDateString();
+    }
+    // If it's already a string, return as is
+    return date;
+  };
 
   return (
     <div className="p-8 max-w-4xl mx-auto">
@@ -209,12 +219,12 @@ const PrintableAdmissionForm = ({ formData, photoPreview }) => {
             
             <div className="form-group">
               <div className="form-label">Date of Birth (YYYY-MM-DD)</div>
-              <div className="form-value">{formData.dateOfBirth || ''}</div>
+              <div className="form-value">{formatDate(formData.dateOfBirth) || ''}</div>
             </div>
             
             <div className="form-group">
               <div className="form-label">Admission Date (YYYY-MM-DD)</div>
-              <div className="form-value">{formData.admissionDate || ''}</div>
+              <div className="form-value">{formatDate(formData.admissionDate) || ''}</div>
             </div>
           </div>
         </div>

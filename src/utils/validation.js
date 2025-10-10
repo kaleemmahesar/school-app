@@ -35,7 +35,61 @@ export const validateDate = (date, fieldName) => {
   return null;
 };
 
-export const validateNumber = (value, fieldName, min = 0) => {
+// New: Validate date is not in the future
+export const validateDateNotInFuture = (date, fieldName) => {
+  if (!date) return null;
+  const dateObj = new Date(date);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0); // Reset time part for comparison
+  
+  if (isNaN(dateObj.getTime())) {
+    return `Please enter a valid ${fieldName}`;
+  }
+  
+  if (dateObj > today) {
+    return `${fieldName} cannot be in the future`;
+  }
+  
+  return null;
+};
+
+// New: Validate date range
+export const validateDateRange = (startDate, endDate, startFieldName, endFieldName) => {
+  if (!startDate || !endDate) return null;
+  
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  
+  if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+    return 'Please enter valid dates';
+  }
+  
+  if (start > end) {
+    return `${startFieldName} must be before ${endFieldName}`;
+  }
+  
+  return null;
+};
+
+// New: Validate admission date is not before date of birth
+export const validateAdmissionAfterBirth = (dateOfBirth, admissionDate) => {
+  if (!dateOfBirth || !admissionDate) return null;
+  
+  const birth = new Date(dateOfBirth);
+  const admission = new Date(admissionDate);
+  
+  if (isNaN(birth.getTime()) || isNaN(admission.getTime())) {
+    return 'Please enter valid dates';
+  }
+  
+  if (admission < birth) {
+    return 'Admission date cannot be before date of birth';
+  }
+  
+  return null;
+};
+
+export const validateNumber = (value, fieldName, min = 0, max = null) => {
   if (value === '' || value === undefined || value === null) return null;
   const num = parseFloat(value);
   if (isNaN(num)) {
@@ -43,6 +97,9 @@ export const validateNumber = (value, fieldName, min = 0) => {
   }
   if (num < min) {
     return `${fieldName} must be at least ${min}`;
+  }
+  if (max !== null && num > max) {
+    return `${fieldName} must be no more than ${max}`;
   }
   return null;
 };
@@ -55,6 +112,72 @@ export const validateLength = (value, fieldName, minLength, maxLength) => {
   }
   if (maxLength && length > maxLength) {
     return `${fieldName} must be no more than ${maxLength} characters`;
+  }
+  return null;
+};
+
+// New: Validate CNIC format (Pakistan CNIC: 13 digits)
+export const validateCNIC = (cnic, fieldName) => {
+  if (!cnic) return null;
+  // Remove any spaces or dashes for validation
+  const cleanCNIC = cnic.replace(/[\s\-]/g, '');
+  const cnicRegex = /^\d{13}$/;
+  if (!cnicRegex.test(cleanCNIC)) {
+    return `${fieldName} must be a valid 13-digit CNIC number`;
+  }
+  return null;
+};
+
+// New: Validate URL
+export const validateURL = (url) => {
+  if (!url) return null;
+  try {
+    new URL(url);
+    return null;
+  } catch (e) {
+    return 'Please enter a valid URL';
+  }
+};
+
+// New: Validate that value matches a pattern
+export const validatePattern = (value, pattern, fieldName, errorMessage) => {
+  if (!value) return null;
+  if (!pattern.test(value)) {
+    return errorMessage || `${fieldName} format is invalid`;
+  }
+  return null;
+};
+
+// New: Conditional validation - only validate if condition is met
+export const validateConditional = (value, condition, validator, ...validatorArgs) => {
+  if (!condition) return null;
+  return validator(value, ...validatorArgs);
+};
+
+// New: Validate that two fields match (e.g., password confirmation)
+export const validateMatch = (value1, value2, fieldName1, fieldName2) => {
+  if (value1 !== value2) {
+    return `${fieldName1} and ${fieldName2} must match`;
+  }
+  return null;
+};
+
+// New: Validate array minimum length
+export const validateMinArrayLength = (array, minLength, fieldName) => {
+  if (!array || !Array.isArray(array)) {
+    return `${fieldName} must be an array`;
+  }
+  if (array.length < minLength) {
+    return `${fieldName} must have at least ${minLength} items`;
+  }
+  return null;
+};
+
+// New: Validate that at least one field is filled
+export const validateAtLeastOne = (fields, fieldNames) => {
+  const hasValue = fields.some(field => field && field.toString().trim() !== '');
+  if (!hasValue) {
+    return `At least one of ${fieldNames.join(', ')} is required`;
   }
   return null;
 };
@@ -77,11 +200,32 @@ export const validateField = (value, rules, fieldName) => {
       case 'date':
         error = validateDate(value, fieldName);
         break;
+      case 'dateNotInFuture':
+        error = validateDateNotInFuture(value, fieldName);
+        break;
       case 'number':
-        error = validateNumber(value, fieldName, rule.min);
+        error = validateNumber(value, fieldName, rule.min, rule.max);
         break;
       case 'length':
         error = validateLength(value, fieldName, rule.minLength, rule.maxLength);
+        break;
+      case 'cnic':
+        error = validateCNIC(value, fieldName);
+        break;
+      case 'url':
+        error = validateURL(value);
+        break;
+      case 'pattern':
+        error = validatePattern(value, rule.pattern, fieldName, rule.errorMessage);
+        break;
+      case 'conditional':
+        error = validateConditional(value, rule.condition, rule.validator, ...rule.validatorArgs);
+        break;
+      case 'match':
+        error = validateMatch(value, rule.value2, fieldName, rule.fieldName2);
+        break;
+      case 'minArrayLength':
+        error = validateMinArrayLength(value, rule.minLength, fieldName);
         break;
       default:
         break;
@@ -109,6 +253,14 @@ export const validateForm = (formData, validationRules) => {
     }
   }
   
+  // Check cross-field validations
+  if (formData.dateOfBirth && formData.dateOfAdmission) {
+    const admissionError = validateAdmissionAfterBirth(formData.dateOfBirth, formData.dateOfAdmission);
+    if (admissionError) {
+      errors.dateOfAdmission = admissionError;
+    }
+  }
+  
   return errors;
 };
 
@@ -122,21 +274,9 @@ export const admissionFormValidationRules = {
     { type: 'required' },
     { type: 'length', minLength: 2, maxLength: 50 }
   ],
-  email: [
+  grNo: [
     { type: 'required' },
-    { type: 'email' }
-  ],
-  phone: [
-    { type: 'required' },
-    { type: 'phone' }
-  ],
-  dateOfBirth: [
-    { type: 'required' },
-    { type: 'date' }
-  ],
-  admissionDate: [
-    { type: 'required' },
-    { type: 'date' }
+    { type: 'length', minLength: 1, maxLength: 20 }
   ],
   class: [
     { type: 'required' }
@@ -144,16 +284,54 @@ export const admissionFormValidationRules = {
   section: [
     { type: 'required' }
   ],
-  admissionFees: [
+  fatherName: [
     { type: 'required' },
+    { type: 'length', minLength: 2, maxLength: 50 }
+  ],
+  caste: [
+    { type: 'required' },
+    { type: 'length', minLength: 2, maxLength: 30 }
+  ],
+  address: [
+    { type: 'required' },
+    { type: 'length', minLength: 5, maxLength: 200 }
+  ],
+  dateOfBirth: [
+    { type: 'required' },
+    { type: 'date' },
+    { type: 'dateNotInFuture' }
+  ],
+  parentContactNumber: [
+    { type: 'required' },
+    { type: 'phone' }
+  ],
+  birthPlace: [
+    { type: 'required' },
+    { type: 'length', minLength: 2, maxLength: 50 }
+  ],
+  gender: [
+    { type: 'required' }
+  ],
+  fatherCnic: [
+    { type: 'required' },
+    { type: 'cnic' }
+  ],
+  dateOfAdmission: [
+    { type: 'required' },
+    { type: 'date' },
+    { type: 'dateNotInFuture' }
+  ],
+  // Add validation rules for fees fields
+  monthlyFees: [
     { type: 'number', min: 0 }
   ],
-  monthlyFees: [
-    { type: 'required' },
+  admissionFees: [
+    { type: 'number', min: 0 }
+  ],
+  feesPaid: [
     { type: 'number', min: 0 }
   ],
   totalFees: [
-    { type: 'required' },
     { type: 'number', min: 0 }
   ]
 };

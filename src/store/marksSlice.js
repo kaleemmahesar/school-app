@@ -1,4 +1,5 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+import { toast } from 'react-toastify';
 
 // Mock data for student marks
 const mockMarks = [
@@ -49,32 +50,54 @@ const initialState = {
 };
 
 // Async thunks for mock API calls
-export const fetchMarks = createAsyncThunk('marks/fetchMarks', async () => {
-  // Simulate API delay
-  await new Promise(resolve => setTimeout(resolve, 500));
-  return mockMarks;
+export const fetchMarks = createAsyncThunk('marks/fetchMarks', async (_, { rejectWithValue }) => {
+  try {
+    // Simulate API delay
+    await new Promise(resolve => setTimeout(resolve, 500));
+    return mockMarks;
+  } catch (error) {
+    return rejectWithValue(error.message);
+  }
 });
 
-export const addMarks = createAsyncThunk('marks/addMarks', async (marksData) => {
-  // Simulate API delay
-  await new Promise(resolve => setTimeout(resolve, 500));
-  const newMarks = {
-    id: Date.now().toString(),
-    ...marksData,
-  };
-  return newMarks;
+export const addMarks = createAsyncThunk('marks/addMarks', async (marksData, { rejectWithValue }) => {
+  try {
+    // Simulate API delay
+    await new Promise(resolve => setTimeout(resolve, 500));
+    const newMarks = {
+      id: Date.now().toString(),
+      ...marksData,
+    };
+    toast.success('Marksheet added successfully');
+    return newMarks;
+  } catch (error) {
+    toast.error('Failed to add marksheet');
+    return rejectWithValue(error.message);
+  }
 });
 
-export const updateMarks = createAsyncThunk('marks/updateMarks', async (marksData) => {
-  // Simulate API delay
-  await new Promise(resolve => setTimeout(resolve, 500));
-  return marksData;
+export const updateMarks = createAsyncThunk('marks/updateMarks', async (marksData, { rejectWithValue }) => {
+  try {
+    // Simulate API delay
+    await new Promise(resolve => setTimeout(resolve, 500));
+    toast.success('Marksheet updated successfully');
+    return marksData;
+  } catch (error) {
+    toast.error('Failed to update marksheet');
+    return rejectWithValue(error.message);
+  }
 });
 
-export const deleteMarks = createAsyncThunk('marks/deleteMarks', async (marksId) => {
-  // Simulate API delay
-  await new Promise(resolve => setTimeout(resolve, 500));
-  return marksId;
+export const deleteMarks = createAsyncThunk('marks/deleteMarks', async (marksId, { rejectWithValue }) => {
+  try {
+    // Simulate API delay
+    await new Promise(resolve => setTimeout(resolve, 500));
+    toast.success('Marksheet deleted successfully');
+    return marksId;
+  } catch (error) {
+    toast.error('Failed to delete marksheet');
+    return rejectWithValue(error.message);
+  }
 });
 
 const marksSlice = createSlice({

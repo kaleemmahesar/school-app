@@ -5,7 +5,7 @@ const ClassFormModal = ({ onClose, onSubmit, classData, students }) => { // Add 
   const [formData, setFormData] = useState({
     name: '',
     monthlyFees: '',
-    sections: [{ id: '', name: 'A' }], // Default section A
+    sections: [{ id: `${Date.now()}-A`, name: 'A' }], // Default section A with proper ID
   });
   const isEditMode = !!classData;
 
@@ -14,10 +14,10 @@ const ClassFormModal = ({ onClose, onSubmit, classData, students }) => { // Add 
       setFormData({
         name: classData.name,
         monthlyFees: classData.monthlyFees || '',
-        sections: classData.sections.map(section => ({ 
-          id: section.id, 
+        sections: classData.sections.map((section, index) => ({ 
+          id: section.id || `${classData.id || Date.now()}-${index}`, 
           name: section.name 
-        })), // Remove studentCount from sections
+        })), // Ensure sections have proper IDs
       });
     }
   }, [classData]);
@@ -73,7 +73,7 @@ const ClassFormModal = ({ onClose, onSubmit, classData, students }) => { // Add 
     
     setFormData({
       ...formData,
-      sections: [...formData.sections, { id: '', name: nextLetter }],
+      sections: [...formData.sections, { id: `${Date.now()}-${nextLetter}`, name: nextLetter }],
     });
   };
 
@@ -90,8 +90,14 @@ const ClassFormModal = ({ onClose, onSubmit, classData, students }) => { // Add 
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    // Ensure sections have proper IDs
+    const sectionsWithIds = formData.sections.map((section, index) => ({
+      ...section,
+      id: section.id || `${Date.now()}-${index}` // Generate ID if not present
+    }));
+    
     // Calculate section counts based on student records
-    const sectionsWithCounts = calculateSectionCounts(formData.name, formData.sections);
+    const sectionsWithCounts = calculateSectionCounts(formData.name, sectionsWithIds);
     // Calculate total students
     const totalStudents = sectionsWithCounts.reduce((sum, section) => sum + (section.studentCount || 0), 0);
     onSubmit({ ...formData, sections: sectionsWithCounts, totalStudents });
