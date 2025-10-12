@@ -1,6 +1,7 @@
 import { createSlice } from '@reduxjs/toolkit';
 import { toast } from 'react-toastify';
 import { createAsyncThunkWithToast, createAddThunk, createUpdateThunk, createDeleteThunk } from '../utils/asyncThunkUtils';
+import { API_BASE_URL } from '../utils/apiConfig';
 
 // Mock data for expenses
 const mockExpenses = [

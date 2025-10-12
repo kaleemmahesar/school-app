@@ -129,7 +129,12 @@ const AdmissionForm = ({ onClose, studentData }) => {
     }
     
     if (isEditMode) {
-      dispatch(updateStudent({ ...studentData, ...submissionData }));
+      // For editing, we need to preserve the original ID and other important fields
+      dispatch(updateStudent({ 
+        id: studentData.id,  // Preserve the original ID
+        ...studentData,      // Include all original data
+        ...submissionData    // Override with updated data
+      }));
     } else {
       dispatch(addStudent(submissionData));
     }

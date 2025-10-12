@@ -1,12 +1,14 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { toast } from 'react-toastify';
+import { createAsyncThunkWithToast } from '../utils/asyncThunkUtils';
+import { API_BASE_URL } from '../utils/apiConfig';
 
 // Mock data for staff with enhanced salary management
 const mockStaff = [
   {
     id: '1',
-    firstName: 'Michael',
-    lastName: 'Johnson',
+    firstName: 'Ahmed',
+    lastName: 'Khan',
     phone: '111-222-3333',
     position: 'Math Teacher',
     salary: 45000,
@@ -31,8 +33,8 @@ const mockStaff = [
   },
   {
     id: '2',
-    firstName: 'Sarah',
-    lastName: 'Williams',
+    firstName: 'Fatima',
+    lastName: 'Ahmed',
     phone: '444-555-6666',
     position: 'English Teacher',
     salary: 42000,
@@ -57,8 +59,8 @@ const mockStaff = [
   },
   {
     id: '3',
-    firstName: 'Robert',
-    lastName: 'Brown',
+    firstName: 'Bilal',
+    lastName: 'Malik',
     phone: '777-888-9999',
     position: 'Science Teacher',
     salary: 44000,
@@ -83,8 +85,8 @@ const mockStaff = [
   },
   {
     id: '4',
-    firstName: 'Emily',
-    lastName: 'Davis',
+    firstName: 'Ayesha',
+    lastName: 'Raza',
     phone: '222-333-4444',
     position: 'Accountant',
     salary: 35000,
@@ -109,8 +111,8 @@ const mockStaff = [
   },
   {
     id: '5',
-    firstName: 'David',
-    lastName: 'Miller',
+    firstName: 'Omar',
+    lastName: 'Sheikh',
     phone: '555-666-7777',
     position: 'Librarian',
     salary: 30000,
@@ -135,8 +137,8 @@ const mockStaff = [
   },
   {
     id: '6',
-    firstName: 'Lisa',
-    lastName: 'Wilson',
+    firstName: 'Zainab',
+    lastName: 'Hussain',
     phone: '888-999-0000',
     position: 'Counselor',
     salary: 32000,
@@ -161,8 +163,8 @@ const mockStaff = [
   },
   {
     id: '7',
-    firstName: 'James',
-    lastName: 'Taylor',
+    firstName: 'Hassan',
+    lastName: 'Qureshi',
     phone: '333-444-5555',
     position: 'Principal',
     salary: 60000,
@@ -187,8 +189,8 @@ const mockStaff = [
   },
   {
     id: '8',
-    firstName: 'Jennifer',
-    lastName: 'Anderson',
+    firstName: 'Mariam',
+    lastName: 'Butt',
     phone: '666-777-8888',
     position: 'Lab Assistant',
     salary: 25000,
@@ -213,8 +215,8 @@ const mockStaff = [
   },
   {
     id: '9',
-    firstName: 'Thomas',
-    lastName: 'Wilson',
+    firstName: 'Saad',
+    lastName: 'Mirza',
     phone: '555-444-3333',
     position: 'Security Guard',
     salary: 20000,
@@ -239,8 +241,8 @@ const mockStaff = [
   },
   {
     id: '10',
-    firstName: 'Emma',
-    lastName: 'Thompson',
+    firstName: 'Sana',
+    lastName: 'Javed',
     phone: '666-555-4444',
     position: 'Receptionist',
     salary: 22000,
@@ -265,8 +267,8 @@ const mockStaff = [
   },
   {
     id: '11',
-    firstName: 'Oliver',
-    lastName: 'Martinez',
+    firstName: 'Ali',
+    lastName: 'Rizvi',
     phone: '777-666-5555',
     position: 'Maintenance Staff',
     salary: 18000,
@@ -291,8 +293,8 @@ const mockStaff = [
   },
   {
     id: '12',
-    firstName: 'Sophia',
-    lastName: 'Anderson',
+    firstName: 'Hina',
+    lastName: 'Abbasi',
     phone: '888-777-6666',
     position: 'Cleaner',
     salary: 15000,

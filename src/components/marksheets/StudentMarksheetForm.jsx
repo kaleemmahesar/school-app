@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { FaBook, FaGraduationCap, FaClipboardList, FaUserGraduate } from 'react-icons/fa';
 import MarksheetPrintView from './MarksheetPrintView';
+import SearchableStudentDropdown from '../common/SearchableStudentDropdown';
 
 const StudentMarksheetForm = ({ 
   classes, 
@@ -281,20 +282,14 @@ const StudentMarksheetForm = ({
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
               <FaUserGraduate className="h-5 w-5 text-gray-400" />
             </div>
-            <select
+            <SearchableStudentDropdown
+              students={filteredStudents}
               value={selectedStudent}
-              onChange={(e) => handleStudentChange(e.target.value)}
-              className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+              onChange={handleStudentChange}
+              placeholder="Search and select a student..."
               required
               disabled={!selectedClass || !selectedSection}
-            >
-              <option value="">Select Student</option>
-              {filteredStudents.map(student => (
-                <option key={student.id} value={student.id}>
-                  {student.firstName} {student.lastName}
-                </option>
-              ))}
-            </select>
+            />
           </div>
         </div>
 

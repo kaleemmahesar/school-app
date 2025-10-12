@@ -25,6 +25,18 @@ const CertificateGenerator = ({ student, onClose }) => {
       dispatch(updateStudent(updatedStudent));
     }
     
+    // If generating a pass certificate, update the student status to passed_out
+    if (certificateType === 'pass') {
+      const updatedStudent = {
+        ...student,
+        status: 'passed_out',
+        passDate: issueDate,
+        passDetails: reason
+      };
+      
+      dispatch(updateStudent(updatedStudent));
+    }
+    
     setShowPrintView(true);
   };
 
@@ -94,7 +106,7 @@ const CertificateGenerator = ({ student, onClose }) => {
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Certificate Type
                 </label>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-3 gap-4">
                   <button
                     type="button"
                     onClick={() => setCertificateType('leaving')}
@@ -105,6 +117,17 @@ const CertificateGenerator = ({ student, onClose }) => {
                     }`}
                   >
                     Leaving Certificate
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCertificateType('pass')}
+                    className={`px-4 py-2 border rounded-md text-sm font-medium ${
+                      certificateType === 'pass'
+                        ? 'bg-blue-100 border-blue-500 text-blue-700'
+                        : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+                    }`}
+                  >
+                    Pass Certificate
                   </button>
                   <button
                     type="button"
@@ -168,7 +191,9 @@ const CertificateGenerator = ({ student, onClose }) => {
                 <div className="border-2 border-dashed border-blue-200 rounded-lg p-4">
                   <div className="text-center">
                     <h3 className="text-xl font-bold text-gray-900 mb-2">
-                      {certificateType === 'leaving' ? 'LEAVING CERTIFICATE' : 'CHARACTER CERTIFICATE'}
+                      {certificateType === 'leaving' ? 'LEAVING CERTIFICATE' : 
+                       certificateType === 'pass' ? 'PASS CERTIFICATE' : 
+                       'CHARACTER CERTIFICATE'}
                     </h3>
                     <p className="text-sm text-gray-600 mb-4">This is to certify that</p>
                     <p className="text-lg font-semibold text-gray-900">
@@ -190,6 +215,18 @@ const CertificateGenerator = ({ student, onClose }) => {
                         {reason && (
                           <p className="mt-2">
                             Reason: <span className="font-medium">{reason}</span>
+                          </p>
+                        )}
+                      </div>
+                    ) : certificateType === 'pass' ? (
+                      <div className="mt-4 text-sm text-gray-700">
+                        <p>
+                          has successfully passed the final examination and is awarded this certificate on{' '}
+                          <span className="font-medium">{formatDate(issueDate)}</span>.
+                        </p>
+                        {reason && (
+                          <p className="mt-2">
+                            Additional Details: <span className="font-medium">{reason}</span>
                           </p>
                         )}
                       </div>

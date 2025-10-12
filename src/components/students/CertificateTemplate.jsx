@@ -34,7 +34,9 @@ const CertificateTemplate = ({
         {/* Certificate Title */}
         <div className="text-center mb-10">
           <h2 className="text-2xl font-bold text-gray-900 border-2 border-gray-900 inline-block px-6 py-2">
-            {certificateType === 'leaving' ? 'LEAVING CERTIFICATE' : 'CHARACTER CERTIFICATE'}
+            {certificateType === 'leaving' ? 'LEAVING CERTIFICATE' : 
+             certificateType === 'pass' ? 'PASS CERTIFICATE' : 
+             'CHARACTER CERTIFICATE'}
           </h2>
         </div>
 
@@ -72,6 +74,21 @@ const CertificateTemplate = ({
               )}
               <p className="text-center mt-6">
                 We wish {student.firstName} all the best in their future endeavors.
+              </p>
+            </div>
+          ) : certificateType === 'pass' ? (
+            <div className="text-lg text-gray-700 mb-8 leading-relaxed">
+              <p className="text-center mb-4">
+                has successfully completed all required coursework and passed the final examination on{' '}
+                <span className="font-bold">{formatDate(issueDate)}</span>.
+              </p>
+              {reason && (
+                <p className="text-center mb-4">
+                  Additional Details: <span className="font-medium">{reason}</span>
+                </p>
+              )}
+              <p className="text-center">
+                We congratulate {student.firstName} on this achievement and wish them success in their future endeavors.
               </p>
             </div>
           ) : (

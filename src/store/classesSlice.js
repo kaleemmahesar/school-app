@@ -1,6 +1,7 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { toast } from 'react-toastify';
 import { createAsyncThunkWithToast, createAddThunk, createUpdateThunk, createDeleteThunk } from '../utils/asyncThunkUtils';
+import { API_BASE_URL } from '../utils/apiConfig';
 
 // Mock data for classes with monthly fees and subjects
 const mockClasses = [
@@ -15,10 +16,9 @@ const mockClasses = [
       { id: '10hist', name: 'History', teacher: 'Mr. Davis' }
     ],
     sections: [
-      { id: '10A', name: 'A', studentCount: 30 },
-      { id: '10B', name: 'B', studentCount: 28 },
-    ],
-    totalStudents: 58,
+      { id: '10A', name: 'A' },
+      { id: '10B', name: 'B' },
+    ]
   },
   {
     id: '2',
@@ -31,10 +31,9 @@ const mockClasses = [
       { id: '9geo', name: 'Geography', teacher: 'Mr. Moore' }
     ],
     sections: [
-      { id: '9A', name: 'A', studentCount: 32 },
-      { id: '9B', name: 'B', studentCount: 29 },
-    ],
-    totalStudents: 61,
+      { id: '9A', name: 'A' },
+      { id: '9B', name: 'B' },
+    ]
   },
   {
     id: '3',
@@ -47,10 +46,9 @@ const mockClasses = [
       { id: '8hist', name: 'History', teacher: 'Ms. White' }
     ],
     sections: [
-      { id: '8A', name: 'A', studentCount: 25 },
-      { id: '8B', name: 'B', studentCount: 27 },
-    ],
-    totalStudents: 52,
+      { id: '8A', name: 'A' },
+      { id: '8B', name: 'B' },
+    ]
   },
   {
     id: '4',
@@ -63,10 +61,9 @@ const mockClasses = [
       { id: '7geo', name: 'Geography', teacher: 'Mr. Hall' }
     ],
     sections: [
-      { id: '7A', name: 'A', studentCount: 28 },
-      { id: '7B', name: 'B', studentCount: 26 },
-    ],
-    totalStudents: 54,
+      { id: '7A', name: 'A' },
+      { id: '7B', name: 'B' },
+    ]
   },
   {
     id: '5',
@@ -79,10 +76,9 @@ const mockClasses = [
       { id: '6hist', name: 'History', teacher: 'Ms. Scott' }
     ],
     sections: [
-      { id: '6A', name: 'A', studentCount: 30 },
-      { id: '6B', name: 'B', studentCount: 29 },
-    ],
-    totalStudents: 59,
+      { id: '6A', name: 'A' },
+      { id: '6B', name: 'B' },
+    ]
   },
 ];
 

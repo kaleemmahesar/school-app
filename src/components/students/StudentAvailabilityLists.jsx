@@ -1,13 +1,17 @@
 import React, { useState, useEffect } from 'react';
+import { useDispatch } from 'react-redux';
 import { useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { FaUserCheck, FaUserTimes, FaSearch, FaFilter, FaEdit } from 'react-icons/fa';
+import Pagination from '../common/Pagination';
+import { markStudentAsLeft } from '../../store/studentsSlice';
 
 const StudentAvailabilityLists = ({ activeTab: propActiveTab, 
                                   onFilterChange,
                                   parentSearchTerm,
                                   parentSelectedClass,
                                   parentSelectedSection }) => {
+  const dispatch = useDispatch();
   const navigate = useNavigate();
   const { students } = useSelector(state => state.students);
   
@@ -15,7 +19,9 @@ const StudentAvailabilityLists = ({ activeTab: propActiveTab,
   const [selectedClass, setSelectedClass] = useState(parentSelectedClass || '');
   const [selectedSection, setSelectedSection] = useState(parentSelectedSection || '');
   const [localActiveTab, setLocalActiveTab] = useState('available'); // 'available', 'unavailable', or 'left'
-  
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 8;
+
   // Use prop activeTab if provided, otherwise use local state
   const activeTab = propActiveTab !== undefined && propActiveTab !== null ? propActiveTab : localActiveTab;
 
@@ -39,24 +45,25 @@ const StudentAvailabilityLists = ({ activeTab: propActiveTab,
   // Categorize students
   const categorizeStudents = () => {
     return students.reduce((acc, student) => {
-      // Calculate if student is "available" (studying - all fees paid)
-      const totalFees = parseFloat(student.totalFees) || 0;
-      const feesPaid = parseFloat(student.feesPaid) || 0;
-      const isAvailable = feesPaid >= totalFees;
-      
-      // For this implementation, we'll consider students with a "graduationDate" or "status" field as "left"
-      // Since we don't have these fields in the current data model, we'll simulate this by checking
-      // if the student is in a "passed out" class (e.g., classes that are no longer active)
-      const isLeft = student.status === 'left' || student.status === 'passed_out' || 
-                    (student.class && student.class.includes('Passed')) || 
-                    (student.graduationDate && new Date(student.graduationDate) < new Date());
-      
-      if (isLeft) {
-        acc.left.push(student);
-      } else if (isAvailable) {
-        acc.available.push(student);
-      } else {
+      // Students who have passed out (generated pass certificate)
+      if (student.status === 'passed_out') {
         acc.unavailable.push(student);
+      } 
+      // Students who left in middle (generated leaving certificate)
+      else if (student.status === 'left') {
+        acc.left.push(student);
+      }
+      // Available students (studying - all fees paid)
+      else {
+        const totalFees = parseFloat(student.totalFees) || 0;
+        const feesPaid = parseFloat(student.feesPaid) || 0;
+        const isAvailable = feesPaid >= totalFees;
+        
+        if (isAvailable) {
+          acc.available.push(student);
+        } else {
+          acc.unavailable.push(student);
+        }
       }
       
       return acc;
@@ -70,7 +77,7 @@ const StudentAvailabilityLists = ({ activeTab: propActiveTab,
     return studentList.filter(student => {
       const matchesSearch = 
         `${student.firstName} ${student.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        student.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (student.grNo && student.grNo.toLowerCase().includes(searchTerm.toLowerCase())) ||
         student.class.toLowerCase().includes(searchTerm.toLowerCase());
       
       const matchesClass = !selectedClass || student.class === selectedClass;
@@ -95,9 +102,16 @@ const StudentAvailabilityLists = ({ activeTab: propActiveTab,
   };
 
   const currentFilteredList = getCurrentFilteredList();
+  
+  // Get current page students
+  const getCurrentPageStudents = () => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return currentFilteredList.slice(startIndex, endIndex);
+  };
 
-  // If activeTab is provided as prop, don't show the tabs
-  const showTabs = propActiveTab === undefined || propActiveTab === null;
+  const currentStudents = getCurrentPageStudents();
+  const totalPages = Math.ceil(currentFilteredList.length / itemsPerPage);
 
   // Handle edit student
   const handleEditStudent = (student) => {
@@ -111,24 +125,18 @@ const StudentAvailabilityLists = ({ activeTab: propActiveTab,
       const allFilteredStudents = filterStudents(students);
       
       const filteredAvailableStudents = allFilteredStudents.filter(student => {
-        const totalFees = parseFloat(student.totalFees) || 0;
-        const feesPaid = parseFloat(student.feesPaid) || 0;
-        return feesPaid >= totalFees;
+        // Available students are those who are studying and have paid all fees
+        return student.status !== 'passed_out' && student.status !== 'left';
       });
 
       const filteredUnavailableStudents = allFilteredStudents.filter(student => {
-        const totalFees = parseFloat(student.totalFees) || 0;
-        const feesPaid = parseFloat(student.feesPaid) || 0;
-        const isLeft = student.status === 'left' || student.status === 'passed_out' || 
-                      (student.class && student.class.includes('Passed'));
-        return !isLeft && feesPaid < totalFees;
+        // Unavailable students are those who have passed out
+        return student.status === 'passed_out';
       });
 
       const filteredLeftStudents = allFilteredStudents.filter(student => {
-        const isLeft = student.status === 'left' || student.status === 'passed_out' || 
-                      (student.class && student.class.includes('Passed')) || 
-                      (student.graduationDate && new Date(student.graduationDate) < new Date());
-        return isLeft;
+        // Left students are those who left in middle
+        return student.status === 'left';
       });
 
       // Family groups based on filtered students
@@ -159,68 +167,14 @@ const StudentAvailabilityLists = ({ activeTab: propActiveTab,
   // Call notifyParentOfFilterChange when filters change
   useEffect(() => {
     notifyParentOfFilterChange();
+    // Reset to first page when filters change
+    setCurrentPage(1);
   }, [searchTerm, selectedClass, selectedSection]);
 
   return (
     <>
-      {/* Students Table with integrated filters - only show tabs when not controlled by parent */}
-      <div className="bg-white rounded-lg shadow p-4">
-        {showTabs && (
-          /* Tabs for Available/Unavailable/Left */
-          <div className="border-b border-gray-200 mb-4">
-            <nav className="-mb-px flex flex-wrap space-x-6">
-              <button
-                onClick={() => setLocalActiveTab('available')}
-                className={`whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm ${
-                  activeTab === 'available'
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                <div className="flex items-center">
-                  <FaUserCheck className="mr-2" />
-                  Available
-                  <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                    {filteredAvailable.length}
-                  </span>
-                </div>
-              </button>
-              <button
-                onClick={() => setLocalActiveTab('unavailable')}
-                className={`whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm ${
-                  activeTab === 'unavailable'
-                    ? 'border-yellow-500 text-yellow-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                <div className="flex items-center">
-                  <FaUserTimes className="mr-2" />
-                  Unavailable
-                  <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                    {filteredUnavailable.length}
-                  </span>
-                </div>
-              </button>
-              <button
-                onClick={() => setLocalActiveTab('left')}
-                className={`whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm ${
-                  activeTab === 'left'
-                    ? 'border-red-500 text-red-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                <div className="flex items-center">
-                  <FaUserTimes className="mr-2" />
-                  Left
-                  <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                    {filteredLeft.length}
-                  </span>
-                </div>
-              </button>
-            </nav>
-          </div>
-        )}
-
+      {/* Students Table with integrated filters */}
+      <div className="bg-white shadow p-4">
         {/* Search and Filters - Move inside table section */}
         <div className="mb-4">
           <div className="flex flex-col md:flex-row md:items-center gap-3">
@@ -230,7 +184,7 @@ const StudentAvailabilityLists = ({ activeTab: propActiveTab,
               </div>
               <input
                 type="text"
-                placeholder="Search by student name, email, or class..."
+                placeholder="Search by student name, GR No, or class..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-sm"
@@ -309,65 +263,55 @@ const StudentAvailabilityLists = ({ activeTab: propActiveTab,
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Student</th>
-                <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact</th>
-                <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Class/Section</th>
-                <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fees Status</th>
-                <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Photo</th>
+                <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">GR No</th>
+                <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Father's Name</th>
+                <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Class</th>
+                <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Section</th>
+                <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Religion</th>
                 <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {currentFilteredList.map((student) => (
+              {currentStudents.map((student) => (
                 <tr key={student.id} className="hover:bg-gray-50">
                   <td className="px-4 py-3 whitespace-nowrap">
                     <div className="flex items-center">
-                      <div className="bg-gray-200 border border-dashed rounded-md w-8 h-8" />
-                      <div className="ml-3">
-                        <div className="text-sm font-medium text-gray-900">{student.firstName} {student.lastName}</div>
-                        <div className="text-xs text-gray-500">ID: {student.id}</div>
+                      <div className="bg-gray-200 border-2 border-dashed rounded-xl w-8 h-8 flex items-center justify-center">
+                        <svg className="w-4 h-4 text-gray-500" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+                        </svg>
                       </div>
                     </div>
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{student.email}</div>
-                    <div className="text-xs text-gray-500">{student.phone}</div>
+                    <div className="text-sm text-gray-900">
+                      {student.grNo ? student.grNo.replace('GR', '') : 'N/A'}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <div className="text-sm font-medium text-gray-900">{student.firstName} {student.lastName}</div>
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <div className="text-sm text-gray-900">{student.fatherName}</div>
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap">
                     <div className="text-sm text-gray-900">{student.class}</div>
-                    <div className="text-xs text-gray-500">Section {student.section}</div>
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap">
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-                      parseFloat(student.feesPaid) >= parseFloat(student.totalFees)
-                        ? 'bg-green-100 text-green-800'
-                        : 'bg-yellow-100 text-yellow-800'
-                    }`}>
-                      Rs {student.feesPaid} / Rs {student.totalFees}
-                    </span>
+                    <div className="text-sm text-gray-900">{student.section}</div>
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap">
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-                      activeTab === 'available'
-                        ? 'bg-green-100 text-green-800'
-                        : activeTab === 'unavailable'
-                          ? 'bg-yellow-100 text-yellow-800'
-                          : 'bg-red-100 text-red-800'
-                    }`}>
-                      {activeTab === 'available' 
-                        ? 'Studying' 
-                        : activeTab === 'unavailable' 
-                          ? 'Pending Fees' 
-                          : 'Left School'}
-                    </span>
+                    <div className="text-sm text-gray-900">{student.religion}</div>
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
                     <div className="flex space-x-2">
                       <button
                         onClick={() => handleEditStudent(student)}
-                        className="text-blue-600 hover:text-blue-900 flex items-center"
+                        className="inline-flex items-center px-3 py-1 border border-gray-300 text-xs font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50"
                       >
-                        <FaEdit className="mr-1" /> Edit
+                        <FaEdit className="mr-1" /> Edit Details
                       </button>
                     </div>
                   </td>
@@ -386,7 +330,7 @@ const StudentAvailabilityLists = ({ activeTab: propActiveTab,
                 }
               </div>
               <h3 className="mt-2 text-sm font-medium text-gray-900">
-                No {activeTab} students found
+                No {activeTab === 'unavailable' ? 'passed out' : activeTab === 'left' ? 'left in middle' : activeTab} students found
               </h3>
               <p className="mt-1 text-sm text-gray-500">
                 Try adjusting your search or filter criteria
@@ -394,6 +338,19 @@ const StudentAvailabilityLists = ({ activeTab: propActiveTab,
             </div>
           )}
         </div>
+        
+        {/* Pagination */}
+        {currentFilteredList.length > itemsPerPage && (
+          <div className="mt-4">
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={currentFilteredList.length}
+              itemsPerPage={itemsPerPage}
+              onPageChange={(page) => setCurrentPage(page)}
+            />
+          </div>
+        )}
       </div>
     </>
   );

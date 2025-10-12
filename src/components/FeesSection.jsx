@@ -1103,7 +1103,7 @@ const FeesSection = () => {
 
         {/* Summary Statistics */}
         <div className="my-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
             <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl shadow p-4 text-white">
               <div className="flex items-center justify-between">
                 <div>
@@ -1136,6 +1136,30 @@ const FeesSection = () => {
                 </div>
                 <div className="p-2 bg-red-400 bg-opacity-30 rounded-full">
                   <FaTimes size={20} />
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-gradient-to-r from-purple-500 to-purple-600 rounded-xl shadow p-4 text-white">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-purple-100 text-xs font-medium">Paid Amount</p>
+                  <p className="text-2xl font-bold mt-1">Rs {Math.round(filteredStudents.reduce((sum, student) => sum + student.paidAmount, 0))}</p>
+                </div>
+                <div className="p-2 bg-purple-400 bg-opacity-30 rounded-full">
+                  <FaDollarSign size={20} />
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-gradient-to-r from-amber-500 to-amber-600 rounded-xl shadow p-4 text-white">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-amber-100 text-xs font-medium">Pending Amount</p>
+                  <p className="text-2xl font-bold mt-1">Rs {Math.round(filteredStudents.reduce((sum, student) => sum + student.pendingAmount, 0))}</p>
+                </div>
+                <div className="p-2 bg-amber-400 bg-opacity-30 rounded-full">
+                  <FaDollarSign size={20} />
                 </div>
               </div>
             </div>
@@ -1330,7 +1354,7 @@ const FeesSection = () => {
                           <div className="flex items-center">
                             <div className="w-24 bg-gray-200 rounded-full h-2 mr-2">
                               <div 
-                                className="bg-blue-600 h-2 rounded-full" 
+                                className={`${student.completionRate === 100 ? 'bg-green-600' : 'bg-blue-600'} h-2 rounded-full`} 
                                 style={{ width: `${student.completionRate}%` }}
                               ></div>
                             </div>
@@ -1379,7 +1403,7 @@ const FeesSection = () => {
                                 <div className="flex items-center">
                                   <div className="w-20 bg-gray-200 rounded-full h-2 mr-2">
                                     <div 
-                                      className="bg-blue-600 h-2 rounded-full" 
+                                      className={`${family.completionRate === 100 ? 'bg-green-600' : 'bg-blue-600'} h-2 rounded-full`} 
                                       style={{ width: `${family.completionRate}%` }}
                                     ></div>
                                   </div>

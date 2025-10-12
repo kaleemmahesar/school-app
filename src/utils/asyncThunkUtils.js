@@ -1,5 +1,6 @@
 import { createAsyncThunk } from '@reduxjs/toolkit';
 import { toast } from 'react-toastify';
+import { API_BASE_URL } from './apiConfig';
 
 /**
  * Create an async thunk with consistent error handling and toast notifications
@@ -127,5 +128,6 @@ export default {
   createAsyncThunkWithToast,
   createAddThunk,
   createUpdateThunk,
-  createDeleteThunk
+  createDeleteThunk,
+  API_BASE_URL
 };

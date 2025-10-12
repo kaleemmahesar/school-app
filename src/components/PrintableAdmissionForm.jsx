@@ -82,8 +82,8 @@ const PrintableAdmissionForm = ({ formData, photoPreview }) => {
           margin: 0 -10px 15px -10px;
         }
         .form-group {
-          flex: 1 0 45%;
-          min-width: 250px;
+          flex: 1 0 30%;
+          min-width: 200px;
           padding: 0 10px;
           margin-bottom: 15px;
         }
@@ -185,7 +185,7 @@ const PrintableAdmissionForm = ({ formData, photoPreview }) => {
           <div className="form-row">
             {/* Photo Section */}
             <div className="form-group">
-              <div className="form-label">Student Photo</div>
+              <div className="form-label">Photo</div>
               <div className="photo-container">
                 {photoPreview ? (
                   <img src={photoPreview} alt="Student" />
@@ -198,43 +198,53 @@ const PrintableAdmissionForm = ({ formData, photoPreview }) => {
             </div>
             
             <div className="form-group">
-              <div className="form-label">First Name</div>
-              <div className="form-value">{formData.firstName || ''}</div>
+              <div className="form-label">GR Number</div>
+              <div className="form-value">{formData.grNo || ''}</div>
             </div>
             
             <div className="form-group">
-              <div className="form-label">Last Name</div>
-              <div className="form-value">{formData.lastName || ''}</div>
+              <div className="form-label">Name of Student</div>
+              <div className="form-value">{formData.firstName || ''} {formData.lastName || ''}</div>
             </div>
             
             <div className="form-group">
-              <div className="form-label">Email Address</div>
-              <div className="form-value">{formData.email || ''}</div>
+              <div className="form-label">Father's Name</div>
+              <div className="form-value">{formData.fatherName || ''}</div>
             </div>
             
             <div className="form-group">
-              <div className="form-label">Phone Number</div>
-              <div className="form-value">{formData.phone || ''}</div>
+              <div className="form-label">Religion</div>
+              <div className="form-value">{formData.religion || ''}</div>
+            </div>
+            
+            {/* Address field */}
+            <div className="form-group full-width">
+              <div className="form-label">Address</div>
+              <div className="form-value">{formData.address || ''}</div>
             </div>
             
             <div className="form-group">
-              <div className="form-label">Date of Birth (YYYY-MM-DD)</div>
+              <div className="form-label">Date of Birth</div>
               <div className="form-value">{formatDate(formData.dateOfBirth) || ''}</div>
             </div>
             
             <div className="form-group">
-              <div className="form-label">Admission Date (YYYY-MM-DD)</div>
-              <div className="form-value">{formatDate(formData.admissionDate) || ''}</div>
+              <div className="form-label">Place of Birth</div>
+              <div className="form-value">{formData.birthPlace || ''}</div>
             </div>
-          </div>
-        </div>
-        
-        {/* Academic Information Section */}
-        <div className="section">
-          <div className="section-title">Academic Information</div>
-          <div className="form-row">
+            
             <div className="form-group">
-              <div className="form-label">Class</div>
+              <div className="form-label">Last Attended School</div>
+              <div className="form-value">{formData.lastSchoolAttended || ''}</div>
+            </div>
+            
+            <div className="form-group">
+              <div className="form-label">Date of Admission</div>
+              <div className="form-value">{formatDate(formData.dateOfAdmission) || ''}</div>
+            </div>
+            
+            <div className="form-group">
+              <div className="form-label">Class in which admitted</div>
               <div className="form-value">{formData.class || ''}</div>
             </div>
             
@@ -242,26 +252,25 @@ const PrintableAdmissionForm = ({ formData, photoPreview }) => {
               <div className="form-label">Section</div>
               <div className="form-value">{formData.section || ''}</div>
             </div>
-          </div>
-        </div>
-        
-        {/* Family Relationship Section */}
-        <div className="section">
-          <div className="section-title">Family Relationship</div>
-          <div className="form-row">
+            
             <div className="form-group">
-              <div className="form-label">Family ID</div>
-              <div className="form-value">{formData.familyId || ''}</div>
+              <div className="form-label">Date of Removal</div>
+              <div className="form-value">{formatDate(formData.dateOfLeaving) || ''}</div>
             </div>
             
             <div className="form-group">
-              <div className="form-label">Relationship</div>
-              <div className="form-value">{formData.relationship || ''}</div>
+              <div className="form-label">Class at the time of removal</div>
+              <div className="form-value">{formData.classInWhichLeft || ''}</div>
             </div>
             
-            <div className="form-group">
-              <div className="form-label">Parent/Guardian ID</div>
-              <div className="form-value">{formData.parentId || ''}</div>
+            <div className="form-group full-width">
+              <div className="form-label">Reason for leaving</div>
+              <div className="form-value">{formData.reasonOfLeaving || ''}</div>
+            </div>
+            
+            <div className="form-group full-width">
+              <div className="form-label">Remarks</div>
+              <div className="form-value">{formData.remarks || ''}</div>
             </div>
           </div>
         </div>
@@ -271,23 +280,23 @@ const PrintableAdmissionForm = ({ formData, photoPreview }) => {
           <div className="section-title">Fee Details</div>
           <div className="form-row">
             <div className="form-group">
-              <div className="form-label">Admission Fees (Rs)</div>
-              <div className="form-value">{formData.admissionFees || ''}</div>
-            </div>
-            
-            <div className="form-group">
-              <div className="form-label">Monthly Fees (Rs)</div>
+              <div className="form-label">Monthly Fees</div>
               <div className="form-value">{formData.monthlyFees || ''}</div>
             </div>
             
             <div className="form-group">
-              <div className="form-label">Total Fees (Rs)</div>
-              <div className="form-value">{formData.totalFees || ''}</div>
+              <div className="form-label">Admission Fees</div>
+              <div className="form-value">{formData.admissionFees || ''}</div>
             </div>
             
             <div className="form-group">
-              <div className="form-label">Fees Paid (Rs)</div>
+              <div className="form-label">Fees Paid</div>
               <div className="form-value">{formData.feesPaid || ''}</div>
+            </div>
+            
+            <div className="form-group">
+              <div className="form-label">Total Fees</div>
+              <div className="form-value">{formData.totalFees || ''}</div>
             </div>
           </div>
         </div>

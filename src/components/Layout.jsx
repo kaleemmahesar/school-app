@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { FaUsers, FaMoneyBillWave, FaChalkboardTeacher, FaBook, FaGraduationCap, FaChartLine, FaDollarSign, FaClipboardList, FaChevronDown, FaQrcode, FaUsersCog, FaFileInvoice, FaTasks, FaListOl, FaFileAlt, FaEdit, FaGraduationCap as FaGraduationCapIcon, FaCalendarAlt, FaCertificate, FaUser, FaSignOutAlt, FaCog } from 'react-icons/fa';
+import { FaUsers, FaMoneyBillWave, FaChalkboardTeacher, FaBook, FaGraduationCap, FaChartLine, FaDollarSign, FaClipboardList, FaChevronDown, FaQrcode, FaUsersCog, FaFileInvoice, FaTasks, FaListOl, FaFileAlt, FaEdit, FaGraduationCap as FaGraduationCapIcon, FaCalendarAlt, FaCertificate, FaUser, FaSignOutAlt, FaCog, FaTable } from 'react-icons/fa';
 import { logoutUser } from '../store/usersSlice';
 
 const Layout = ({ children }) => {
@@ -102,12 +102,22 @@ const Layout = ({ children }) => {
       path: '/certificates',
       icon: <FaCertificate className="mr-2" />
     },
+    {
+      name: 'Examinations',
+      path: '/examinations',
+      icon: <FaCalendarAlt className="mr-2" />
+    },
+    // {
+    //   name: 'Timetable',
+    //   path: '/timetable',
+    //   icon: <FaTable className="mr-2" />
+    // },
     // Only show settings for admin users
-    ...(currentUser && currentUser.role === 'Administrator' ? [{
-      name: 'Settings',
-      path: '/settings',
-      icon: <FaCog className="mr-2" />
-    }] : [])
+    // ...(currentUser && currentUser.role === 'Administrator' ? [{
+    //   name: 'Settings',
+    //   path: '/settings',
+    //   icon: <FaCog className="mr-2" />
+    // }] : [])
   ];
 
   // Don't show navigation for login page

@@ -6,6 +6,7 @@ import classesReducer from './classesSlice';
 import marksReducer from './marksSlice';
 import usersReducer from './usersSlice';
 import settingsReducer from './settingsSlice';
+import examsReducer from './examsSlice';
 
 export const store = configureStore({
   reducer: {
@@ -16,6 +17,7 @@ export const store = configureStore({
     marks: marksReducer,
     users: usersReducer,
     settings: settingsReducer,
+    exams: examsReducer,
   },
 });
 

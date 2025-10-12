@@ -10,7 +10,7 @@ const CertificatesSection = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedClass, setSelectedClass] = useState('');
   const [selectedSection, setSelectedSection] = useState('');
-  const [certificateType, setCertificateType] = useState('all'); // 'all', 'leaving', 'character'
+  const [certificateType, setCertificateType] = useState('all'); // 'all', 'leaving', 'pass', 'character'
   const [showCertificateModal, setShowCertificateModal] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState(null);
 
@@ -38,7 +38,8 @@ const CertificatesSection = () => {
       
       // Filter by certificate type
       const matchesCertificateType = certificateType === 'all' || 
-        (certificateType === 'leaving' && (student.status === 'left' || student.status === 'passed_out')) ||
+        (certificateType === 'leaving' && student.status === 'left') ||
+        (certificateType === 'pass' && student.status === 'passed_out') ||
         (certificateType === 'character' && student.status !== 'left' && student.status !== 'passed_out');
       
       return matchesSearch && matchesClass && matchesSection && matchesCertificateType;
@@ -60,16 +61,6 @@ const CertificatesSection = () => {
   const handleGenerateCertificate = (student) => {
     setSelectedStudent(student);
     setShowCertificateModal(true);
-  };
-
-  const handleMarkAsLeft = (student) => {
-    const updatedStudent = {
-      ...student,
-      status: 'left',
-      leavingDate: new Date().toISOString().split('T')[0]
-    };
-    
-    dispatch(updateStudent(updatedStudent));
   };
 
   const formatDate = (dateString) => {
@@ -189,6 +180,7 @@ const CertificatesSection = () => {
                   >
                     <option value="all">All Certificates</option>
                     <option value="leaving">Leaving Certificates</option>
+                    <option value="pass">Pass Certificates</option>
                     <option value="character">Character Certificates</option>
                   </select>
                 </div>
@@ -226,7 +218,11 @@ const CertificatesSection = () => {
                   <tr key={student.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
-                        <div className="bg-gray-200 border-2 border-dashed rounded-xl w-10 h-10" />
+                        <div className="bg-gray-200 border-2 border-dashed rounded-xl w-10 h-10 flex items-center justify-center">
+                          <svg className="w-5 h-5 text-gray-500" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+                          </svg>
+                        </div>
                         <div className="ml-4">
                           <div className="text-sm font-medium text-gray-900">
                             {student.firstName} {student.lastName}
@@ -251,9 +247,13 @@ const CertificatesSection = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex flex-col space-y-1">
-                        {student.status === 'left' || student.status === 'passed_out' ? (
+                        {student.status === 'left' ? (
                           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                             <FaCertificate className="mr-1" /> Leaving Certificate
+                          </span>
+                        ) : student.status === 'passed_out' ? (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                            <FaCertificate className="mr-1" /> Pass Certificate
                           </span>
                         ) : (
                           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
@@ -270,14 +270,6 @@ const CertificatesSection = () => {
                         >
                           <FaCertificate className="mr-1" /> Generate
                         </button>
-                        {(student.status !== 'left' && student.status !== 'passed_out') && (
-                          <button
-                            onClick={() => handleMarkAsLeft(student)}
-                            className="inline-flex items-center px-3 py-1 border border-transparent rounded-lg text-sm font-medium text-white bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700"
-                          >
-                            <FaUserTimes className="mr-1" /> Mark as Left
-                          </button>
-                        )}
                       </div>
                     </td>
                   </tr>

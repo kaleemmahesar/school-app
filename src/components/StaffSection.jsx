@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchStaff, addStaff, updateStaff, deleteStaff, addStaffAdvance, payStaffSalary } from '../store/staffSlice';
-import { FaPlus, FaEdit, FaTrash, FaSearch, FaChalkboardTeacher, FaUser, FaPhone, FaEnvelope, FaCalendar, FaDollarSign, FaBriefcase, FaMoneyBillWave } from 'react-icons/fa';
+import { fetchClasses } from '../store/classesSlice';
+import { FaPlus, FaEdit, FaTrash, FaSearch, FaChalkboardTeacher, FaUser, FaPhone, FaEnvelope, FaCalendar, FaDollarSign, FaBriefcase, FaMoneyBillWave, FaBook } from 'react-icons/fa';
 import PageHeader from './common/PageHeader';
 import StaffFormModal from './StaffFormModal';
 import StaffFinancialModal from './StaffFinancialModal';
@@ -10,6 +11,7 @@ import Pagination from './common/Pagination';
 const StaffSection = () => {
   const dispatch = useDispatch();
   const { staff, loading, error } = useSelector(state => state.staff);
+  const { classes } = useSelector(state => state.classes);
   const [searchTerm, setSearchTerm] = useState('');
   const [showStaffModal, setShowStaffModal] = useState(false);
   const [showFinancialModal, setShowFinancialModal] = useState(false);
@@ -20,6 +22,7 @@ const StaffSection = () => {
 
   useEffect(() => {
     dispatch(fetchStaff());
+    dispatch(fetchClasses());
   }, [dispatch]);
 
   const handleEdit = (staffMember) => {
@@ -130,6 +133,43 @@ const StaffSection = () => {
     acc[member.position] += 1;
     return acc;
   }, {});
+
+  // Function to find classes taught by a specific teacher
+  const getClassesForTeacher = (teacherName) => {
+    const teacherClasses = [];
+    
+    // Split the teacher name to get first and last name
+    const nameParts = teacherName.split(' ');
+    const firstName = nameParts[0] || '';
+    const lastName = nameParts[nameParts.length - 1] || '';
+    
+    classes.forEach(classItem => {
+      // Check if any subject in this class is taught by this teacher
+      const teacherSubjects = classItem.subjects.filter(subject => {
+        if (!subject.teacher) return false;
+        
+        const teacher = subject.teacher.toLowerCase();
+        const fullName = teacherName.toLowerCase();
+        const lowerFirstName = firstName.toLowerCase();
+        const lowerLastName = lastName.toLowerCase();
+        
+        // Match if teacher name contains any part of the staff name
+        return teacher.includes(lowerFirstName) || 
+               teacher.includes(lowerLastName) || 
+               teacher.includes(fullName);
+      });
+      
+      if (teacherSubjects.length > 0) {
+        // Add class with subjects taught by this teacher
+        teacherClasses.push({
+          className: classItem.name,
+          subjects: teacherSubjects.map(subject => subject.name)
+        });
+      }
+    });
+    
+    return teacherClasses;
+  };
 
   if (loading) return <div className="flex justify-center items-center h-64"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div></div>;
   if (error) return <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded">
@@ -358,6 +398,34 @@ const StaffSection = () => {
                         </span>
                       </div>
                     </div>
+                  </div>
+                  
+                  {/* Classes taught by this teacher */}
+                  <div className="pt-3 border-t border-gray-100">
+                    <h4 className="text-sm font-medium text-gray-900 mb-2">Classes Teaching</h4>
+                    {(() => {
+                      const teacherClasses = getClassesForTeacher(`${member.firstName} ${member.lastName}`);
+                      
+                      if (teacherClasses.length === 0) {
+                        return <p className="text-sm text-gray-500">No classes assigned</p>;
+                      }
+                      
+                      return (
+                        <div className="space-y-2 max-h-32 overflow-y-auto">
+                          {teacherClasses.map((classItem, index) => (
+                            <div key={index} className="flex items-start text-sm">
+                              <FaBook className="text-gray-400 mr-2 mt-0.5 flex-shrink-0" />
+                              <div>
+                                <span className="font-medium text-gray-900">{classItem.className}</span>
+                                <div className="text-xs text-gray-500">
+                                  {classItem.subjects.join(', ')}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    })()}
                   </div>
                 </div>
                 

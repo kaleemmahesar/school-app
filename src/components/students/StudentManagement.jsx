@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useSelector } from 'react-redux';
-import { FaUserCheck, FaUserTimes, FaUsers, FaUserPlus, FaSearch, FaFilter } from 'react-icons/fa';
+import { FaUserCheck, FaUserTimes, FaUsers, FaUserPlus } from 'react-icons/fa';
 import PageHeader from '../common/PageHeader';
 import StudentAvailabilityLists from './StudentAvailabilityLists';
 import FamilyStudentsList from './FamilyStudentsList';
@@ -109,62 +109,8 @@ const StudentManagement = ({ onAddStudent }) => {
         }
       />
 
-      {/* Search and Filters */}
-      <div className="bg-white rounded-lg shadow p-4 mb-6">
-        <div className="flex flex-col md:flex-row md:items-center gap-3 mb-4">
-          <div className="relative flex-grow max-w-md">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <FaSearch className="h-4 w-4 text-gray-400" />
-            </div>
-            <input
-              type="text"
-              placeholder="Search by student name, email, or class..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-sm"
-            />
-          </div>
-          
-          <div className="flex flex-wrap gap-2">
-            <div className="flex items-center space-x-2">
-              <FaFilter className="text-gray-400 h-4 w-4" />
-              <select
-                value={selectedClass}
-                onChange={(e) => setSelectedClass(e.target.value)}
-                className="block w-full pl-3 pr-10 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-sm"
-              >
-                <option value="">All Classes</option>
-                {uniqueClasses.map((cls) => (
-                  <option key={cls} value={cls}>{cls}</option>
-                ))}
-              </select>
-            </div>
-            
-            <div className="flex items-center space-x-2">
-              <FaFilter className="text-gray-400 h-4 w-4" />
-              <select
-                value={selectedSection}
-                onChange={(e) => setSelectedSection(e.target.value)}
-                disabled={!selectedClass}
-                className="block w-full pl-3 pr-10 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-sm"
-              >
-                <option value="">All Sections</option>
-                {classSections.map((section) => (
-                  <option key={section} value={section}>{section}</option>
-                ))}
-              </select>
-            </div>
-            
-            <button
-              onClick={handleClearFilters}
-              className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-            >
-              Clear
-            </button>
-          </div>
-        </div>
-
-        {/* Tabs for different views */}
+      {/* Tabs for different views */}
+      <div className="bg-white shadow p-4">
         <div className="border-b border-gray-200">
           <nav className="-mb-px flex flex-wrap space-x-6">
             <button
@@ -193,7 +139,7 @@ const StudentManagement = ({ onAddStudent }) => {
             >
               <div className="flex items-center">
                 <FaUserTimes className="mr-2" />
-                Unavailable
+                Passed Out
                 <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
                   {stats.unavailable}
                 </span>
@@ -209,7 +155,7 @@ const StudentManagement = ({ onAddStudent }) => {
             >
               <div className="flex items-center">
                 <FaUserTimes className="mr-2" />
-                Left
+                Left in Middle
                 <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
                   {stats.left}
                 </span>
@@ -247,6 +193,25 @@ const StudentManagement = ({ onAddStudent }) => {
           />
         ) : (
           <FamilyManagement />
+        )}
+      </div>
+
+      {/* Summary Statistics */}
+      <div className="mt-3 flex items-center text-sm text-gray-600">
+        <span>
+          Showing students filtered by search and class/section criteria
+        </span>
+        {(selectedClass || selectedSection || searchTerm) && (
+          <button 
+            onClick={() => {
+              setSearchTerm('');
+              setSelectedClass('');
+              setSelectedSection('');
+            }}
+            className="ml-2 text-blue-600 hover:text-blue-800"
+          >
+            (Clear filters)
+          </button>
         )}
       </div>
     </>

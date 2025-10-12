@@ -266,31 +266,20 @@ export const validateForm = (formData, validationRules) => {
 
 // Validation rules for admission form
 export const admissionFormValidationRules = {
-  firstName: [
-    { type: 'required' },
-    { type: 'length', minLength: 2, maxLength: 50 }
-  ],
-  lastName: [
-    { type: 'required' },
-    { type: 'length', minLength: 2, maxLength: 50 }
-  ],
   grNo: [
     { type: 'required' },
     { type: 'length', minLength: 1, maxLength: 20 }
   ],
-  class: [
-    { type: 'required' }
-  ],
-  section: [
-    { type: 'required' }
+  firstName: [
+    { type: 'required' },
+    { type: 'length', minLength: 2, maxLength: 50 }
   ],
   fatherName: [
     { type: 'required' },
     { type: 'length', minLength: 2, maxLength: 50 }
   ],
-  caste: [
-    { type: 'required' },
-    { type: 'length', minLength: 2, maxLength: 30 }
+  religion: [
+    { type: 'required' }
   ],
   address: [
     { type: 'required' },
@@ -301,25 +290,20 @@ export const admissionFormValidationRules = {
     { type: 'date' },
     { type: 'dateNotInFuture' }
   ],
-  parentContactNumber: [
-    { type: 'required' },
-    { type: 'phone' }
-  ],
   birthPlace: [
     { type: 'required' },
     { type: 'length', minLength: 2, maxLength: 50 }
-  ],
-  gender: [
-    { type: 'required' }
-  ],
-  fatherCnic: [
-    { type: 'required' },
-    { type: 'cnic' }
   ],
   dateOfAdmission: [
     { type: 'required' },
     { type: 'date' },
     { type: 'dateNotInFuture' }
+  ],
+  class: [
+    { type: 'required' }
+  ],
+  section: [
+    { type: 'required' }
   ],
   // Add validation rules for fees fields
   monthlyFees: [

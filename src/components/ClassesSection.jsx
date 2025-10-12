@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchClasses, addClass, updateClass, deleteClass, updateClassFees, addSubjectToClass, removeSubjectFromClass } from '../store/classesSlice';
 import { fetchStudents } from '../store/studentsSlice';
@@ -17,12 +17,37 @@ const ClassesSection = () => {
   const [selectedClass, setSelectedClass] = useState(null);
   const [currentClass, setCurrentClass] = useState(null);
   const [feesAmount, setFeesAmount] = useState('');
-  const [subjectData, setSubjectData] = useState({ name: '', teacher: '' });
+  const [subjectData, setSubjectData] = useState({ name: '', teacher: '', maxMarks: 100 });
 
   useEffect(() => {
     dispatch(fetchClasses());
     dispatch(fetchStudents()); // Add this line to fetch students
   }, [dispatch]);
+
+  // Calculate student counts for each class and section dynamically
+  const classesWithStudentCounts = useMemo(() => {
+    return classes.map(classItem => {
+      // Calculate total students for this class
+      const totalStudents = students.filter(student => student.class === classItem.name).length;
+      
+      // Calculate students per section
+      const sectionsWithCounts = classItem.sections.map(section => {
+        const studentCount = students.filter(student => 
+          student.class === classItem.name && student.section === section.name
+        ).length;
+        return {
+          ...section,
+          studentCount
+        };
+      });
+      
+      return {
+        ...classItem,
+        totalStudents,
+        sections: sectionsWithCounts
+      };
+    });
+  }, [classes, students]);
 
   const handleEdit = (classItem) => {
     setCurrentClass(classItem);
@@ -60,7 +85,7 @@ const ClassesSection = () => {
         subject: newSubject 
       }));
       // Reset the form after submission
-      setSubjectData({ name: '', teacher: '' });
+      setSubjectData({ name: '', teacher: '', maxMarks: 100 });
     }
   };
 
@@ -105,15 +130,15 @@ const ClassesSection = () => {
     setCurrentClass(null);
   };
 
-  const filteredClasses = classes.filter(cls =>
+  const filteredClasses = classesWithStudentCounts.filter(cls =>
     cls.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   // Calculate total students across all classes
-  const totalStudents = classes.reduce((sum, cls) => sum + cls.totalStudents, 0);
+  const totalStudents = classesWithStudentCounts.reduce((sum, cls) => sum + cls.totalStudents, 0);
 
   // Calculate total sections
-  const totalSections = classes.reduce((sum, cls) => sum + cls.sections.length, 0);
+  const totalSections = classesWithStudentCounts.reduce((sum, cls) => sum + cls.sections.length, 0);
 
   if (loading) return <div className="flex justify-center items-center h-64"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div></div>;
   if (error) return <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded">
@@ -401,6 +426,19 @@ const ClassesSection = () => {
                 />
               </div>
               
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Maximum Marks</label>
+                <input
+                  type="number"
+                  value={subjectData.maxMarks}
+                  onChange={(e) => setSubjectData({...subjectData, maxMarks: parseInt(e.target.value) || 100})}
+                  className="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="100"
+                  min="1"
+                  required
+                />
+              </div>
+              
               <button
                 type="submit"
                 className="w-full inline-flex items-center justify-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
@@ -418,7 +456,7 @@ const ClassesSection = () => {
                     <div key={subject.id} className="flex justify-between items-center p-2 bg-gray-50 rounded-lg">
                       <div>
                         <div className="text-sm font-medium text-gray-900">{subject.name}</div>
-                        <div className="text-xs text-gray-500">Teacher: {subject.teacher}</div>
+                        <div className="text-xs text-gray-500">Teacher: {subject.teacher} | Max Marks: {subject.maxMarks || 100}</div>
                       </div>
                       <button
                         onClick={() => handleRemoveSubject(subject.id)}

@@ -48,25 +48,35 @@ const Dashboard = () => {
     // Net profit/loss (income - expenses)
     const netProfit = totalFeesCollected - (totalStaffSalaries + otherExpenses);
     
-    // Fees by class
-    const feesByClass = students.reduce((acc, student) => {
-      if (!acc[student.class]) {
-        acc[student.class] = { collected: 0, pending: 0, total: 0 };
+    // Fees by class - include all classes, even those without students
+    const feesByClass = {};
+    // Initialize with all classes
+    classes.forEach(classItem => {
+      feesByClass[classItem.name] = { collected: 0, pending: 0, total: 0 };
+    });
+    // Add student data
+    students.forEach(student => {
+      if (!feesByClass[student.class]) {
+        feesByClass[student.class] = { collected: 0, pending: 0, total: 0 };
       }
-      acc[student.class].collected += parseFloat(student.feesPaid || 0);
-      acc[student.class].total += parseFloat(student.totalFees || 0);
-      acc[student.class].pending += (parseFloat(student.totalFees || 0) - parseFloat(student.feesPaid || 0));
-      return acc;
-    }, {});
+      feesByClass[student.class].collected += parseFloat(student.feesPaid || 0);
+      feesByClass[student.class].total += parseFloat(student.totalFees || 0);
+      feesByClass[student.class].pending += (parseFloat(student.totalFees || 0) - parseFloat(student.feesPaid || 0));
+    });
     
-    // Students by class
-    const studentsByClass = students.reduce((acc, student) => {
-      if (!acc[student.class]) {
-        acc[student.class] = 0;
+    // Students by class - include all classes, even those without students
+    const studentsByClass = {};
+    // Initialize with all classes
+    classes.forEach(classItem => {
+      studentsByClass[classItem.name] = 0;
+    });
+    // Add student data
+    students.forEach(student => {
+      if (!studentsByClass[student.class]) {
+        studentsByClass[student.class] = 0;
       }
-      acc[student.class] += 1;
-      return acc;
-    }, {});
+      studentsByClass[student.class] += 1;
+    });
     
     // Expenses by category
     const expensesByCategory = expenses.reduce((acc, expense) => {
@@ -495,22 +505,25 @@ const Dashboard = () => {
                   <FaChartPie className="text-gray-400" />
                 </div>
                 <div className="space-y-3">
-                  {Object.entries(stats.studentsByClass).map(([className, count]) => (
-                    <div key={className} className="flex items-center">
-                      <div className="w-32 text-sm text-gray-600">{className}</div>
-                      <div className="flex-1 ml-2">
-                        <div className="flex items-center">
-                          <div className="w-full bg-gray-200 rounded-full h-2">
-                            <div 
-                              className="bg-blue-600 h-2 rounded-full" 
-                              style={{ width: `${(count / stats.totalStudents) * 100}%` }}
-                            ></div>
+                  {classes.map((classItem) => {
+                    const count = stats.studentsByClass[classItem.name] || 0;
+                    return (
+                      <div key={classItem.name} className="flex items-center">
+                        <div className="w-32 text-sm text-gray-600">{classItem.name}</div>
+                        <div className="flex-1 ml-2">
+                          <div className="flex items-center">
+                            <div className="w-full bg-gray-200 rounded-full h-2">
+                              <div 
+                                className="bg-blue-600 h-2 rounded-full" 
+                                style={{ width: `${stats.totalStudents > 0 ? (count / stats.totalStudents) * 100 : 0}%` }}
+                              ></div>
+                            </div>
+                            <div className="ml-2 text-sm font-medium text-gray-700 w-10">{count}</div>
                           </div>
-                          <div className="ml-2 text-sm font-medium text-gray-700 w-10">{count}</div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
 
@@ -521,11 +534,12 @@ const Dashboard = () => {
                   <FaChartBar className="text-gray-400" />
                 </div>
                 <div className="space-y-3">
-                  {Object.entries(stats.feesByClass).map(([className, data]) => {
+                  {classes.map((classItem) => {
+                    const data = stats.feesByClass[classItem.name] || { collected: 0, pending: 0, total: 0 };
                     const collectionRate = data.total > 0 ? (data.collected / data.total) * 100 : 0;
                     return (
-                      <div key={className} className="flex items-center">
-                        <div className="w-32 text-sm text-gray-600">{className}</div>
+                      <div key={classItem.name} className="flex items-center">
+                        <div className="w-32 text-sm text-gray-600">{classItem.name}</div>
                         <div className="flex-1 ml-2">
                           <div className="flex items-center">
                             <div className="w-full bg-gray-200 rounded-full h-2">
