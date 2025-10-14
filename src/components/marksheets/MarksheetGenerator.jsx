@@ -495,16 +495,13 @@ const MarksheetGenerator = () => {
                       <td><strong>{printPreview.marks.totalObtained}</strong></td>
                       <td><strong>{printPreview.marks.overallGrade}</strong></td>
                     </tr>
-                    <tr>
-                      <td colSpan="2"><strong>Percentage</strong></td>
-                      <td colSpan="2"><strong>{printPreview.marks.percentage.toFixed(2)}%</strong></td>
-                    </tr>
                   </tfoot>
                 </table>
                 
                 <div className="footer">
-                  <p><strong>Remarks:</strong> {printPreview.marks.remarks || 'No remarks provided'}</p>
-                  <p className="mt-2"><strong>Position:</strong> {autoRankStudents().find(s => s.id === printPreview.student.id)?.rank || 'N/A'} out of {autoRankStudents().length} students</p>
+                  <p>Percentage: {printPreview.marks.percentage}%</p>
+                  <p className="signature-line">Signature: _________________________</p>
+                  <p className="date-line">Date: _________________________</p>
                 </div>
               </div>
             </div>

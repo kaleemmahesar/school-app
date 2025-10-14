@@ -1,26 +1,31 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
 import { fetchStaff, addStaff, updateStaff, deleteStaff, addStaffAdvance, payStaffSalary } from '../store/staffSlice';
 import { fetchClasses } from '../store/classesSlice';
-import { FaPlus, FaEdit, FaTrash, FaSearch, FaChalkboardTeacher, FaUser, FaPhone, FaEnvelope, FaCalendar, FaDollarSign, FaBriefcase, FaMoneyBillWave, FaBook } from 'react-icons/fa';
+import { FaPlus, FaEdit, FaTrash, FaSearch, FaChalkboardTeacher, FaUser, FaPhone, FaCalendar, FaDollarSign, FaBriefcase, FaMoneyBillWave, FaCamera } from 'react-icons/fa';
 import PageHeader from './common/PageHeader';
 import StaffFormModal from './StaffFormModal';
 import StaffFinancialModal from './StaffFinancialModal';
+import StaffDetailsModal from './StaffDetailsModal';
 import Pagination from './common/Pagination';
 
 const StaffSection = () => {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   const { staff, loading, error } = useSelector(state => state.staff);
   const { classes } = useSelector(state => state.classes);
   const [searchTerm, setSearchTerm] = useState('');
   const [showStaffModal, setShowStaffModal] = useState(false);
   const [showFinancialModal, setShowFinancialModal] = useState(false);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [currentStaff, setCurrentStaff] = useState(null);
   const [selectedStaffForFinance, setSelectedStaffForFinance] = useState(null);
+  const [selectedStaffForDetails, setSelectedStaffForDetails] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 8;
+  const [itemsPerPage] = useState(10);
 
-  useEffect(() => {
+  React.useEffect(() => {
     dispatch(fetchStaff());
     dispatch(fetchClasses());
   }, [dispatch]);
@@ -51,6 +56,11 @@ const StaffSection = () => {
     setShowFinancialModal(true);
   };
 
+  const handleViewDetails = (staffMember) => {
+    setSelectedStaffForDetails(staffMember);
+    setShowDetailsModal(true);
+  };
+
   const handleAddAdvance = (advanceData) => {
     dispatch(addStaffAdvance(advanceData));
   };
@@ -73,7 +83,10 @@ const StaffSection = () => {
     member.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
     member.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
     member.position.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  ).sort((a, b) => {
+    // Sort by date of joining in descending order (newest first)
+    return new Date(b.dateOfJoining) - new Date(a.dateOfJoining);
+  });
 
   // Calculate total monthly salary expenses (including allowances for current month only)
   const totalMonthlySalary = staff.reduce((sum, member) => {
@@ -103,14 +116,24 @@ const StaffSection = () => {
     return sum + paid;
   }, 0);
 
-  // Calculate total expected salaries based on joining date (true pending amount)
+  // Calculate total expected salaries based on joining date with prorated first month (true pending amount)
   const totalExpectedSalaries = staff.reduce((sum, member) => {
     // Calculate months since joining
     const joiningDate = new Date(member.dateOfJoining);
     const currentDate = new Date();
-    const monthsSinceJoining = 
+    
+    // Calculate full months worked
+    let monthsSinceJoining = 
       (currentDate.getFullYear() - joiningDate.getFullYear()) * 12 + 
       (currentDate.getMonth() - joiningDate.getMonth());
+    
+    // Calculate prorated salary for the first month if joined mid-month
+    const daysInJoiningMonth = new Date(joiningDate.getFullYear(), joiningDate.getMonth() + 1, 0).getDate();
+    const daysWorkedInFirstMonth = daysInJoiningMonth - joiningDate.getDate() + 1;
+    const proratedFirstMonth = daysWorkedInFirstMonth / daysInJoiningMonth;
+    
+    // Adjust months since joining to account for prorated first month
+    const adjustedMonthsSinceJoining = monthsSinceJoining - 1 + proratedFirstMonth;
     
     // Calculate monthly total (salary + allowances)
     const allowances = (member.allowances || []).reduce((allowanceSum, allowance) => {
@@ -118,58 +141,18 @@ const StaffSection = () => {
     }, 0);
     const monthlyTotal = parseFloat(member.salary || 0) + allowances;
     
-    // Total expected = months worked * monthly salary
-    return sum + (monthsSinceJoining * monthlyTotal);
+    // Total expected = adjusted months worked * monthly salary
+    return sum + (adjustedMonthsSinceJoining * monthlyTotal);
   }, 0);
 
   // Calculate true pending amount (expected - paid)
   const totalPendingSalaries = totalExpectedSalaries - totalPaidSalaries;
 
-  // Group staff by position
-  const staffByPosition = staff.reduce((acc, member) => {
-    if (!acc[member.position]) {
-      acc[member.position] = 0;
-    }
-    acc[member.position] += 1;
-    return acc;
-  }, {});
-
-  // Function to find classes taught by a specific teacher
-  const getClassesForTeacher = (teacherName) => {
-    const teacherClasses = [];
-    
-    // Split the teacher name to get first and last name
-    const nameParts = teacherName.split(' ');
-    const firstName = nameParts[0] || '';
-    const lastName = nameParts[nameParts.length - 1] || '';
-    
-    classes.forEach(classItem => {
-      // Check if any subject in this class is taught by this teacher
-      const teacherSubjects = classItem.subjects.filter(subject => {
-        if (!subject.teacher) return false;
-        
-        const teacher = subject.teacher.toLowerCase();
-        const fullName = teacherName.toLowerCase();
-        const lowerFirstName = firstName.toLowerCase();
-        const lowerLastName = lastName.toLowerCase();
-        
-        // Match if teacher name contains any part of the staff name
-        return teacher.includes(lowerFirstName) || 
-               teacher.includes(lowerLastName) || 
-               teacher.includes(fullName);
-      });
-      
-      if (teacherSubjects.length > 0) {
-        // Add class with subjects taught by this teacher
-        teacherClasses.push({
-          className: classItem.name,
-          subjects: teacherSubjects.map(subject => subject.name)
-        });
-      }
-    });
-    
-    return teacherClasses;
-  };
+  // Pagination
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentStaffList = filteredStaff.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(filteredStaff.length / itemsPerPage);
 
   if (loading) return <div className="flex justify-center items-center h-64"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div></div>;
   if (error) return <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded">
@@ -186,7 +169,6 @@ const StaffSection = () => {
   </div>;
 
   return (
-    // Removed the outer div with className "space-y-6" since Layout provides the styling
     <>
       <PageHeader
         title="Staff Management"
@@ -269,214 +251,196 @@ const StaffSection = () => {
         </div>
       </div>
 
-      {/* Search and Filters */}
-      <div className="bg-white rounded-2xl shadow-lg p-6 mb-6">
-        <div className="flex flex-col md:flex-row md:items-center gap-4">
-          <div className="relative flex-grow max-w-md">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <FaSearch className="h-5 w-5 text-gray-400" />
+      {/* Staff Table with Filters */}
+      <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
+        {/* Search and Filters */}
+        <div className="p-6">
+          <div className="flex flex-col md:flex-row md:items-center gap-4">
+            <div className="relative flex-grow max-w-md">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <FaSearch className="h-5 w-5 text-gray-400" />
+              </div>
+              <input
+                type="text"
+                placeholder="Search by name or position..."
+                value={searchTerm}
+                onChange={handleSearchChange}
+                className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+              />
             </div>
-            <input
-              type="text"
-              placeholder="Search by name or position..."
-              value={searchTerm}
-              onChange={handleSearchChange}
-              className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
-            />
-          </div>
-          
-          <div className="flex items-center space-x-2">
-            <button
-              onClick={handleClearFilters}
-              className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-            >
-              Clear Filters
-            </button>
+            
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={handleClearFilters}
+                className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+              >
+                Clear Filters
+              </button>
+            </div>
           </div>
         </div>
-      </div>
-
-      {/* Staff Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {filteredStaff.slice(
-          (currentPage - 1) * itemsPerPage,
-          currentPage * itemsPerPage
-        ).map((member) => {
-          // Calculate months since joining
-          const joiningDate = new Date(member.dateOfJoining);
-          const currentDate = new Date();
-          const monthsSinceJoining = 
-            (currentDate.getFullYear() - joiningDate.getFullYear()) * 12 + 
-            (currentDate.getMonth() - joiningDate.getMonth());
-          
-          // Calculate total allowances for the member
-          const totalAllowances = (member.allowances || []).reduce((sum, allowance) => {
-            return sum + parseFloat(allowance.amount || 0);
-          }, 0);
-          
-          // Calculate monthly total (salary + allowances)
-          const monthlyTotal = parseFloat(member.salary || 0) + totalAllowances;
-          
-          // Calculate advances for this member
-          const memberAdvances = (member.salaryHistory || []).reduce((sum, record) => {
-            return sum + (record.status === 'advance' ? Math.abs(parseFloat(record.netSalary || 0)) : 0);
-          }, 0);
-          
-          // Calculate paid salaries for this member (total paid so far)
-          const memberPaidSalaries = (member.salaryHistory || []).reduce((sum, record) => {
-            return sum + (record.status === 'paid' ? Math.abs(parseFloat(record.netSalary || 0)) : 0);
-          }, 0);
-          
-          // Calculate paid salaries for this member for current month
-          const currentMonth = new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-          const memberPaidSalariesCurrentMonth = (member.salaryHistory || []).reduce((sum, record) => {
-            return sum + (record.status === 'paid' && record.month === currentMonth ? Math.abs(parseFloat(record.netSalary || 0)) : 0);
-          }, 0);
-          
-          // Calculate pending amount for this member (current month)
-          const memberPending = monthlyTotal - memberPaidSalariesCurrentMonth;
-          
-          return (
-            <div key={member.id} className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300">
-              <div className="p-6">
-                <div className="flex items-center mb-4">
-                  <div className="bg-gray-200 border-2 border-dashed rounded-xl w-16 h-16" />
-                  <div className="ml-4">
-                    <h3 className="text-lg font-semibold text-gray-900">{member.firstName} {member.lastName}</h3>
-                    <p className="text-sm text-gray-500">ID: {member.id}</p>
-                  </div>
-                </div>
-                
-                <div className="space-y-3">
-                  <div className="flex items-center text-sm">
-                    <FaPhone className="text-gray-400 mr-2" />
-                    <span className="text-gray-600">{member.phone}</span>
-                  </div>
-                  
-                  <div className="flex items-center text-sm">
-                    <FaBriefcase className="text-gray-400 mr-2" />
-                    <span className="text-gray-600">{member.position}</span>
-                  </div>
-                  
-                  <div className="flex items-center text-sm">
-                    <FaCalendar className="text-gray-400 mr-2" />
-                    <span className="text-gray-600">Joined: {new Date(member.dateOfJoining).toLocaleDateString()}</span>
-                  </div>
-                  
-                  <div className="pt-3 border-t border-gray-100">
-                    <h4 className="text-sm font-medium text-gray-900 mb-2">Financial Summary</h4>
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-500">Months Worked:</span>
-                        <span className="font-medium">{monthsSinceJoining}</span>
-                      </div>
-                      
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-500">Monthly Salary:</span>
-                        <span className="font-medium">Rs {Math.round(monthlyTotal)}</span>
-                      </div>
-                      
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-500">Advances Taken:</span>
-                        <span className="font-medium text-yellow-600">Rs {Math.round(memberAdvances)}</span>
-                      </div>
-                      
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-500">Total Paid:</span>
-                        <span className="font-medium text-green-600">Rs {Math.round(memberPaidSalaries)}</span>
-                      </div>
-                      
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-500">Expected Total:</span>
-                        <span className="font-medium">Rs {Math.round(monthsSinceJoining * monthlyTotal)}</span>
-                      </div>
-                      
-                      <div className="flex justify-between text-sm font-semibold">
-                        <span className="text-gray-900">Total Pending:</span>
-                        <span className={`text-gray-900 ${(monthsSinceJoining * monthlyTotal) - memberPaidSalaries > 0 ? 'text-red-600' : 'text-green-600'}`}>
-                          Rs {Math.round(Math.abs((monthsSinceJoining * monthlyTotal) - memberPaidSalaries))}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  {/* Classes taught by this teacher */}
-                  <div className="pt-3 border-t border-gray-100">
-                    <h4 className="text-sm font-medium text-gray-900 mb-2">Classes Teaching</h4>
-                    {(() => {
-                      const teacherClasses = getClassesForTeacher(`${member.firstName} ${member.lastName}`);
-                      
-                      if (teacherClasses.length === 0) {
-                        return <p className="text-sm text-gray-500">No classes assigned</p>;
-                      }
-                      
-                      return (
-                        <div className="space-y-2 max-h-32 overflow-y-auto">
-                          {teacherClasses.map((classItem, index) => (
-                            <div key={index} className="flex items-start text-sm">
-                              <FaBook className="text-gray-400 mr-2 mt-0.5 flex-shrink-0" />
-                              <div>
-                                <span className="font-medium text-gray-900">{classItem.className}</span>
-                                <div className="text-xs text-gray-500">
-                                  {classItem.subjects.join(', ')}
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      );
-                    })()}
-                  </div>
-                </div>
-                
-                <div className="flex justify-between mt-6 space-x-2">
-                  <button
-                    onClick={() => handleFinancialAction(member)}
-                    className="flex-1 inline-flex items-center justify-center px-3 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
-                  >
-                    <FaDollarSign className="mr-1" /> Manage
-                  </button>
-                  
-                  <button
-                    onClick={() => handleEdit(member)}
-                    className="inline-flex items-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                  >
-                    <FaEdit />
-                  </button>
-                  
-                  <button
-                    onClick={() => handleDelete(member.id)}
-                    className="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-                  >
-                    <FaTrash />
-                  </button>
-                </div>
-              </div>
-            </div>
-          );
-        })}
         
-        {filteredStaff.length === 0 && (
-          <div className="col-span-full text-center py-12">
-            <FaChalkboardTeacher className="mx-auto h-12 w-12 text-gray-400" />
-            <h3 className="mt-2 text-sm font-medium text-gray-900">No staff members found</h3>
-            <p className="mt-1 text-sm text-gray-500">Try adjusting your search criteria</p>
+        {/* Staff Table */}
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Staff</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Position</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Salary</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Joined</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {currentStaffList.length > 0 ? (
+                currentStaffList.map((member) => {
+                  // Calculate monthly total (salary + allowances)
+                  const totalAllowances = (member.allowances || []).reduce((sum, allowance) => {
+                    return sum + parseFloat(allowance.amount || 0);
+                  }, 0);
+                  const monthlyTotal = parseFloat(member.salary || 0) + totalAllowances;
+                  
+                  return (
+                    <tr key={member.id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center">
+                          {member.photo ? (
+                            <img 
+                              src={member.photo} 
+                              alt={`${member.firstName} ${member.lastName}`} 
+                              className="h-10 w-10 rounded-lg object-cover border border-gray-300"
+                            />
+                          ) : (
+                            <div className="bg-gray-200 border-2 border-dashed rounded-xl w-10 h-10 flex items-center justify-center">
+                              <FaCamera className="h-5 w-5 text-gray-400" />
+                            </div>
+                          )}
+                          <div className="ml-4">
+                            <div className="text-sm font-medium text-gray-900">
+                              {member.firstName} {member.lastName}
+                            </div>
+                            <div className="text-sm text-gray-500">ID: {member.id}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-900">{member.position}</div>
+                        {member.subject && (
+                          <div className="text-sm text-gray-500">Subject: {member.subject}</div>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-900">Rs {Math.round(monthlyTotal)}</div>
+                        {/* Worked months vs paid salaries summary with prorated calculation */}
+                        <div className="text-xs text-gray-500 mt-1">
+                          {/* Calculate months since joining with prorated first month */}
+                          {(() => {
+                            const joiningDate = new Date(member.dateOfJoining);
+                            const currentDate = new Date();
+                            
+                            // Calculate full months worked
+                            let monthsSinceJoining = 
+                              (currentDate.getFullYear() - joiningDate.getFullYear()) * 12 + 
+                              (currentDate.getMonth() - joiningDate.getMonth());
+                            
+                            // Calculate prorated salary for the first month if joined mid-month
+                            const daysInJoiningMonth = new Date(joiningDate.getFullYear(), joiningDate.getMonth() + 1, 0).getDate();
+                            const daysWorkedInFirstMonth = daysInJoiningMonth - joiningDate.getDate() + 1;
+                            const proratedFirstMonth = daysWorkedInFirstMonth / daysInJoiningMonth;
+                            
+                            // Adjust months since joining to account for prorated first month
+                            const adjustedMonthsSinceJoining = monthsSinceJoining - 1 + proratedFirstMonth;
+                            
+                            // Calculate paid salaries count
+                            const paidSalariesCount = member.salaryHistory ? 
+                              member.salaryHistory.filter(record => record.status === 'paid').length : 0;
+                            
+                            // Calculate pending payments
+                            const pendingPayments = adjustedMonthsSinceJoining - paidSalariesCount;
+                            
+                            return (
+                              <div className="flex items-center">
+                                <span>{adjustedMonthsSinceJoining.toFixed(1)} worked</span>
+                                <span className="mx-1">•</span>
+                                <span>{paidSalariesCount} paid</span>
+                                {pendingPayments > 0 && (
+                                  <>
+                                    <span className="mx-1">•</span>
+                                    <span className="text-red-600 font-medium">{pendingPayments.toFixed(1)} pending</span>
+                                  </>
+                                )}
+                              </div>
+                            );
+                          })()}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {new Date(member.dateOfJoining).toLocaleDateString()}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <div className="flex space-x-2">
+                          <button
+                            onClick={() => handleViewDetails(member)}
+                            className="inline-flex items-center px-3 py-1 border border-gray-300 rounded-md text-sm font-medium text-blue-700 bg-white hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                            title="View Details"
+                          >
+                            <FaUser className="mr-1" />
+                            View
+                          </button>
+                          <button
+                            onClick={() => handleFinancialAction(member)}
+                            className="inline-flex items-center px-3 py-1 border border-gray-300 rounded-md text-sm font-medium text-green-700 bg-white hover:bg-green-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                            title="Manage Finances"
+                          >
+                            <FaDollarSign className="mr-1" />
+                            Finance
+                          </button>
+                          <button
+                            onClick={() => handleEdit(member)}
+                            className="inline-flex items-center px-3 py-1 border border-gray-300 rounded-md text-sm font-medium text-indigo-700 bg-white hover:bg-indigo-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                            title="Edit"
+                          >
+                            <FaEdit className="mr-1" />
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => handleDelete(member.id)}
+                            className="inline-flex items-center px-3 py-1 border border-gray-300 rounded-md text-sm font-medium text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                            title="Delete"
+                          >
+                            <FaTrash className="mr-1" />
+                            Delete
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              ) : (
+                <tr>
+                  <td colSpan="5" className="px-6 py-4 text-center text-sm text-gray-500">
+                    No staff members found
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+        
+        {/* Pagination */}
+        {filteredStaff.length > itemsPerPage && (
+          <div className="px-6 py-4 border-t border-gray-200">
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={filteredStaff.length}
+              itemsPerPage={itemsPerPage}
+              onPageChange={(page) => setCurrentPage(page)}
+            />
           </div>
         )}
       </div>
-      
-      {/* Pagination */}
-      {filteredStaff.length >= itemsPerPage && (
-        <div className="mt-6">
-          <Pagination
-            currentPage={currentPage}
-            totalPages={Math.ceil(filteredStaff.length / itemsPerPage)}
-            totalItems={filteredStaff.length}
-            itemsPerPage={itemsPerPage}
-            onPageChange={(page) => setCurrentPage(page)}
-          />
-        </div>
-      )}
 
       {/* Staff Form Modal */}
       {showStaffModal && (
@@ -487,6 +451,7 @@ const StaffSection = () => {
           }}
           onSubmit={handleStaffSubmit}
           staffData={currentStaff}
+          classes={classes}
         />
       )}
 
@@ -500,6 +465,18 @@ const StaffSection = () => {
           }}
           onAddAdvance={handleAddAdvance}
           onPaySalary={handlePaySalary}
+        />
+      )}
+
+      {/* Staff Details Modal */}
+      {showDetailsModal && selectedStaffForDetails && (
+        <StaffDetailsModal
+          staffMember={selectedStaffForDetails}
+          onClose={() => {
+            setShowDetailsModal(false);
+            setSelectedStaffForDetails(null);
+          }}
+          classes={classes}
         />
       )}
     </>

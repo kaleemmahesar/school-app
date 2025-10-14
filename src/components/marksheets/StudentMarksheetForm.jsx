@@ -1,21 +1,21 @@
 import React, { useState, useEffect } from 'react';
-import { FaBook, FaGraduationCap, FaClipboardList, FaUserGraduate } from 'react-icons/fa';
+import { FaBook, FaGraduationCap, FaClipboardList, FaCheck, FaCogs } from 'react-icons/fa';
 import MarksheetPrintView from './MarksheetPrintView';
-import SearchableStudentDropdown from '../common/SearchableStudentDropdown';
 
 const StudentMarksheetForm = ({ 
   classes, 
   students, 
-  currentMarks, 
   onSubmit, 
-  onCancel 
+  onCancel,
+  currentMarks
 }) => {
-  const [selectedClass, setSelectedClass] = useState(currentMarks?.class || '');
-  const [selectedSection, setSelectedSection] = useState(currentMarks?.section || '');
-  const [selectedStudent, setSelectedStudent] = useState(currentMarks?.studentId || '');
-  const [examType, setExamType] = useState(currentMarks?.examType || '');
-  const [year, setYear] = useState(currentMarks?.year || new Date().getFullYear().toString());
-  const [subjectMarks, setSubjectMarks] = useState(currentMarks?.marks || []);
+  const [step, setStep] = useState(1); // 1: Select student, 2: Enter marks
+  const [selectedClass, setSelectedClass] = useState('');
+  const [selectedSection, setSelectedSection] = useState('');
+  const [selectedStudent, setSelectedStudent] = useState('');
+  const [examType, setExamType] = useState('');
+  const [year, setYear] = useState(new Date().getFullYear().toString());
+  const [subjectMarks, setSubjectMarks] = useState([]);
   const [showPrintPreview, setShowPrintPreview] = useState(false);
   const [previewData, setPreviewData] = useState(null);
   
@@ -34,18 +34,10 @@ const StudentMarksheetForm = ({
     ? classes.find(cls => cls.name === selectedClass)?.subjects || []
     : [];
 
-  // Initialize form when class is selected or when editing existing marks
+  // Initialize form when class is selected
   useEffect(() => {
-    if (currentMarks) {
-      // Editing existing marksheet
-      setSelectedClass(currentMarks.class || '');
-      setSelectedSection(currentMarks.section || '');
-      setSelectedStudent(currentMarks.studentId || '');
-      setExamType(currentMarks.examType || '');
-      setYear(currentMarks.year || new Date().getFullYear().toString());
-      setSubjectMarks(currentMarks.marks || []);
-    } else if (selectedClass && selectedSection) {
-      // Creating new marksheet - initialize subjects
+    if (selectedClass && selectedSection) {
+      // Get subjects for selected class
       const classData = classes.find(cls => cls.name === selectedClass);
       const subjects = classData?.subjects || [];
       
@@ -59,17 +51,7 @@ const StudentMarksheetForm = ({
       }));
       setSubjectMarks(initialSubjectMarks);
     }
-  }, [selectedClass, selectedSection, classes, currentMarks]);
-
-  // Handle student selection
-  const handleStudentChange = (studentId) => {
-    setSelectedStudent(studentId);
-    const student = students.find(s => s.id === studentId);
-    if (student) {
-      setSelectedClass(student.class);
-      setSelectedSection(student.section);
-    }
-  };
+  }, [selectedClass, selectedSection, classes]);
 
   // Handle marks change for a specific subject
   const handleMarksChange = (subjectIndex, field, value) => {
@@ -77,17 +59,16 @@ const StudentMarksheetForm = ({
     
     if (field === 'marksObtained') {
       const obtained = parseInt(value) || 0;
-      const total = parseInt(updatedSubjectMarks[subjectIndex].totalMarks) || 100;
+      const total = updatedSubjectMarks[subjectIndex].totalMarks;
       const percentage = total > 0 ? (obtained / total) * 100 : 0;
       
-      // Calculate grade
-      let grade = '';
+      // Simple grade calculation
+      let grade = 'F';
       if (percentage >= 90) grade = 'A+';
       else if (percentage >= 80) grade = 'A';
       else if (percentage >= 70) grade = 'B+';
       else if (percentage >= 60) grade = 'B';
       else if (percentage >= 50) grade = 'C';
-      else grade = 'F';
       
       updatedSubjectMarks[subjectIndex].marksObtained = value;
       updatedSubjectMarks[subjectIndex].grade = grade;
@@ -100,18 +81,17 @@ const StudentMarksheetForm = ({
 
   // Calculate totals
   const calculateTotals = () => {
-    const totalObtained = subjectMarks.reduce((sum, mark) => sum + (parseInt(mark.marksObtained) || 0), 0);
-    const totalMarks = subjectMarks.reduce((sum, mark) => sum + (parseInt(mark.totalMarks) || 0), 0);
+    const totalObtained = subjectMarks.reduce((sum, subject) => sum + (parseInt(subject.marksObtained) || 0), 0);
+    const totalMarks = subjectMarks.reduce((sum, subject) => sum + (parseInt(subject.totalMarks) || 0), 0);
     const percentage = totalMarks > 0 ? ((totalObtained / totalMarks) * 100).toFixed(2) : 0;
     
     // Calculate overall grade
-    let overallGrade = '';
+    let overallGrade = 'F';
     if (percentage >= 90) overallGrade = 'A+';
     else if (percentage >= 80) overallGrade = 'A';
     else if (percentage >= 70) overallGrade = 'B+';
     else if (percentage >= 60) overallGrade = 'B';
     else if (percentage >= 50) overallGrade = 'C';
-    else overallGrade = 'F';
     
     return { totalObtained, totalMarks, percentage, overallGrade };
   };
@@ -120,14 +100,14 @@ const StudentMarksheetForm = ({
     e.preventDefault();
     
     // Validate required fields
-    if (!selectedStudent || !selectedClass || !selectedSection || !examType || !year) {
+    if (!selectedClass || !selectedSection || !selectedStudent || !examType || !year) {
       alert('Please fill in all required fields');
       return;
     }
     
     // Validate that all marks are entered
-    const allMarksEntered = subjectMarks.every(mark => 
-      mark.marksObtained !== '' && mark.marksObtained !== null
+    const allMarksEntered = subjectMarks.every(subject => 
+      subject.marksObtained !== '' && subject.marksObtained !== null
     );
     
     if (!allMarksEntered) {
@@ -135,16 +115,12 @@ const StudentMarksheetForm = ({
       return;
     }
     
-    // Get student name
-    const student = students.find(s => s.id === selectedStudent);
-    const studentName = student ? `${student.firstName} ${student.lastName}` : '';
+    const totals = calculateTotals();
     
     // Prepare data for submission
-    const totals = calculateTotals();
     const marksheetData = {
-      id: currentMarks ? currentMarks.id : Date.now().toString(),
+      id: currentMarks?.id || Date.now().toString(),
       studentId: selectedStudent,
-      studentName: studentName,
       class: selectedClass,
       section: selectedSection,
       examType: examType,
@@ -170,7 +146,7 @@ const StudentMarksheetForm = ({
     window.print();
   };
 
-  // Handle download action (simplified for now)
+  // Handle download action
   const handleDownload = () => {
     alert('In a full implementation, this would download the marksheet as a PDF');
   };
@@ -280,16 +256,22 @@ const StudentMarksheetForm = ({
           <label className="block text-sm font-medium text-gray-700 mb-1">Student *</label>
           <div className="relative">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <FaUserGraduate className="h-5 w-5 text-gray-400" />
+              <FaGraduationCap className="h-5 w-5 text-gray-400" />
             </div>
-            <SearchableStudentDropdown
-              students={filteredStudents}
+            <select
               value={selectedStudent}
-              onChange={handleStudentChange}
-              placeholder="Search and select a student..."
+              onChange={(e) => setSelectedStudent(e.target.value)}
+              className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
               required
               disabled={!selectedClass || !selectedSection}
-            />
+            >
+              <option value="">Select Student</option>
+              {filteredStudents.map(student => (
+                <option key={student.id} value={student.id}>
+                  {student.firstName} {student.lastName} (ID: {student.id})
+                </option>
+              ))}
+            </select>
           </div>
         </div>
 
@@ -325,85 +307,68 @@ const StudentMarksheetForm = ({
           />
         </div>
       </div>
-      
-      {/* Subject Marks */}
-      {subjectMarks.length > 0 && (
+
+      {selectedClass && selectedSection && selectedStudent && (
         <div className="mb-6">
-          <h4 className="text-lg font-medium text-gray-900 mb-4">Subject Marks</h4>
-          <div className="bg-white rounded-2xl shadow-lg p-6">
-            <div className="overflow-hidden rounded-lg border border-gray-200">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Subject</th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Marks Obtained</th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Marks</th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Grade</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {subjectMarks.map((mark, index) => (
-                    <tr key={index}>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">{mark.subjectName}</div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <input
-                          type="number"
-                          min="0"
-                          value={mark.marksObtained}
-                          onChange={(e) => handleMarksChange(index, 'marksObtained', e.target.value)}
-                          className="block w-24 px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
-                          required
-                        />
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <input
-                          type="number"
-                          min="0"
-                          value={mark.totalMarks}
-                          onChange={(e) => handleMarksChange(index, 'totalMarks', e.target.value)}
-                          className="block w-24 px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
-                          required
-                        />
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900 font-medium">{mark.grade || '-'}</div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+          <h4 className="text-md font-medium text-gray-900 mb-3">Enter Marks</h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {subjectMarks.map((subject, index) => (
+              <div key={index} className="border border-gray-200 rounded-lg p-4">
+                <div className="flex justify-between items-center mb-2">
+                  <h5 className="font-medium text-gray-900">{subject.subjectName}</h5>
+                  <span className="text-sm text-gray-500">Total: {subject.totalMarks}</span>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">Obtained Marks</label>
+                    <input
+                      type="number"
+                      min="0"
+                      max={subject.totalMarks}
+                      value={subject.marksObtained}
+                      onChange={(e) => handleMarksChange(index, 'marksObtained', e.target.value)}
+                      className="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">Grade</label>
+                    <input
+                      type="text"
+                      value={subject.grade}
+                      readOnly
+                      className="block w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-sm"
+                    />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+          
+          {/* Summary */}
+          <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+            <div className="grid grid-cols-4 gap-4">
+              <div>
+                <p className="text-xs text-gray-500">Total Obtained</p>
+                <p className="font-bold">{calculateTotals().totalObtained}</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500">Total Marks</p>
+                <p className="font-bold">{calculateTotals().totalMarks}</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500">Percentage</p>
+                <p className="font-bold">{calculateTotals().percentage}%</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500">Grade</p>
+                <p className="font-bold">{calculateTotals().overallGrade}</p>
+              </div>
             </div>
           </div>
         </div>
       )}
-      
-      {/* Totals */}
-      {subjectMarks.length > 0 && (
-        <div className="mb-6 p-4 bg-blue-50 rounded-lg">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div>
-              <p className="text-sm text-gray-600">Total Obtained</p>
-              <p className="text-lg font-bold text-gray-900">{calculateTotals().totalObtained}</p>
-            </div>
-            <div>
-              <p className="text-sm text-gray-600">Total Marks</p>
-              <p className="text-lg font-bold text-gray-900">{calculateTotals().totalMarks}</p>
-            </div>
-            <div>
-              <p className="text-sm text-gray-600">Percentage</p>
-              <p className="text-lg font-bold text-gray-900">{calculateTotals().percentage}%</p>
-            </div>
-            <div>
-              <p className="text-sm text-gray-600">Overall Grade</p>
-              <p className="text-lg font-bold text-gray-900">{calculateTotals().overallGrade}</p>
-            </div>
-          </div>
-        </div>
-      )}
-      
-      <div className="flex justify-end space-x-3 pt-4">
+
+      <div className="flex justify-end space-x-3">
         <button
           type="button"
           onClick={onCancel}
@@ -414,9 +379,9 @@ const StudentMarksheetForm = ({
         <button
           type="button"
           onClick={handleSubmit}
-          className="inline-flex items-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          className="inline-flex items-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
         >
-          <FaClipboardList className="mr-2" /> {currentMarks ? 'Update Marksheet' : 'Add Marksheet'}
+          <FaCheck className="mr-2" /> {currentMarks ? 'Update Marksheet' : 'Save and Preview'}
         </button>
       </div>
     </div>

@@ -45,16 +45,8 @@ const FamilyManagement = () => {
         };
       }
       
-      // Calculate fees for this student
-      const totalFees = parseFloat(student.totalFees) || 0;
-      const feesPaid = parseFloat(student.feesPaid) || 0;
-      const feesPending = totalFees - feesPaid;
-      
-      // Add to family totals
-      familyGroups[familyId].totalFees += totalFees;
-      familyGroups[familyId].feesPaid += feesPaid;
-      familyGroups[familyId].feesPending += feesPending;
-      
+      // For NGO schools, we don't need to calculate fees
+      // Just add the student to the family
       familyGroups[familyId].members.push(student);
     });
     
@@ -332,18 +324,7 @@ const FamilyManagement = () => {
                         Head: {familyGroup.familyInfo.head.firstName} {familyGroup.familyInfo.head.lastName}
                       </p>
                     )}
-                    {/* Fees Summary */}
-                    <div className="mt-2 flex flex-wrap gap-1">
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                        Paid: Rs {Math.round(familyGroup.feesPaid)}
-                      </span>
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                        Pending: Rs {Math.round(familyGroup.feesPending)}
-                      </span>
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                        Total: Rs {Math.round(familyGroup.totalFees)}
-                      </span>
-                    </div>
+                    {/* Removed fees summary for NGO school */}
                   </div>
                   
                   <div className="p-4">
@@ -372,15 +353,7 @@ const FamilyManagement = () => {
                                   <span className="font-medium">Contact:</span> {student.phone}
                                 </p>
                               </div>
-                              {/* Student Fees Information */}
-                              <div className="mt-1 flex flex-wrap gap-1">
-                                <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                  Paid: Rs {Math.round(parseFloat(student.feesPaid) || 0)}
-                                </span>
-                                <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                                  Pending: Rs {Math.round((parseFloat(student.totalFees) || 0) - (parseFloat(student.feesPaid) || 0))}
-                                </span>
-                              </div>
+                              {/* Removed student fees information for NGO school */}
                             </div>
                           </div>
                         </div>

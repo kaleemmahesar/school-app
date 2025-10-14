@@ -39,7 +39,11 @@ const MarksheetDetailPage = ({ student, marksheets, onBack, onEdit, onDelete }) 
             <FaPrint className="mr-2" /> Print Marksheet
           </button>
         </div>
-        <MarksheetPrintView marksheetData={selectedMarksheet} />
+        <MarksheetPrintView 
+          marksheetData={selectedMarksheet} 
+          onPrint={() => window.print()}
+          onDownload={() => alert('In a full implementation, this would download the marksheet as a PDF')}
+        />
       </div>
     );
   }

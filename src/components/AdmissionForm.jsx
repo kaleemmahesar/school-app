@@ -3,7 +3,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { addStudent, updateStudent, deleteStudent } from '../store/studentsSlice';
 import { fetchClasses } from '../store/classesSlice';
-import { FaUserGraduate, FaIdCard, FaPhone, FaEnvelope, FaCalendar, FaSchool, FaMoneyBillWave, FaCamera, FaTrash } from 'react-icons/fa';
+import { FaUserGraduate, FaIdCard, FaPhone, FaEnvelope, FaCalendar, FaSchool, FaMoneyBillWave, FaCamera, FaTrash, FaInfoCircle } from 'react-icons/fa';
 import PrintableAdmissionForm from './PrintableAdmissionForm';
 import ConfirmationDialog from './common/ConfirmationDialog';
 
@@ -28,6 +28,11 @@ const AdmissionForm = ({ onClose, studentData }) => {
     familyId: '',
     relationship: '',
     parentId: '',
+    // Fields for students coming from another school
+    isTransferStudent: false, // New field to track if student is a transfer
+    dateOfLeaving: '',
+    classInWhichLeft: '',
+    reasonOfLeaving: '',
   });
   const [photoPreview, setPhotoPreview] = useState(null);
   const [photoFile, setPhotoFile] = useState(null);
@@ -41,7 +46,13 @@ const AdmissionForm = ({ onClose, studentData }) => {
 
   useEffect(() => {
     if (studentData) {
-      setFormData(studentData);
+      // Determine if this is a transfer student based on whether transfer fields have values
+      const isTransferStudent = !!(studentData.dateOfLeaving || studentData.classInWhichLeft || studentData.reasonOfLeaving);
+      
+      setFormData({
+        ...studentData,
+        isTransferStudent
+      });
       // If student has a photo, set the preview
       if (studentData.photo) {
         setPhotoPreview(studentData.photo);
@@ -51,6 +62,16 @@ const AdmissionForm = ({ onClose, studentData }) => {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
+    
+    // Special handling for the isTransferStudent field
+    if (name === 'isTransferStudent') {
+      setFormData({
+        ...formData,
+        [name]: value
+      });
+      return;
+    }
+    
     setFormData({
       ...formData,
       [name]: value,
@@ -119,6 +140,14 @@ const AdmissionForm = ({ onClose, studentData }) => {
   const handleSubmit = (e) => {
     e.preventDefault();
     
+    // If this is a transfer student, validate the transfer fields
+    if (formData.isTransferStudent) {
+      if (!formData.dateOfLeaving || !formData.classInWhichLeft || !formData.reasonOfLeaving) {
+        alert('Please fill all transfer student information fields');
+        return;
+      }
+    }
+    
     // Create form data to send to the backend
     const submissionData = { ...formData };
     
@@ -126,6 +155,13 @@ const AdmissionForm = ({ onClose, studentData }) => {
     // For now, we'll just store the preview data URL
     if (photoPreview) {
       submissionData.photo = photoPreview;
+    }
+    
+    // If not a transfer student, clear transfer fields
+    if (!formData.isTransferStudent) {
+      submissionData.dateOfLeaving = '';
+      submissionData.classInWhichLeft = '';
+      submissionData.reasonOfLeaving = '';
     }
     
     if (isEditMode) {
@@ -595,6 +631,80 @@ const AdmissionForm = ({ onClose, studentData }) => {
                 </div>
               </div>
               
+              {/* Transfer Student Information Toggle */}
+              <div className="bg-gray-50 rounded-lg p-4">
+                <div className="flex items-center">
+                  <input
+                    type="checkbox"
+                    id="isTransferStudent"
+                    name="isTransferStudent"
+                    checked={formData.isTransferStudent}
+                    onChange={(e) => setFormData({...formData, isTransferStudent: e.target.checked})}
+                    className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                  />
+                  <label htmlFor="isTransferStudent" className="ml-2 block text-sm font-medium text-gray-700">
+                    Student is transferring from another school
+                  </label>
+                  <FaInfoCircle className="ml-2 h-4 w-4 text-blue-500" title="Check this box if the student is coming from another school" />
+                </div>
+              </div>
+
+              {/* Transfer Student Information (Only shown when isTransferStudent is true) */}
+              {formData.isTransferStudent && (
+                <div className="bg-blue-50 rounded-lg p-4 border border-blue-100">
+                  <h2 className="text-md font-medium text-blue-900 mb-3">Transfer Student Information</h2>
+                  <p className="text-sm text-blue-700 mb-3">These fields are required for students transferring from another school</p>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <label htmlFor="dateOfLeaving" className="block text-sm font-medium text-gray-700 mb-1">
+                        Date of Removal <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="date"
+                        id="dateOfLeaving"
+                        name="dateOfLeaving"
+                        value={formData.dateOfLeaving}
+                        onChange={handleInputChange}
+                        className="block w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                        required={formData.isTransferStudent}
+                      />
+                    </div>
+                    
+                    <div>
+                      <label htmlFor="classInWhichLeft" className="block text-sm font-medium text-gray-700 mb-1">
+                        Class at the time of removal <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        id="classInWhichLeft"
+                        name="classInWhichLeft"
+                        value={formData.classInWhichLeft}
+                        onChange={handleInputChange}
+                        className="block w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="e.g., Class 9"
+                        required={formData.isTransferStudent}
+                      />
+                    </div>
+                    
+                    <div>
+                      <label htmlFor="reasonOfLeaving" className="block text-sm font-medium text-gray-700 mb-1">
+                        Reason for leaving <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        id="reasonOfLeaving"
+                        name="reasonOfLeaving"
+                        value={formData.reasonOfLeaving}
+                        onChange={handleInputChange}
+                        className="block w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="e.g., Relocation, School closure"
+                        required={formData.isTransferStudent}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Form Actions */}
               <div className="flex justify-end space-x-2 pt-2">
                 {isEditMode && (

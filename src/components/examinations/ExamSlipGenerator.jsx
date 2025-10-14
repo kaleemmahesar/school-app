@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { FaFilePdf, FaPrint, FaDownload } from 'react-icons/fa';
+import ExamSlipPrintView from './ExamSlipPrintView';
+import BulkExamSlipPrintView from './BulkExamSlipPrintView';
 
 const ExamSlipGenerator = () => {
   const dispatch = useDispatch();
@@ -11,6 +13,9 @@ const ExamSlipGenerator = () => {
   const [selectedClass, setSelectedClass] = useState('');
   const [selectedSection, setSelectedSection] = useState('');
   const [generatedSlips, setGeneratedSlips] = useState([]);
+  const [showPrintPreview, setShowPrintPreview] = useState(false);
+  const [previewSlip, setPreviewSlip] = useState(null);
+  const [showBulkPrintPreview, setShowBulkPrintPreview] = useState(false);
   
   // Get unique classes from exams
   const examClasses = [...new Set(exams.map(exam => exam.class))];
@@ -61,13 +66,93 @@ const ExamSlipGenerator = () => {
   };
   
   const handlePrintSlips = () => {
-    window.print();
+    setShowBulkPrintPreview(true);
   };
   
   const handleDownloadPDF = () => {
     // In a real app, this would generate and download a PDF
     alert('PDF download functionality would be implemented here');
   };
+  
+  const handleViewSlip = (slip) => {
+    const exam = exams.find(e => e.id === slip.examId);
+    const student = students.find(s => s.id === slip.studentId);
+    
+    setPreviewSlip({
+      slip: slip,
+      exam: exam,
+      student: student
+    });
+    setShowPrintPreview(true);
+  };
+
+  if (showPrintPreview && previewSlip) {
+    return (
+      <div className="fixed inset-0 bg-white z-50 p-0 m-0 overflow-hidden">
+        <div className="print-container">
+          <div className="flex justify-between items-center mb-4 p-4 bg-white border-b print:hidden">
+            <h1 className="text-xl font-bold text-gray-900">Exam Slip Print Preview</h1>
+            <div className="flex space-x-2">
+              <button
+                onClick={() => window.print()}
+                className="inline-flex items-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700"
+              >
+                <FaPrint className="mr-2" /> Print Slip
+              </button>
+              <button
+                onClick={() => setShowPrintPreview(false)}
+                className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+              >
+                Back to Generator
+              </button>
+            </div>
+          </div>
+          <div className="overflow-auto h-screen pb-20">
+            <ExamSlipPrintView
+              examSlip={previewSlip.slip}
+              student={previewSlip.student}
+              exam={previewSlip.exam}
+              onPrint={() => window.print()}
+              onDownload={() => alert('PDF download functionality would be implemented here')}
+            />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (showBulkPrintPreview && generatedSlips.length > 0) {
+    return (
+      <div className="fixed inset-0 bg-white z-50 p-0 m-0 overflow-auto">
+        <div className="print-container h-full flex flex-col">
+          <div className="flex justify-between items-center mb-4 p-4 bg-white border-b print:hidden sticky top-0 z-10">
+            <h1 className="text-xl font-bold text-gray-900">Bulk Exam Slips Print Preview</h1>
+            <div className="flex space-x-2">
+              <button
+                onClick={() => window.print()}
+                className="inline-flex items-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700"
+              >
+                <FaPrint className="mr-2" /> Print All Slips
+              </button>
+              <button
+                onClick={() => setShowBulkPrintPreview(false)}
+                className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+              >
+                Back to Generator
+              </button>
+            </div>
+          </div>
+          <div className="flex-1 overflow-auto p-4 print:p-0 print:overflow-visible print:flex-none">
+            <BulkExamSlipPrintView
+              examSlips={generatedSlips}
+              students={students}
+              exams={exams}
+            />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white rounded-2xl shadow-lg p-6">
@@ -80,13 +165,13 @@ const ExamSlipGenerator = () => {
                 onClick={handlePrintSlips}
                 className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
               >
-                <FaPrint className="mr-2" /> Print
+                <FaPrint className="mr-2" /> Print All
               </button>
               <button
                 onClick={handleDownloadPDF}
                 className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
               >
-                <FaDownload className="mr-2" /> Download PDF
+                <FaDownload className="mr-2" /> Download All PDF
               </button>
             </>
           )}
@@ -209,6 +294,15 @@ const ExamSlipGenerator = () => {
                       ))}
                     </tbody>
                   </table>
+                </div>
+                
+                <div className="flex justify-center mt-4">
+                  <button
+                    onClick={() => handleViewSlip(slip)}
+                    className="inline-flex items-center px-3 py-1 border border-gray-300 text-xs font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                  >
+                    <FaPrint className="mr-1" /> View Slip
+                  </button>
                 </div>
                 
                 <div className="text-xs text-gray-500 mt-4">

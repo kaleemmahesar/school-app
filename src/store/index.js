@@ -7,6 +7,7 @@ import marksReducer from './marksSlice';
 import usersReducer from './usersSlice';
 import settingsReducer from './settingsSlice';
 import examsReducer from './examsSlice';
+import subsidiesReducer from './subsidiesSlice';
 
 export const store = configureStore({
   reducer: {
@@ -18,6 +19,7 @@ export const store = configureStore({
     users: usersReducer,
     settings: settingsReducer,
     exams: examsReducer,
+    subsidies: subsidiesReducer,
   },
 });
 

@@ -3,6 +3,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { FaUsers, FaMoneyBillWave, FaChalkboardTeacher, FaBook, FaGraduationCap, FaChartLine, FaDollarSign, FaClipboardList, FaChevronDown, FaQrcode, FaUsersCog, FaFileInvoice, FaTasks, FaListOl, FaFileAlt, FaEdit, FaGraduationCap as FaGraduationCapIcon, FaCalendarAlt, FaCertificate, FaUser, FaSignOutAlt, FaCog, FaTable } from 'react-icons/fa';
 import { logoutUser } from '../store/usersSlice';
+import Logo from '../img/logo.png';
 
 const Layout = ({ children }) => {
   const dispatch = useDispatch();
@@ -82,14 +83,19 @@ const Layout = ({ children }) => {
       path: '/staff',
       icon: <FaChalkboardTeacher className="mr-2" />
     },
+    // {
+    //   name: 'Fees',
+    //   path: '/fees',
+    //   icon: <FaFileInvoice className="mr-2" />
+    // },
     {
       name: 'Expenses',
       path: '/expenses',
       icon: <FaMoneyBillWave className="mr-2" />
     },
     {
-      name: 'Fees',
-      path: '/fees',
+      name: 'NGO Subsidies',
+      path: '/subsidies',
       icon: <FaDollarSign className="mr-2" />
     },
     {
@@ -112,6 +118,11 @@ const Layout = ({ children }) => {
     //   path: '/timetable',
     //   icon: <FaTable className="mr-2" />
     // },
+    // {
+    //   name: 'Settings',
+    //   path: '/settings',
+    //   icon: <FaCog className="mr-2" />
+    // }
     // Only show settings for admin users
     // ...(currentUser && currentUser.role === 'Administrator' ? [{
     //   name: 'Settings',
@@ -140,10 +151,10 @@ const Layout = ({ children }) => {
         <div className="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between">
             <div className="flex items-center">
-              <div className="bg-gradient-to-r from-blue-600 to-indigo-700 p-2 rounded-xl">
-                <FaGraduationCap className="text-white text-2xl" />
+              <div className="rounded-xl">
+                <img src={Logo} alt="Logo" className="h-14 w-auto" />
               </div>
-              <h1 className="ml-3 text-2xl font-bold text-gray-900">School Management System</h1>
+              <h1 className="ml-3 text-2xl font-bold text-gray-900">Asad High School Larkana</h1>
             </div>
             <div className="flex items-center space-x-4">
               {currentUser ? (

@@ -4,7 +4,9 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import DatePicker from 'react-datepicker';
 import { addStudent, updateStudent } from '../store/studentsSlice';
 import { fetchClasses } from '../store/classesSlice';
-import { FaUserGraduate, FaIdCard, FaPhone, FaEnvelope, FaCalendar, FaSchool, FaMoneyBillWave, FaCamera, FaArrowLeft, FaPrint, FaUser, FaHome, FaMapMarker, FaMoon, FaSun } from 'react-icons/fa';
+import { FaUserGraduate, FaIdCard, FaPhone, FaEnvelope, FaCalendar, FaSchool, FaMoneyBillWave, FaCamera, FaArrowLeft, FaPrint, FaUser, FaHome, FaMapMarker, FaMoon, FaSun, FaInfoCircle } from 'react-icons/fa';
+import { validateForm } from '../utils/validation';
+import { admissionFormValidationRules } from '../utils/validation';
 import PrintableAdmissionForm from './PrintableAdmissionForm';
 import PageHeader from './common/PageHeader';
 import 'react-datepicker/dist/react-datepicker.css';
@@ -34,20 +36,17 @@ const AdmissionPage = () => {
     dateOfAdmission: new Date(), // Default to today
     class: '',
     section: '', // Add section field
+    // Transfer student fields with isTransferStudent flag
+    isTransferStudent: false,
     dateOfLeaving: null,
     classInWhichLeft: '',
     reasonOfLeaving: '',
-    remarks: '',
-    // Add fees-related fields
-    monthlyFees: '',
-    admissionFees: '',
-    feesPaid: '',
-    totalFees: ''
+    remarks: ''
   });
   const [photoPreview, setPhotoPreview] = useState(null);
   const [photoFile, setPhotoFile] = useState(null);
   const [showPrintView, setShowPrintView] = useState(false);
-  // Removed errors state since we're removing validation
+  const [errors, setErrors] = useState({});
 
   useEffect(() => {
     dispatch(fetchClasses());
@@ -55,11 +54,15 @@ const AdmissionPage = () => {
 
   useEffect(() => {
     if (studentData) {
+      // Determine if this is a transfer student based on whether transfer fields have values
+      const isTransferStudent = !!(studentData.dateOfLeaving || studentData.classInWhichLeft || studentData.reasonOfLeaving);
+      
       setFormData({
         ...studentData,
         dateOfBirth: studentData.dateOfBirth ? new Date(studentData.dateOfBirth) : null,
         dateOfAdmission: studentData.dateOfAdmission ? new Date(studentData.dateOfAdmission) : new Date(),
         dateOfLeaving: studentData.dateOfLeaving ? new Date(studentData.dateOfLeaving) : null,
+        isTransferStudent
       });
       // If student has a photo, set the preview
       if (studentData.photo) {
@@ -77,7 +80,14 @@ const AdmissionPage = () => {
       [name]: newValue,
     });
 
-    // Removed error clearing logic since we're removing validation
+    // Clear error for this field when user starts typing
+    if (errors[name]) {
+      setErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[name];
+        return newErrors;
+      });
+    }
   };
 
   const handleDateChange = (date, name) => {
@@ -86,7 +96,14 @@ const AdmissionPage = () => {
       [name]: date,
     });
 
-    // Removed error clearing logic since we're removing validation
+    // Clear error for this field when user selects a date
+    if (errors[name]) {
+      setErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[name];
+        return newErrors;
+      });
+    }
   };
 
   const handlePhotoChange = (e) => {
@@ -123,12 +140,39 @@ const AdmissionPage = () => {
     }
   };
 
-  // Removed validateFormFields function since we're removing validation
+  const validateFormFields = () => {
+    // Create a copy of the validation rules
+    const validationRules = { ...admissionFormValidationRules };
+    
+    // Add validation rules for transfer student fields if the student is a transfer student
+    if (formData.isTransferStudent) {
+      validationRules.dateOfLeaving = [
+        { type: 'required' },
+        { type: 'date' }
+      ];
+      validationRules.classInWhichLeft = [
+        { type: 'required' },
+        { type: 'length', minLength: 1, maxLength: 50 }
+      ];
+      validationRules.reasonOfLeaving = [
+        { type: 'required' },
+        { type: 'length', minLength: 1, maxLength: 100 }
+      ];
+    }
+    
+    const formErrors = validateForm(formData, validationRules);
+    setErrors(formErrors);
+    return Object.keys(formErrors).length === 0;
+  };
+
 
   const handleSubmit = (e) => {
     e.preventDefault();
     
-    // Removed form validation check
+    // Validate form before submitting
+    if (!validateFormFields()) {
+      return;
+    }
     
     // Create form data to send to the backend
     const submissionData = { 
@@ -137,6 +181,13 @@ const AdmissionPage = () => {
       dateOfAdmission: formData.dateOfAdmission ? formData.dateOfAdmission.toISOString().split('T')[0] : '',
       dateOfLeaving: formData.dateOfLeaving ? formData.dateOfLeaving.toISOString().split('T')[0] : '',
     };
+    
+    // If not a transfer student, clear transfer fields
+    if (!formData.isTransferStudent) {
+      submissionData.dateOfLeaving = '';
+      submissionData.classInWhichLeft = '';
+      submissionData.reasonOfLeaving = '';
+    }
     
     // If there's a photo file, we would typically upload it to a server here
     // For now, we'll just store the preview data URL
@@ -162,9 +213,13 @@ const AdmissionPage = () => {
   };
 
   const handlePrint = () => {
-    // Removed validation check before printing
+    // Validate form before printing
+    if (!validateFormFields()) {
+      return;
+    }
     setShowPrintView(true);
   };
+
 
   const closePrintView = () => {
     setShowPrintView(false);
@@ -184,7 +239,7 @@ const AdmissionPage = () => {
 
   if (showPrintView) {
     return (
-      <div className="fixed inset-0 bg-white z-50 p-0 m-0 overflow-hidden">
+      <div className="inset-0 bg-white z-50 p-0 m-0">
         {/* Print Header - Hidden during actual printing */}
         <div className="print-header sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center no-print">
           <h3 className="text-xl font-semibold text-gray-900">Print Admission Form</h3>
@@ -248,9 +303,8 @@ const AdmissionPage = () => {
       <main className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
         {showPrintView ? (
           <PrintableAdmissionForm 
-            studentData={formData} 
-            onClose={closePrintView}
-            onPrint={handlePrintAction}
+            formData={formData} 
+            photoPreview={photoPreview}
           />
         ) : (
           <div className="space-y-6">
@@ -336,10 +390,12 @@ const AdmissionPage = () => {
                       name="grNo"
                       value={formData.grNo}
                       onChange={handleInputChange}
-                      className={`block w-full px-4 py-2.5 border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 transition`}
+                      className={`block w-full px-4 py-2.5 border ${errors.grNo ? 'border-red-300' : 'border-gray-300'} rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 transition`}
                       placeholder="Enter GR Number"
                     />
-                    {/* Removed error message display since we're removing validation */}
+                    {errors.grNo && (
+                      <p className="mt-1 text-sm text-red-600">{errors.grNo}</p>
+                    )}
                   </div>
                   
                   <div>
@@ -351,10 +407,12 @@ const AdmissionPage = () => {
                       name="firstName"
                       value={formData.firstName}
                       onChange={handleInputChange}
-                      className={`block w-full px-4 py-2.5 border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 transition`}
+                      className={`block w-full px-4 py-2.5 border ${errors.firstName ? 'border-red-300' : 'border-gray-300'} rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 transition`}
                       placeholder="Enter Student Name"
                     />
-                    {/* Removed error message display since we're removing validation */}
+                    {errors.firstName && (
+                      <p className="mt-1 text-sm text-red-600">{errors.firstName}</p>
+                    )}
                   </div>
                   
                   <div>
@@ -366,10 +424,12 @@ const AdmissionPage = () => {
                       name="fatherName"
                       value={formData.fatherName}
                       onChange={handleInputChange}
-                      className={`block w-full px-4 py-2.5 border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 transition`}
+                      className={`block w-full px-4 py-2.5 border ${errors.fatherName ? 'border-red-300' : 'border-gray-300'} rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 transition`}
                       placeholder="Enter Father's Name"
                     />
-                    {/* Removed error message display since we're removing validation */}
+                    {errors.fatherName && (
+                      <p className="mt-1 text-sm text-red-600">{errors.fatherName}</p>
+                    )}
                   </div>
                   
                   <div>
@@ -411,7 +471,9 @@ const AdmissionPage = () => {
                         <span className={`text-sm ${formData.religion === 'Christian' ? 'text-blue-600 font-medium' : 'text-gray-700'}`}>Christian</span>
                       </label>
                     </div>
-                    {/* Removed error message display since we're removing validation */}
+                    {errors.religion && (
+                      <p className="mt-1 text-sm text-red-600">{errors.religion}</p>
+                    )}
                   </div>
                   
                   {/* Address field spanning full width */}
@@ -424,21 +486,23 @@ const AdmissionPage = () => {
                       name="address"
                       value={formData.address}
                       onChange={handleInputChange}
-                      className={`block w-full px-4 py-2.5 border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 transition`}
+                      className={`block w-full px-4 py-2.5 border ${errors.address ? 'border-red-300' : 'border-gray-300'} rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 transition`}
                       placeholder="Enter Full Address"
                     />
-                    {/* Removed error message display since we're removing validation */}
+                    {errors.address && (
+                      <p className="mt-1 text-sm text-red-600">{errors.address}</p>
+                    )}
                   </div>
                   
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Date of Birth
                     </label>
-                    <div className={`relative rounded-lg shadow-sm`}>
+                    <div className={`relative rounded-lg shadow-sm ${errors.dateOfBirth ? 'border border-red-300 rounded-lg' : ''}`}>
                       <DatePicker
                         selected={formData.dateOfBirth}
                         onChange={(date) => handleDateChange(date, 'dateOfBirth')}
-                        className={`block w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition`}
+                        className={`block w-full px-4 py-2.5 border ${errors.dateOfBirth ? 'border-red-300' : 'border-gray-300'} rounded-lg focus:ring-blue-500 focus:border-blue-500 transition`}
                         placeholderText="Select Date of Birth"
                         showYearDropdown
                         scrollableYearDropdown
@@ -448,7 +512,9 @@ const AdmissionPage = () => {
                         <FaCalendar className="h-5 w-5 text-gray-400" />
                       </div>
                     </div>
-                    {/* Removed error message display since we're removing validation */}
+                    {errors.dateOfBirth && (
+                      <p className="mt-1 text-sm text-red-600">{errors.dateOfBirth}</p>
+                    )}
                   </div>
                   
                   <div>
@@ -460,10 +526,12 @@ const AdmissionPage = () => {
                       name="birthPlace"
                       value={formData.birthPlace}
                       onChange={handleInputChange}
-                      className={`block w-full px-4 py-2.5 border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 transition`}
+                      className={`block w-full px-4 py-2.5 border ${errors.birthPlace ? 'border-red-300' : 'border-gray-300'} rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 transition`}
                       placeholder="Enter Place of Birth"
                     />
-                    {/* Removed error message display since we're removing validation */}
+                    {errors.birthPlace && (
+                      <p className="mt-1 text-sm text-red-600">{errors.birthPlace}</p>
+                    )}
                   </div>
                   
                   <div>
@@ -475,21 +543,23 @@ const AdmissionPage = () => {
                       name="lastSchoolAttended"
                       value={formData.lastSchoolAttended}
                       onChange={handleInputChange}
-                      className={`block w-full px-4 py-2.5 border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 transition`}
+                      className={`block w-full px-4 py-2.5 border ${errors.lastSchoolAttended ? 'border-red-300' : 'border-gray-300'} rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 transition`}
                       placeholder="Enter Last School Attended"
                     />
-                    {/* Removed error message display since we're removing validation */}
+                    {errors.lastSchoolAttended && (
+                      <p className="mt-1 text-sm text-red-600">{errors.lastSchoolAttended}</p>
+                    )}
                   </div>
                   
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Date of Admission
                     </label>
-                    <div className={`relative rounded-lg shadow-sm`}>
+                    <div className={`relative rounded-lg shadow-sm ${errors.dateOfAdmission ? 'border border-red-300 rounded-lg' : ''}`}>
                       <DatePicker
                         selected={formData.dateOfAdmission}
                         onChange={(date) => handleDateChange(date, 'dateOfAdmission')}
-                        className={`block w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition`}
+                        className={`block w-full px-4 py-2.5 border ${errors.dateOfAdmission ? 'border-red-300' : 'border-gray-300'} rounded-lg focus:ring-blue-500 focus:border-blue-500 transition`}
                         placeholderText="Select Date of Admission"
                         showYearDropdown
                         scrollableYearDropdown
@@ -499,7 +569,9 @@ const AdmissionPage = () => {
                         <FaCalendar className="h-5 w-5 text-gray-400" />
                       </div>
                     </div>
-                    {/* Removed error message display since we're removing validation */}
+                    {errors.dateOfAdmission && (
+                      <p className="mt-1 text-sm text-red-600">{errors.dateOfAdmission}</p>
+                    )}
                   </div>
                   
                   {/* Class Field */}
@@ -515,7 +587,7 @@ const AdmissionPage = () => {
                         name="class"
                         value={formData.class}
                         onChange={handleInputChange}
-                        className={`block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500`}
+                        className={`block w-full pl-10 pr-3 py-2 border ${errors.class ? 'border-red-300' : 'border-gray-300'} rounded-md focus:ring-blue-500 focus:border-blue-500`}
                       >
                         <option value="">Select Class</option>
                         {uniqueClasses.map((cls) => (
@@ -523,7 +595,9 @@ const AdmissionPage = () => {
                         ))}
                       </select>
                     </div>
-                    {/* Removed error message display since we're removing validation */}
+                    {errors.class && (
+                      <p className="mt-1 text-sm text-red-600">{errors.class}</p>
+                    )}
                   </div>
 
                   {/* Section Field */}
@@ -540,7 +614,7 @@ const AdmissionPage = () => {
                         value={formData.section}
                         onChange={handleInputChange}
                         disabled={!formData.class}
-                        className={`block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 ${!formData.class ? 'bg-gray-100' : ''}`}
+                        className={`block w-full pl-10 pr-3 py-2 border ${errors.section ? 'border-red-300' : 'border-gray-300'} rounded-md focus:ring-blue-500 focus:border-blue-500 ${!formData.class ? 'bg-gray-100' : ''}`}
                       >
                         <option value="">Select Section</option>
                         {classSections.map((section) => (
@@ -548,59 +622,90 @@ const AdmissionPage = () => {
                         ))}
                       </select>
                     </div>
-                    {/* Removed error message display since we're removing validation */}
+                    {errors.section && (
+                      <p className="mt-1 text-sm text-red-600">{errors.section}</p>
+                    )}
                   </div>
                   
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Date of Removal
-                    </label>
-                    <div className={`relative rounded-lg shadow-sm`}>
-                      <DatePicker
-                        selected={formData.dateOfLeaving}
-                        onChange={(date) => handleDateChange(date, 'dateOfLeaving')}
-                        className={`block w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition`}
-                        placeholderText="Select Date of Removal"
-                        showYearDropdown
-                        scrollableYearDropdown
-                        yearDropdownItemNumber={100}
+                  {/* Transfer Student Information Toggle */}
+                  <div className="md:col-span-3 bg-gray-50 rounded-lg p-4">
+                    <div className="flex items-center">
+                      <input
+                        type="checkbox"
+                        id="isTransferStudent"
+                        name="isTransferStudent"
+                        checked={formData.isTransferStudent}
+                        onChange={handleInputChange}
+                        className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                       />
-                      <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                        <FaCalendar className="h-5 w-5 text-gray-400" />
-                      </div>
+                      <label htmlFor="isTransferStudent" className="ml-2 block text-sm font-medium text-gray-700">
+                        Student is transferring from another school
+                      </label>
+                      <FaInfoCircle className="ml-2 h-4 w-4 text-blue-500" title="Check this box if the student is coming from another school" />
                     </div>
-                    {/* Removed error message display since we're removing validation */}
                   </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Class at the time of removal
-                    </label>
-                    <input
-                      type="text"
-                      name="classInWhichLeft"
-                      value={formData.classInWhichLeft}
-                      onChange={handleInputChange}
-                      className={`block w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition`}
-                      placeholder="Enter Class at time of removal"
-                    />
-                    {/* Removed error message display since we're removing validation */}
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Reason for leaving
-                    </label>
-                    <input
-                      type="text"
-                      name="reasonOfLeaving"
-                      value={formData.reasonOfLeaving}
-                      onChange={handleInputChange}
-                      className={`block w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition`}
-                      placeholder="Enter Reason for leaving"
-                    />
-                    {/* Removed error message display since we're removing validation */}
-                  </div>
+
+                  {/* Transfer Student Information (Only shown when isTransferStudent is true) */}
+                  {formData.isTransferStudent && (
+                    <>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Date of Removal <span className="text-red-500">*</span>
+                        </label>
+                        <div className={`relative rounded-lg shadow-sm ${errors.dateOfLeaving ? 'border border-red-300 rounded-lg' : ''}`}>
+                          <DatePicker
+                            selected={formData.dateOfLeaving}
+                            onChange={(date) => handleDateChange(date, 'dateOfLeaving')}
+                            className={`block w-full px-4 py-2.5 border ${errors.dateOfLeaving ? 'border-red-300' : 'border-gray-300'} rounded-lg focus:ring-blue-500 focus:border-blue-500 transition`}
+                            placeholderText="Select Date of Removal"
+                            showYearDropdown
+                            scrollableYearDropdown
+                            yearDropdownItemNumber={100}
+                          />
+                          <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                            <FaCalendar className="h-5 w-5 text-gray-400" />
+                          </div>
+                        </div>
+                        {errors.dateOfLeaving && (
+                          <p className="mt-1 text-sm text-red-600">{errors.dateOfLeaving}</p>
+                        )}
+                      </div>
+                      
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Class at the time of removal <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          name="classInWhichLeft"
+                          value={formData.classInWhichLeft}
+                          onChange={handleInputChange}
+                          className={`block w-full px-4 py-2.5 border ${errors.classInWhichLeft ? 'border-red-300' : 'border-gray-300'} rounded-lg focus:ring-blue-500 focus:border-blue-500 transition`}
+                          placeholder="Enter Class at time of removal"
+                        />
+                        {errors.classInWhichLeft && (
+                          <p className="mt-1 text-sm text-red-600">{errors.classInWhichLeft}</p>
+                        )}
+                      </div>
+                      
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Reason for leaving <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          name="reasonOfLeaving"
+                          value={formData.reasonOfLeaving}
+                          onChange={handleInputChange}
+                          className={`block w-full px-4 py-2.5 border ${errors.reasonOfLeaving ? 'border-red-300' : 'border-gray-300'} rounded-lg focus:ring-blue-500 focus:border-blue-500 transition`}
+                          placeholder="Enter Reason for leaving"
+                        />
+                        {errors.reasonOfLeaving && (
+                          <p className="mt-1 text-sm text-red-600">{errors.reasonOfLeaving}</p>
+                        )}
+                      </div>
+                    </>
+                  )}
                   
                   <div className="md:col-span-3">
                     <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -611,64 +716,22 @@ const AdmissionPage = () => {
                       name="remarks"
                       value={formData.remarks}
                       onChange={handleInputChange}
-                      className={`block w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition`}
+                      className={`block w-full px-4 py-2.5 border ${errors.remarks ? 'border-red-300' : 'border-gray-300'} rounded-lg focus:ring-blue-500 focus:border-blue-500 transition`}
                       placeholder="Enter Remarks"
                     />
-                    {/* Removed error message display since we're removing validation */}
+                    {errors.remarks && (
+                      <p className="mt-1 text-sm text-red-600">{errors.remarks}</p>
+                    )}
                   </div>
                 </div>
               </div>
               
-              {/* Fee Details Section */}
+              {/* NGO Funding Section */}
               <div className="bg-white rounded-lg shadow-lg p-6">
-                <h2 className="text-lg font-semibold text-gray-900 mb-4 border-b border-gray-200 pb-2">Fee Details</h2>
+                <h2 className="text-lg font-semibold text-gray-900 mb-4 border-b border-gray-200 pb-2">NGO Funding</h2>
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Monthly Fees</label>
-                    <input
-                      type="number"
-                      name="monthlyFees"
-                      value={formData.monthlyFees}
-                      onChange={handleInputChange}
-                      className="block w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-                      placeholder="Enter Monthly Fees"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Admission Fees</label>
-                    <input
-                      type="number"
-                      name="admissionFees"
-                      value={formData.admissionFees}
-                      onChange={handleInputChange}
-                      className="block w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-                      placeholder="Enter Admission Fees"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Fees Paid</label>
-                    <input
-                      type="number"
-                      name="feesPaid"
-                      value={formData.feesPaid}
-                      onChange={handleInputChange}
-                      className="block w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-                      placeholder="Enter Fees Paid"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Total Fees</label>
-                    <input
-                      type="number"
-                      name="totalFees"
-                      value={formData.totalFees}
-                      onChange={handleInputChange}
-                      className="block w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-                      placeholder="Enter Total Fees"
-                    />
+                  <div className="md:col-span-4">
+                    <p className="text-gray-600">This school is funded by quarterly NGO subsidies. No fees are charged to students.</p>
                   </div>
                 </div>
               </div>

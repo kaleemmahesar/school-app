@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchExams, addExam, updateExam, deleteExam } from '../store/examsSlice';
 import { fetchClasses } from '../store/classesSlice';
-import { FaPlus, FaEdit, FaTrash, FaSearch, FaCalendarAlt, FaFileAlt, FaEye } from 'react-icons/fa';
+import { FaPlus, FaEdit, FaTrash, FaSearch, FaCalendarAlt, FaFileAlt, FaEye, FaCheck } from 'react-icons/fa';
 import ExamSlipGenerator from './examinations/ExamSlipGenerator';
 import ExamResultsTracker from './examinations/ExamResultsTracker';
 
@@ -57,16 +57,24 @@ const ExaminationSection = () => {
         const examForClass = {
           ...examData,
           class: className,
-          // Get subjects for this class from the class data
-          subjects: classes.find(c => c.name === className)?.subjects.map(subject => ({
-            ...subject,
-            date: '',
-            time: '',
-            duration: 180
-          })) || []
+          // Get subjects for this class from the class data and apply schedule
+          subjects: classes.find(c => c.name === className)?.subjects.map(subject => {
+            // Find schedule data for this subject
+            const subjectId = subject.id || subject.name;
+            const schedule = examData.scheduledSubjects?.find(sc => sc.className === className)
+              ?.subjects?.find(s => (s.id || s.name) === subjectId) || {};
+            
+            return {
+              ...subject,
+              date: schedule.date || '',
+              time: schedule.time || '',
+              duration: schedule.duration || 180
+            };
+          }) || []
         };
-        // Remove the classes array as we're creating individual exams
+        // Remove the classes array and scheduledSubjects as we're creating individual exams
         delete examForClass.classes;
+        delete examForClass.scheduledSubjects;
         dispatch(addExam(examForClass));
       });
     }
@@ -290,6 +298,8 @@ const ExaminationSection = () => {
 
 // Exam Form Component
 const ExamForm = ({ formData, setFormData, onSubmit, onCancel, classes }) => {
+  const [subjectSchedule, setSubjectSchedule] = useState({});
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({
@@ -311,9 +321,46 @@ const ExamForm = ({ formData, setFormData, onSubmit, onCancel, classes }) => {
     });
   };
 
+  // Handle subject schedule changes
+  const handleSubjectScheduleChange = (subjectId, field, value) => {
+    setSubjectSchedule(prev => ({
+      ...prev,
+      [subjectId]: {
+        ...prev[subjectId],
+        [field]: value
+      }
+    }));
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
-    onSubmit(formData);
+    
+    // Prepare subjects with schedule data
+    const classesWithScheduledSubjects = formData.classes.map(className => {
+      const classObj = classes.find(c => c.name === className);
+      if (!classObj) return { className, subjects: [] };
+      
+      const scheduledSubjects = classObj.subjects.map(subject => {
+        const schedule = subjectSchedule[subject.id] || subjectSchedule[subject.name] || {};
+        return {
+          ...subject,
+          date: schedule.date || '',
+          time: schedule.time || '',
+          duration: schedule.duration || 180
+        };
+      });
+      
+      return {
+        className,
+        subjects: scheduledSubjects
+      };
+    });
+    
+    // Pass the scheduled subjects data to onSubmit
+    onSubmit({
+      ...formData,
+      scheduledSubjects: classesWithScheduledSubjects
+    });
   };
 
   // Get sections for selected class
@@ -321,6 +368,18 @@ const ExamForm = ({ formData, setFormData, onSubmit, onCancel, classes }) => {
     const classObj = classes.find(c => c.name === className);
     return classObj ? classObj.sections : [];
   };
+
+  // Get subjects for selected classes
+  const getSubjectsForSelectedClasses = () => {
+    if (formData.classes.length === 0) return [];
+    
+    // Get subjects from the first selected class as an example
+    // In a real implementation, you might want to show subjects for all selected classes
+    const firstClass = classes.find(c => c.name === formData.classes[0]);
+    return firstClass ? firstClass.subjects : [];
+  };
+
+  const selectedClassSubjects = getSubjectsForSelectedClasses();
 
   return (
     <div className="bg-white rounded-2xl shadow-lg p-6 mb-6">
@@ -453,6 +512,64 @@ const ExamForm = ({ formData, setFormData, onSubmit, onCancel, classes }) => {
           </div>
         </div>
         
+        {/* Subject Schedule Section */}
+        {formData.classes.length > 0 && selectedClassSubjects.length > 0 && (
+          <div className="mb-6">
+            <h3 className="text-md font-medium text-gray-900 mb-3">Subject Schedule</h3>
+            <p className="text-sm text-gray-500 mb-4">Set date, time, and duration for each subject (applies to all selected classes)</p>
+            
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Subject</th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time</th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Duration (minutes)</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {selectedClassSubjects.map((subject) => {
+                    const schedule = subjectSchedule[subject.id] || subjectSchedule[subject.name] || {};
+                    return (
+                      <tr key={subject.id || subject.name} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                          {subject.name}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          <input
+                            type="date"
+                            value={schedule.date || ''}
+                            onChange={(e) => handleSubjectScheduleChange(subject.id || subject.name, 'date', e.target.value)}
+                            className="block w-full px-2 py-1 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm"
+                          />
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          <input
+                            type="time"
+                            value={schedule.time || ''}
+                            onChange={(e) => handleSubjectScheduleChange(subject.id || subject.name, 'time', e.target.value)}
+                            className="block w-full px-2 py-1 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm"
+                          />
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          <input
+                            type="number"
+                            min="1"
+                            value={schedule.duration || 180}
+                            onChange={(e) => handleSubjectScheduleChange(subject.id || subject.name, 'duration', parseInt(e.target.value) || 180)}
+                            className="block w-full px-2 py-1 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm"
+                          />
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+        
         <div className="flex justify-end space-x-3">
           <button
             type="button"
@@ -476,12 +593,51 @@ const ExamForm = ({ formData, setFormData, onSubmit, onCancel, classes }) => {
 
 // Exam Detail Component
 const ExamDetail = ({ exam, classes }) => {
+  const dispatch = useDispatch();
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedSubjects, setEditedSubjects] = useState([]);
+
+  useEffect(() => {
+    if (exam.subjects) {
+      setEditedSubjects([...exam.subjects]);
+    }
+  }, [exam]);
+
   const getSubjectsForClass = (className) => {
     const classObj = classes.find(c => c.name === className);
     return classObj ? classObj.subjects : [];
   };
 
   const classSubjects = getSubjectsForClass(exam.class);
+
+  const handleEditSchedule = () => {
+    setIsEditing(true);
+  };
+
+  const handleSaveSchedule = () => {
+    // Update the exam with the new subject schedule
+    const updatedExam = {
+      ...exam,
+      subjects: editedSubjects
+    };
+    dispatch(updateExam(updatedExam));
+    setIsEditing(false);
+  };
+
+  const handleCancelEdit = () => {
+    // Reset to original subjects
+    setEditedSubjects(exam.subjects ? [...exam.subjects] : []);
+    setIsEditing(false);
+  };
+
+  const handleSubjectChange = (index, field, value) => {
+    const updatedSubjects = [...editedSubjects];
+    updatedSubjects[index] = {
+      ...updatedSubjects[index],
+      [field]: value
+    };
+    setEditedSubjects(updatedSubjects);
+  };
 
   return (
     <div className="bg-white rounded-2xl shadow-lg p-6">
@@ -511,32 +667,100 @@ const ExamDetail = ({ exam, classes }) => {
       </div>
 
       <div className="mb-8">
-        <h3 className="text-lg font-medium text-gray-900 mb-4">Exam Schedule</h3>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-medium text-gray-900">Exam Schedule</h3>
+          {!isEditing ? (
+            <button
+              onClick={handleEditSchedule}
+              className="inline-flex items-center px-3 py-1 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            >
+              <FaEdit className="mr-1" /> Edit Schedule
+            </button>
+          ) : (
+            <div className="space-x-2">
+              <button
+                onClick={handleSaveSchedule}
+                className="inline-flex items-center px-3 py-1 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+              >
+                <FaCheck className="mr-1" /> Save
+              </button>
+              <button
+                onClick={handleCancelEdit}
+                className="inline-flex items-center px-3 py-1 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              >
+                Cancel
+              </button>
+            </div>
+          )}
+        </div>
+        
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Subject</th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time</th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Duration</th>
+                {isEditing ? (
+                  <>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time</th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Duration (minutes)</th>
+                  </>
+                ) : (
+                  <>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time</th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Duration</th>
+                  </>
+                )}
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {exam.subjects && exam.subjects.length > 0 ? (
-                exam.subjects.map((subject, index) => (
+              {editedSubjects && editedSubjects.length > 0 ? (
+                editedSubjects.map((subject, index) => (
                   <tr key={index} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{subject.name}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{subject.date || 'Not scheduled'}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{subject.time || 'Not scheduled'}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {subject.duration ? `${subject.duration} minutes` : 'Not set'}
-                    </td>
+                    {isEditing ? (
+                      <>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          <input
+                            type="date"
+                            value={subject.date || ''}
+                            onChange={(e) => handleSubjectChange(index, 'date', e.target.value)}
+                            className="block w-full px-2 py-1 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm"
+                          />
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          <input
+                            type="time"
+                            value={subject.time || ''}
+                            onChange={(e) => handleSubjectChange(index, 'time', e.target.value)}
+                            className="block w-full px-2 py-1 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm"
+                          />
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          <input
+                            type="number"
+                            min="1"
+                            value={subject.duration || ''}
+                            onChange={(e) => handleSubjectChange(index, 'duration', parseInt(e.target.value) || 0)}
+                            className="block w-full px-2 py-1 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm"
+                          />
+                        </td>
+                      </>
+                    ) : (
+                      <>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{subject.date || 'Not scheduled'}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{subject.time || 'Not scheduled'}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {subject.duration ? `${subject.duration} minutes` : 'Not set'}
+                        </td>
+                      </>
+                    )}
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan="4" className="px-6 py-4 text-center text-sm text-gray-500">
+                  <td colSpan={isEditing ? "4" : "4"} className="px-6 py-4 text-center text-sm text-gray-500">
                     No subjects scheduled for this examination
                   </td>
                 </tr>

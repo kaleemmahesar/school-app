@@ -304,18 +304,5 @@ export const admissionFormValidationRules = {
   ],
   section: [
     { type: 'required' }
-  ],
-  // Add validation rules for fees fields
-  monthlyFees: [
-    { type: 'number', min: 0 }
-  ],
-  admissionFees: [
-    { type: 'number', min: 0 }
-  ],
-  feesPaid: [
-    { type: 'number', min: 0 }
-  ],
-  totalFees: [
-    { type: 'number', min: 0 }
   ]
 };

@@ -3,9 +3,11 @@ import { useDispatch, useSelector } from 'react-redux';
 import { fetchMarks, addMarks, updateMarks, deleteMarks } from '../store/marksSlice';
 import { fetchStudents } from '../store/studentsSlice';
 import { fetchClasses } from '../store/classesSlice';
-import { FaPlus, FaEdit, FaTrash, FaSearch, FaGraduationCap, FaClipboardList, FaEye } from 'react-icons/fa';
+import { FaPlus, FaEdit, FaTrash, FaSearch, FaGraduationCap, FaClipboardList, FaEye, FaTrophy, FaMedal } from 'react-icons/fa';
+import { jsPDF } from 'jspdf';
 import ClassExamMarksheetForm from './marksheets/ClassExamMarksheetForm';
 import StudentMarksheetForm from './marksheets/StudentMarksheetForm';
+import IndividualMarksheetPrintView from './marksheets/IndividualMarksheetPrintView';
 
 const MarksheetsSection = () => {
   const dispatch = useDispatch();
@@ -19,7 +21,7 @@ const MarksheetsSection = () => {
   const [showForm, setShowForm] = useState(false);
   const [currentMarks, setCurrentMarks] = useState(null);
   const [bulkMode, setBulkMode] = useState(false);
-  const [view, setView] = useState('list'); // 'list' or 'detail'
+  const [view, setView] = useState('list'); // 'list', 'detail', or 'marksheet'
   const [selectedStudentData, setSelectedStudentData] = useState(null);
   
   const [formData, setFormData] = useState({
@@ -105,11 +107,111 @@ const MarksheetsSection = () => {
     setView('detail');
   };
 
+  // Function to view individual marksheet with ranking
+  const handleViewMarksheet = (marksheet) => {
+    // Find all marksheets for the same class, section, exam type, and year
+    const relatedMarksheets = marks.filter(m => 
+      m.class === marksheet.class && 
+      m.section === marksheet.section && 
+      m.examType === marksheet.examType && 
+      m.year === marksheet.year
+    );
+    
+    // Sort by percentage to determine rankings
+    const sortedMarksheets = [...relatedMarksheets].sort((a, b) => 
+      parseFloat(b.percentage) - parseFloat(a.percentage)
+    );
+    
+    // Find position of current marksheet
+    const position = sortedMarksheets.findIndex(m => m.id === marksheet.id) + 1;
+    
+    // Set marksheet data with position information
+    const marksheetWithPosition = {
+      ...marksheet,
+      position: position,
+      totalStudents: relatedMarksheets.length
+    };
+    
+    setCurrentMarks(marksheetWithPosition);
+    setView('marksheet');
+  };
+
   const handleBackToList = () => {
     setView('list');
     setSelectedStudentData(null);
+    setCurrentMarks(null);
   };
 
+  // Function to download marksheet as PDF
+  const downloadMarksheet = () => {
+    // In a real implementation, this would generate and download a PDF
+    // For now, we'll create a simple PDF with marksheet data
+    const doc = new jsPDF();
+    
+    // Add school header
+    doc.setFontSize(16);
+    doc.text('School Management System', 105, 20, null, null, 'center');
+    doc.setFontSize(12);
+    doc.text('Student Marksheet', 105, 30, null, null, 'center');
+    
+    // Add student information
+    const student = students.find(s => s.id === currentMarks.studentId);
+    const studentName = student ? `${student.firstName} ${student.lastName}` : currentMarks.studentName;
+    
+    doc.setFontSize(11);
+    doc.text(`Student Name: ${studentName}`, 20, 45);
+    doc.text(`Student ID: ${currentMarks.studentId}`, 20, 55);
+    doc.text(`Class: ${currentMarks.class} - Section ${currentMarks.section}`, 20, 65);
+    doc.text(`Exam: ${currentMarks.examType} ${currentMarks.year}`, 20, 75);
+    
+    // Add marks table
+    const startY = 85;
+    doc.setFontSize(10);
+    
+    // Table headers
+    doc.setFillColor(240, 240, 240);
+    doc.rect(20, startY, 170, 10, 'F');
+    doc.text('Subject', 25, startY + 7);
+    doc.text('Obtained', 85, startY + 7);
+    doc.text('Total', 115, startY + 7);
+    doc.text('Grade', 145, startY + 7);
+    
+    // Table rows
+    let yPosition = startY + 10;
+    currentMarks.marks.forEach((subject, index) => {
+      doc.text(subject.subjectName, 25, yPosition + 7);
+      doc.text(subject.marksObtained.toString(), 85, yPosition + 7);
+      doc.text(subject.totalMarks.toString(), 115, yPosition + 7);
+      doc.text(subject.grade, 145, yPosition + 7);
+      yPosition += 10;
+    });
+    
+    // Add summary
+    yPosition += 10;
+    doc.text(`Total Obtained: ${currentMarks.totalObtained}`, 20, yPosition);
+    doc.text(`Total Marks: ${currentMarks.totalMarks}`, 80, yPosition);
+    doc.text(`Percentage: ${currentMarks.percentage}%`, 140, yPosition);
+    
+    yPosition += 10;
+    doc.text(`Overall Grade: ${currentMarks.overallGrade}`, 20, yPosition);
+    
+    // Add position if available
+    if (currentMarks.position && currentMarks.position <= 3) {
+      yPosition += 10;
+      let positionText = '';
+      switch (currentMarks.position) {
+        case 1: positionText = '1st Position'; break;
+        case 2: positionText = '2nd Position'; break;
+        case 3: positionText = '3rd Position'; break;
+        default: positionText = `${currentMarks.position}th Position`;
+      }
+      doc.text(`Position: ${positionText}`, 20, yPosition);
+    }
+    
+    // Save the PDF
+    const fileName = `${studentName.replace(/\s+/g, '_')}_${currentMarks.examType}_${currentMarks.year}_Marksheet.pdf`;
+    doc.save(fileName);
+  };
   if (loading) return <div className="flex justify-center items-center h-64"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div></div>;
   if (error) return <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded">
     <div className="flex">
@@ -128,11 +230,13 @@ const MarksheetsSection = () => {
     <div className="">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Marksheets Management</h1>
-          <p className="mt-1 text-sm text-gray-600">
+          <h1 className="text-2xl font-bold text-gray-900 print:hidden">Marksheets Management</h1>
+          <p className="mt-1 text-sm text-gray-600 print:hidden">
             {view === 'list' 
               ? 'Manage student marks and generate report cards' 
-              : `Marksheets for ${selectedStudentData?.name}`}
+              : view === 'detail'
+              ? `Marksheets for ${selectedStudentData?.name}`
+              : 'Student Marksheet'}
           </p>
         </div>
         <div className="mt-4 md:mt-0">
@@ -156,7 +260,7 @@ const MarksheetsSection = () => {
                     setCurrentMarks(null);
                   }
                 }}
-                className={`inline-flex items-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
+                className={`print:hidden inline-flex items-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
                   !bulkMode 
                     ? 'bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700' 
                     : 'bg-gray-500 hover:bg-gray-600'
@@ -169,7 +273,7 @@ const MarksheetsSection = () => {
                   setBulkMode(true);
                   setShowForm(true);
                 }}
-                className={`inline-flex items-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 ${
+                className={`print:hidden inline-flex items-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 ${
                   bulkMode 
                     ? 'bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700' 
                     : 'bg-gray-500 hover:bg-gray-600'
@@ -181,7 +285,7 @@ const MarksheetsSection = () => {
           ) : (
             <button
               onClick={handleBackToList}
-              className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              className="print:hidden inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
             >
               <svg className="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -259,6 +363,53 @@ const MarksheetsSection = () => {
                 <p className="mt-1 text-sm text-gray-500">This student has no marksheets yet</p>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {view === 'marksheet' && currentMarks && (
+        <div className="bg-white rounded-2xl shadow-lg p-6 max-h-[calc(100vh-100px)] overflow-y-auto">
+          <div className="flex justify-between items-center mb-6 sticky top-0 bg-white py-2 z-10">
+            <h2 className="text-xl font-bold text-gray-900">Student Marksheet</h2>
+            <button
+              onClick={handleBackToList}
+              className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            >
+              <svg className="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+              Back to List
+            </button>
+          </div>
+          
+          <div className="mb-6">
+            <IndividualMarksheetPrintView
+              marksheetData={currentMarks}
+              studentData={students.find(s => s.id === currentMarks.studentId)}
+              classData={classes.find(c => c.name === currentMarks.class)}
+              positionData={{ position: currentMarks.position, totalStudents: currentMarks.totalStudents }}
+            />
+          </div>
+          
+          <div className="flex justify-center mt-6 space-x-4 sticky bottom-0 bg-white py-2 z-10">
+            <button
+              onClick={() => window.print()}
+              className="inline-flex items-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            >
+              <svg className="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+              </svg>
+              Print Marksheet
+            </button>
+            <button
+              onClick={downloadMarksheet}
+              className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            >
+              <svg className="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              Download PDF
+            </button>
           </div>
         </div>
       )}

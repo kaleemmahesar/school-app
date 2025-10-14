@@ -1,46 +1,11 @@
 import React from 'react';
-import { FaSchool, FaCalendar, FaDollarSign, FaUser, FaIdCard, FaPrint, FaDownload } from 'react-icons/fa';
+import { FaSchool, FaUser, FaCalendar, FaClock } from 'react-icons/fa';
 
-const ChallanPrintView = ({ challan, student, schoolInfo, onPrint, onDownload }) => {
+const ExamSlipPrintView = ({ examSlip, student, exam, onPrint, onDownload }) => {
   // Add default values for safety
-  const safeChallan = challan || {};
+  const safeExamSlip = examSlip || {};
   const safeStudent = student || {};
-  const safeSchoolInfo = schoolInfo || {
-    name: "School Management System",
-    address: "123 Education Street, Learning City",
-    phone: "+1 (555) 123-4567"
-  };
-
-  const formatDate = (dateString) => {
-    if (!dateString) return 'N/A';
-    try {
-      const date = new Date(dateString);
-      return date.toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric'
-      });
-    } catch (error) {
-      console.error('Error formatting date:', error);
-      return 'Invalid Date';
-    }
-  };
-
-  const getPaymentStatus = () => {
-    const status = safeChallan.status || 'pending';
-    if (status === 'paid') {
-      return (
-        <div className="bg-green-100 text-green-800 px-2 py-1 rounded text-xs font-medium">
-          PAID
-        </div>
-      );
-    }
-    return (
-      <div className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded text-xs font-medium">
-        PENDING
-      </div>
-    );
-  };
+  const safeExam = exam || {};
 
   return (
     <div className="w-full mx-auto bg-white font-sans">
@@ -48,19 +13,21 @@ const ChallanPrintView = ({ challan, student, schoolInfo, onPrint, onDownload })
       <div className="text-center border-b border-gray-300 pb-2 mb-3 print:hidden">
         <div className="flex items-center justify-center mb-1">
           <FaSchool className="text-blue-600 text-lg mr-2" />
-          <h1 className="text-lg font-bold text-gray-800">{safeSchoolInfo.name}</h1>
+          <h1 className="text-lg font-bold text-gray-800">School Management System</h1>
         </div>
-        <p className="text-gray-600 text-xs mb-1">{safeSchoolInfo.address}</p>
-        <p className="text-gray-600 text-xs">Phone: {safeSchoolInfo.phone}</p>
+        <p className="text-gray-600 text-xs mb-1">123 Education Street, Learning City</p>
+        <p className="text-gray-600 text-xs">Phone: +1 (555) 123-4567</p>
       </div>
 
-      {/* Challan Header */}
+      {/* Exam Slip Header */}
       <div className="flex justify-between items-start mb-3">
         <div>
-          <h2 className="text-base font-bold text-gray-800">Fee Challan</h2>
-          <p className="text-gray-600 text-xs">ID: {safeChallan.id || 'N/A'}</p>
+          <h2 className="text-base font-bold text-gray-800">Exam Slip</h2>
+          <p className="text-gray-600 text-xs">ID: {safeExamSlip.id || 'N/A'}</p>
         </div>
-        {getPaymentStatus()}
+        <div className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-medium">
+          {safeExam.name || 'N/A'} - {safeExam.examType || 'N/A'}
+        </div>
       </div>
 
       {/* Student Information */}
@@ -76,71 +43,65 @@ const ChallanPrintView = ({ challan, student, schoolInfo, onPrint, onDownload })
             <span className="font-medium col-span-1">Class:</span>
             <span className="col-span-2">{safeStudent.class || 'N/A'} - Section {safeStudent.section || 'N/A'}</span>
             
-            <span className="font-medium col-span-1">Month:</span>
-            <span className="col-span-2">{safeChallan.month || 'N/A'}</span>
+            <span className="font-medium col-span-1">Roll No:</span>
+            <span className="col-span-2">{safeExamSlip.rollNumber || 'N/A'}</span>
           </div>
         </div>
       </div>
 
-      {/* Fee Details */}
+      {/* Exam Schedule */}
       <div className="mb-3">
-        <h3 className="font-bold text-gray-800 mb-2 text-xs">Fee Details</h3>
+        <h3 className="font-bold text-gray-800 mb-2 text-xs flex items-center">
+          <FaCalendar className="mr-2 text-blue-600 text-xs" /> Exam Schedule
+        </h3>
         <div className="border rounded">
           <div className="grid grid-cols-4 gap-1 p-2 bg-gray-50 border-b text-xs font-medium">
-            <span className="col-span-3">Description</span>
-            <span className="text-center">Amount</span>
+            <span className="col-span-1">Subject</span>
+            <span className="text-center">Date</span>
+            <span className="text-center">Time</span>
+            <span className="text-center">Room</span>
           </div>
           <div className="divide-y divide-gray-200">
-            <div className="grid grid-cols-4 gap-1 p-2 text-xs">
-              <span className="col-span-3">Monthly Tuition Fee</span>
-              <span className="text-center">Rs {Math.round(safeChallan.amount) || '0'}</span>
-            </div>
-            {safeChallan.description && (
-              <div className="grid grid-cols-4 gap-1 p-2 text-xs">
-                <span className="col-span-3">{safeChallan.description}</span>
-                <span className="text-center">Rs 0</span>
+            {safeExamSlip.subjects && safeExamSlip.subjects.map((subject, index) => (
+              <div key={index} className="grid grid-cols-4 gap-1 p-2 text-xs">
+                <span className="col-span-1">{subject.name}</span>
+                <span className="text-center">{subject.date || 'N/A'}</span>
+                <span className="text-center">{subject.time || 'N/A'}</span>
+                <span className="text-center">{subject.room || 'N/A'}</span>
               </div>
-            )}
-            <div className="grid grid-cols-4 gap-1 p-2 text-xs font-bold">
-              <span className="col-span-3">Total Amount</span>
-              <span className="text-center">Rs {Math.round(safeChallan.amount) || '0'}</span>
-            </div>
+            ))}
           </div>
         </div>
       </div>
 
-      {/* Dates */}
+      {/* Exam Details */}
       <div className="grid grid-cols-2 gap-2 mb-3">
         <div>
-          <h4 className="text-xs font-medium text-gray-700 mb-1">Issue Date</h4>
+          <h4 className="text-xs font-medium text-gray-700 mb-1">Exam Date</h4>
           <div className="bg-gray-50 p-2 rounded border text-xs">
-            {formatDate(safeChallan.date || new Date())}
+            {safeExam.startDate || 'N/A'}
           </div>
         </div>
         <div>
-          <h4 className="text-xs font-medium text-gray-700 mb-1">Due Date</h4>
+          <h4 className="text-xs font-medium text-gray-700 mb-1">Reporting Time</h4>
           <div className="bg-gray-50 p-2 rounded border text-xs">
-            {formatDate(safeChallan.dueDate)}
+            30 minutes before exam
           </div>
         </div>
       </div>
 
-      {/* Payment Information */}
-      {safeChallan.status === 'paid' && safeChallan.paymentMethod && (
-        <div className="mb-3">
-          <h3 className="font-bold text-gray-800 mb-2 text-xs">Payment Information</h3>
-          <div className="bg-green-50 p-2 rounded border border-green-200 text-xs">
-            <div className="grid grid-cols-2 gap-1 mb-1">
-              <div className="font-medium">Payment Method:</div>
-              <div className="capitalize">{safeChallan.paymentMethod}</div>
-            </div>
-            <div className="grid grid-cols-2 gap-1">
-              <div className="font-medium">Payment Date:</div>
-              <div>{formatDate(safeChallan.date)}</div>
-            </div>
-          </div>
+      {/* Instructions */}
+      <div className="mb-3">
+        <h3 className="font-bold text-gray-800 mb-2 text-xs">Important Instructions</h3>
+        <div className="bg-blue-50 p-2 rounded border border-blue-200 text-xs">
+          <ul className="list-disc pl-4 space-y-1">
+            <li>Bring your admit card and valid ID to the examination hall</li>
+            <li>Arrive at least 30 minutes before the exam starts</li>
+            <li>No electronic devices are allowed in the examination hall</li>
+            <li>Follow all instructions given by the invigilators</li>
+          </ul>
         </div>
-      )}
+      </div>
 
       {/* Action Buttons - Only show when not printing */}
       <div className="flex justify-center space-x-3 mt-4 mb-3 print:hidden">
@@ -148,24 +109,26 @@ const ChallanPrintView = ({ challan, student, schoolInfo, onPrint, onDownload })
           onClick={onPrint}
           className="flex items-center px-4 py-2 bg-blue-600 text-white rounded text-xs hover:bg-blue-700 transition-colors"
         >
-          <FaPrint className="mr-2" /> Print
+          <svg className="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+          </svg>
+          Print
         </button>
         <button
           onClick={onDownload}
           className="flex items-center px-4 py-2 bg-green-600 text-white rounded text-xs hover:bg-green-700 transition-colors"
         >
-          <FaDownload className="mr-2" /> Save PDF
+          <svg className="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+          Save PDF
         </button>
       </div>
 
       {/* Footer */}
       <div className="text-center text-xs text-gray-500 mt-3 pt-2 border-t border-gray-200 print:hidden">
-        {safeChallan.status === 'paid' ? (
-          <p>Thank you for your payment.</p>
-        ) : (
-          <p>Please pay by the due date.</p>
-        )}
-        <p className="mt-1">Generated on {new Date().toLocaleDateString()}</p>
+        <p>Generated on {new Date().toLocaleDateString()}</p>
+        <p className="mt-1">Official School Document</p>
       </div>
 
       {/* Print Styles */}
@@ -191,7 +154,7 @@ const ChallanPrintView = ({ challan, student, schoolInfo, onPrint, onDownload })
             margin: 0.5in;
           }
           
-          .challan-print-view {
+          .exam-slip-print-view {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             overflow: visible;
           }
@@ -230,22 +193,19 @@ const ChallanPrintView = ({ challan, student, schoolInfo, onPrint, onDownload })
           .gap-2 { gap: 0.5rem; }
           .col-span-1 { grid-column: span 1 / span 1; }
           .col-span-2 { grid-column: span 2 / span 2; }
-          .col-span-3 { grid-column: span 3 / span 3; }
           .border { border: 1px solid #d1d5db; }
           .divide-y > :not([hidden]) ~ :not([hidden]) { border-top: 1px solid #e5e7eb; }
           .divide-gray-200 > :not([hidden]) ~ :not([hidden]) { border-color: #e5e7eb; }
           .text-right { text-align: right; }
-          .bg-green-50 { background-color: #f0fdf4; }
-          .bg-green-100 { background-color: #dcfce7; }
-          .bg-yellow-100 { background-color: #fef9c3; }
-          .text-green-800 { color: #166534; }
-          .text-yellow-800 { color: #854d0e; }
-          .border-green-200 { border-color: #bbf7d0; }
-          .capitalize { text-transform: capitalize; }
+          .bg-blue-50 { background-color: #eff6ff; }
+          .border-blue-200 { border-color: #bfdbfe; }
+          .list-disc { list-style-type: disc; }
+          .pl-4 { padding-left: 1rem; }
+          .space-y-1 > :not([hidden]) ~ :not([hidden]) { margin-top: 0.25rem; }
         }
       `}</style>
     </div>
   );
 };
 
-export default ChallanPrintView;
+export default ExamSlipPrintView;

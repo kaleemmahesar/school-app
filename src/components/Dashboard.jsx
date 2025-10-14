@@ -10,6 +10,7 @@ const Dashboard = () => {
   const expenses = useSelector(state => state.expenses.expenses);
   const staff = useSelector(state => state.staff.staff);
   const classes = useSelector(state => state.classes.classes);
+  const subsidies = useSelector(state => state.subsidies.subsidies);
   
   // State for recent activities table
   const [activityType, setActivityType] = useState('all');
@@ -17,14 +18,141 @@ const Dashboard = () => {
   const [dateRange, setDateRange] = useState({ start: '', end: '' });
   const [transactionType, setTransactionType] = useState('all');
   const [showPrintView, setShowPrintView] = useState(false);
+  
+  // State for quarter/year filter
+  const [selectedQuarter, setSelectedQuarter] = useState('all');
+  const [selectedYear, setSelectedYear] = useState('all');
+
+  // Get unique years and quarters from activities for the filters
+  const availableYears = useMemo(() => {
+    const years = new Set();
+    
+    // Add years from received subsidies only
+    subsidies
+      .filter(subsidy => subsidy.status === 'received')
+      .forEach(subsidy => {
+        if (subsidy.year) {
+          years.add(subsidy.year);
+        }
+      });
+    
+    return Array.from(years).sort((a, b) => b - a);
+  }, [subsidies]);
+
+  // Get available quarters from received subsidies
+  const availableQuarters = useMemo(() => {
+    const quarters = new Set();
+    
+    // Add quarters from received subsidies only
+    subsidies
+      .filter(subsidy => subsidy.status === 'received')
+      .forEach(subsidy => {
+        if (subsidy.quarter) {
+          const quarterNumber = parseInt(subsidy.quarter.replace('Q', ''));
+          if (!isNaN(quarterNumber) && quarterNumber >= 1 && quarterNumber <= 4) {
+            quarters.add(quarterNumber);
+          }
+        }
+      });
+    
+    return Array.from(quarters).sort((a, b) => a - b);
+  }, [subsidies]);
+
+  // Filter data based on selected quarter and year
+  const filteredData = useMemo(() => {
+    // If no filter is applied, return all data
+    if (selectedQuarter === 'all' && selectedYear === 'all') {
+      return { filteredExpenses: expenses, filteredStaff: staff, filteredSubsidies: subsidies };
+    }
+    
+    // Filter expenses by quarter and year
+    const filteredExpenses = expenses.filter(expense => {
+      if (!expense.date) return false;
+      
+      const expenseDate = new Date(expense.date);
+      const expenseYear = expenseDate.getFullYear();
+      const expenseMonth = expenseDate.getMonth(); // 0-11
+      const expenseQuarter = Math.floor(expenseMonth / 3) + 1; // 1-4
+      
+      // Check year filter
+      if (selectedYear !== 'all' && expenseYear !== parseInt(selectedYear)) {
+        return false;
+      }
+      
+      // Check quarter filter
+      if (selectedQuarter !== 'all' && expenseQuarter !== parseInt(selectedQuarter)) {
+        return false;
+      }
+      
+      return true;
+    });
+    
+    // Filter staff salary history by quarter and year
+    const filteredStaff = staff.map(member => {
+      if (!member.salaryHistory) return member;
+      
+      const filteredSalaryHistory = member.salaryHistory.filter(record => {
+        if (!record.paymentDate) return false;
+        
+        const paymentDate = new Date(record.paymentDate);
+        const paymentYear = paymentDate.getFullYear();
+        const paymentMonth = paymentDate.getMonth(); // 0-11
+        const paymentQuarter = Math.floor(paymentMonth / 3) + 1; // 1-4
+        
+        // Check year filter
+        if (selectedYear !== 'all' && paymentYear !== parseInt(selectedYear)) {
+          return false;
+        }
+        
+        // Check quarter filter
+        if (selectedQuarter !== 'all' && paymentQuarter !== parseInt(selectedQuarter)) {
+          return false;
+        }
+        
+        return true;
+      });
+      
+      return {
+        ...member,
+        salaryHistory: filteredSalaryHistory
+      };
+    });
+    
+    // Filter subsidies by quarter and year
+    const filteredSubsidies = subsidies.filter(subsidy => {
+      // Only show received subsidies (as per financial reporting best practices)
+      if (subsidy.status !== 'received') return false;
+      
+      // Check year filter
+      if (selectedYear !== 'all' && subsidy.year !== parseInt(selectedYear)) {
+        return false;
+      }
+      
+      // Check quarter filter
+      if (selectedQuarter !== 'all') {
+        const quarterNumber = parseInt(selectedQuarter);
+        const subsidyQuarterNumber = parseInt(subsidy.quarter.replace('Q', ''));
+        if (subsidyQuarterNumber !== quarterNumber) {
+          return false;
+        }
+      }
+      
+      return true;
+    });
+    
+    return { filteredExpenses, filteredStaff, filteredSubsidies };
+  }, [expenses, staff, subsidies, selectedQuarter, selectedYear]);
 
   // Calculate statistics using useMemo for performance
   const stats = useMemo(() => {
+    // Use filtered data if filters are applied, otherwise use all data
+    const { filteredExpenses, filteredStaff, filteredSubsidies } = filteredData;
+    
     // Total expenses
-    const totalExpenses = expenses.reduce((sum, expense) => sum + parseFloat(expense.amount), 0);
+    const totalExpenses = filteredExpenses.reduce((sum, expense) => sum + parseFloat(expense.amount), 0);
     
     // Total staff salaries (including allowances)
-    const totalStaffSalaries = staff.reduce((sum, member) => {
+    const totalStaffSalaries = filteredStaff.reduce((sum, member) => {
       const allowances = (member.allowances || []).reduce((allowanceSum, allowance) => {
         return allowanceSum + parseFloat(allowance.amount || 0);
       }, 0);
@@ -32,37 +160,20 @@ const Dashboard = () => {
     }, 0);
     
     // Other expenses (excluding staff salaries)
-    const otherExpenses = expenses
+    const otherExpenses = filteredExpenses
       .filter(expense => expense.category !== 'Salary')
       .reduce((sum, expense) => sum + parseFloat(expense.amount), 0);
     
     // Total students
     const totalStudents = students.length;
 
-    // Total fees collected
-    const totalFeesCollected = students.reduce((sum, student) => sum + parseFloat(student.feesPaid || 0), 0);
-    
-    // Total pending fees
-    const totalPendingFees = students.reduce((sum, student) => sum + (parseFloat(student.totalFees || 0) - parseFloat(student.feesPaid || 0)), 0);
+    // Calculate total NGO subsidies based on filtered received subsidies
+    const totalNGOSubsidies = filteredSubsidies
+      .filter(subsidy => subsidy.status === 'received')
+      .reduce((sum, subsidy) => sum + parseFloat(subsidy.amount), 0);
     
     // Net profit/loss (income - expenses)
-    const netProfit = totalFeesCollected - (totalStaffSalaries + otherExpenses);
-    
-    // Fees by class - include all classes, even those without students
-    const feesByClass = {};
-    // Initialize with all classes
-    classes.forEach(classItem => {
-      feesByClass[classItem.name] = { collected: 0, pending: 0, total: 0 };
-    });
-    // Add student data
-    students.forEach(student => {
-      if (!feesByClass[student.class]) {
-        feesByClass[student.class] = { collected: 0, pending: 0, total: 0 };
-      }
-      feesByClass[student.class].collected += parseFloat(student.feesPaid || 0);
-      feesByClass[student.class].total += parseFloat(student.totalFees || 0);
-      feesByClass[student.class].pending += (parseFloat(student.totalFees || 0) - parseFloat(student.feesPaid || 0));
-    });
+    const netProfit = totalNGOSubsidies - (totalStaffSalaries + otherExpenses);
     
     // Students by class - include all classes, even those without students
     const studentsByClass = {};
@@ -79,7 +190,7 @@ const Dashboard = () => {
     });
     
     // Expenses by category
-    const expensesByCategory = expenses.reduce((acc, expense) => {
+    const expensesByCategory = filteredExpenses.reduce((acc, expense) => {
       if (!acc[expense.category]) {
         acc[expense.category] = 0;
       }
@@ -88,7 +199,7 @@ const Dashboard = () => {
     }, {});
     
     // Staff by position
-    const staffByPosition = staff.reduce((acc, member) => {
+    const staffByPosition = filteredStaff.reduce((acc, member) => {
       if (!acc[member.position]) {
         acc[member.position] = 0;
       }
@@ -102,18 +213,17 @@ const Dashboard = () => {
       otherExpenses,
       netProfit,
       totalStudents,
-      totalFeesCollected,
-      totalPendingFees,
-      feesByClass,
+      totalNGOSubsidies,
       studentsByClass,
       expensesByCategory,
       staffByPosition,
-      totalStaff: staff.length
+      totalStaff: filteredStaff.length
     };
-  }, [students, expenses, staff, classes]);
+  }, [students, filteredData, classes, selectedQuarter, selectedYear]);
 
   // Generate recent activities data
   const recentActivities = useMemo(() => {
+    const { filteredExpenses, filteredStaff, filteredSubsidies } = filteredData;
     const activities = [];
     
     // Add student admission activities
@@ -124,26 +234,26 @@ const Dashboard = () => {
         description: `${student.firstName} ${student.lastName} admitted to ${student.class}`,
         date: student.admissionDate || new Date().toISOString(),
         category: 'Students',
-        amount: parseFloat(student.admissionFees) || 0
+        amount: 0 // No admission fees in NGO school
       });
     });
     
-    // Add fee payment activities
-    students.forEach(student => {
-      if (parseFloat(student.feesPaid) > 0) {
+    // Add NGO subsidy activities based on filtered data (only received subsidies)
+    filteredSubsidies
+      .filter(subsidy => subsidy.status === 'received')
+      .forEach(subsidy => {
         activities.push({
-          id: `fee-${student.id}`,
-          type: 'Fee Payment',
-          description: `${student.firstName} ${student.lastName} paid fees`,
-          date: new Date().toISOString(), // In a real app, this would be the actual payment date
-          category: 'Fees',
-          amount: parseFloat(student.feesPaid)
+          id: `subsidy-${subsidy.id}`,
+          type: 'NGO Subsidy',
+          description: `${subsidy.quarter} ${subsidy.year} subsidy received from ${subsidy.ngoName}`,
+          date: subsidy.receivedDate,
+          category: 'Income',
+          amount: parseFloat(subsidy.amount)
         });
-      }
-    });
+      });
     
     // Add expense activities
-    expenses.forEach(expense => {
+    filteredExpenses.forEach(expense => {
       activities.push({
         id: `expense-${expense.id}`,
         type: 'Expense',
@@ -155,7 +265,7 @@ const Dashboard = () => {
     });
     
     // Add staff activities
-    staff.forEach(member => {
+    filteredStaff.forEach(member => {
       activities.push({
         id: `staff-${member.id}`,
         type: 'Staff',
@@ -168,7 +278,7 @@ const Dashboard = () => {
     
     // Sort by date (newest first)
     return activities.sort((a, b) => new Date(b.date) - new Date(a.date));
-  }, [students, expenses, staff]);
+  }, [students, filteredData, selectedQuarter, selectedYear]);
 
   // Filter activities based on selected criteria
   const filteredActivities = useMemo(() => {
@@ -191,7 +301,8 @@ const Dashboard = () => {
       // Income: Fees and Student admissions (positive amounts)
       filtered = filtered.filter(activity => 
         (activity.category === 'Fees' && activity.amount > 0) || 
-        (activity.category === 'Students' && activity.amount > 0)
+        (activity.category === 'Students' && activity.amount > 0) ||
+        (activity.category === 'Income' && activity.amount > 0)
       );
     } else if (transactionType === 'out') {
       // Expense: Only actual expenses
@@ -238,7 +349,8 @@ const Dashboard = () => {
     
     filteredActivities.forEach(activity => {
       if ((activity.category === 'Fees' && activity.amount > 0) || 
-          (activity.category === 'Students' && activity.amount > 0)) {
+          (activity.category === 'Students' && activity.amount > 0) ||
+          (activity.category === 'Income' && activity.amount > 0)) {
         totalIncome += activity.amount;
       } else if (activity.category === 'Expenses') {
         totalExpense += activity.amount;
@@ -387,13 +499,60 @@ const Dashboard = () => {
       <main className="max-w-7xl mx-auto py-6">
         {location.pathname === '/' && (
           <div className="space-y-6">
-            <PageHeader
-              title="Dashboard"
-              subtitle="School management overview and analytics"
-            />
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between">
+              <div className="mb-4 md:mb-0">
+                <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
+                <p className="mt-1 text-sm text-gray-600">School management overview and analytics</p>
+              </div>
+              
+              {/* Quarter/Year Filter */}
+              <div className="flex space-x-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Quarter</label>
+                  <select
+                    value={selectedQuarter}
+                    onChange={(e) => setSelectedQuarter(e.target.value)}
+                    className="block w-full pl-2 pr-8 py-1.5 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-sm"
+                  >
+                    <option value="all">All Quarters</option>
+                    {availableQuarters.map(quarter => (
+                      <option key={quarter} value={quarter}>Q{quarter} (Quarter {quarter})</option>
+                    ))}
+                  </select>
+                </div>
+                
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Year</label>
+                  <select
+                    value={selectedYear}
+                    onChange={(e) => setSelectedYear(e.target.value)}
+                    className="block w-full pl-2 pr-8 py-1.5 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-sm"
+                  >
+                    <option value="all">All Years</option>
+                    {availableYears.map(year => (
+                      <option key={year} value={year}>{year}</option>
+                    ))}
+                  </select>
+                </div>
+                
+                {(selectedQuarter !== 'all' || selectedYear !== 'all') && (
+                  <div className="flex items-end">
+                    <button
+                      onClick={() => {
+                        setSelectedQuarter('all');
+                        setSelectedYear('all');
+                      }}
+                      className="inline-flex items-center px-3 py-1.5 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                    >
+                      Clear Filters
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
             
             {/* Stats Overview */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-6">
               <div className="bg-white rounded-lg shadow p-6">
                 <div className="flex items-center">
                   <div className="p-3 bg-blue-100 rounded-full">
@@ -406,7 +565,7 @@ const Dashboard = () => {
                 </div>
               </div>
               
-              <div className="bg-white rounded-lg shadow p-6">
+              {/* <div className="bg-white rounded-lg shadow p-6">
                 <div className="flex items-center">
                   <div className="p-3 bg-green-100 rounded-full">
                     <FaMoneyBillWave className="h-6 w-6 text-green-600" />
@@ -416,7 +575,7 @@ const Dashboard = () => {
                     <p className="text-2xl font-semibold text-gray-900">Rs {Math.round(stats.totalExpenses)}</p>
                   </div>
                 </div>
-              </div>
+              </div> */}
               
               <div className="bg-white rounded-lg shadow p-6">
                 <div className="flex items-center">
@@ -444,7 +603,7 @@ const Dashboard = () => {
             </div>
 
             {/* Financial Summary */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {/* <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               <div className="bg-white rounded-lg shadow p-6">
                 <div className="flex items-center">
                   <div className="p-3 bg-blue-100 rounded-full">
@@ -475,8 +634,8 @@ const Dashboard = () => {
                     <FaChartLine className="h-6 w-6 text-emerald-600" />
                   </div>
                   <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-600">Total Income</p>
-                    <p className="text-2xl font-semibold text-gray-900">Rs {Math.round(stats.totalFeesCollected)}</p>
+                    <p className="text-sm font-medium text-gray-600">NGO Subsidies</p>
+                    <p className="text-2xl font-semibold text-gray-900">Rs {Math.round(stats.totalNGOSubsidies)}</p>
                   </div>
                 </div>
               </div>
@@ -494,7 +653,7 @@ const Dashboard = () => {
                   </div>
                 </div>
               </div>
-            </div>
+            </div> */}
 
             {/* Charts Section */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -527,38 +686,90 @@ const Dashboard = () => {
                 </div>
               </div>
 
-              {/* Fees Collection by Class */}
+              {/* NGO Subsidy Utilization */}
               <div className="bg-white rounded-lg shadow p-6">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold text-gray-800">Fees Collection by Class</h3>
+                  <h3 className="text-lg font-semibold text-gray-800">Subsidy Utilization</h3>
                   <FaChartBar className="text-gray-400" />
                 </div>
-                <div className="space-y-3">
-                  {classes.map((classItem) => {
-                    const data = stats.feesByClass[classItem.name] || { collected: 0, pending: 0, total: 0 };
-                    const collectionRate = data.total > 0 ? (data.collected / data.total) * 100 : 0;
-                    return (
-                      <div key={classItem.name} className="flex items-center">
-                        <div className="w-32 text-sm text-gray-600">{classItem.name}</div>
-                        <div className="flex-1 ml-2">
-                          <div className="flex items-center">
-                            <div className="w-full bg-gray-200 rounded-full h-2">
-                              <div 
-                                className="bg-green-600 h-2 rounded-full" 
-                                style={{ width: `${collectionRate}%` }}
-                              ></div>
-                            </div>
-                            <div className="ml-2 text-sm font-medium text-gray-700 w-20">
-                              {collectionRate.toFixed(0)}%
-                            </div>
-                          </div>
-                          <div className="text-xs text-gray-500 mt-1">
-                            Rs {Math.round(data.collected)} / Rs {Math.round(data.total)}
-                          </div>
+                <div className="space-y-4">
+                  <div className="flex items-center">
+                    <div className="w-32 text-sm text-gray-600">Staff Salaries</div>
+                    <div className="flex-1 ml-2">
+                      <div className="flex items-center">
+                        <div className="w-full bg-gray-200 rounded-full h-2">
+                          <div 
+                            className="bg-red-600 h-2 rounded-full" 
+                            style={{ width: `${stats.totalNGOSubsidies > 0 ? (stats.totalStaffSalaries / stats.totalNGOSubsidies) * 100 : 0}%` }}
+                          ></div>
+                        </div>
+                        <div className="ml-2 text-sm font-medium text-gray-700 w-24">
+                          Rs {Math.round(stats.totalStaffSalaries)}
                         </div>
                       </div>
-                    );
-                  })}
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center">
+                    <div className="w-32 text-sm text-gray-600">Other Expenses</div>
+                    <div className="flex-1 ml-2">
+                      <div className="flex items-center">
+                        <div className="w-full bg-gray-200 rounded-full h-2">
+                          <div 
+                            className="bg-amber-600 h-2 rounded-full" 
+                            style={{ width: `${stats.totalNGOSubsidies > 0 ? (stats.otherExpenses / stats.totalNGOSubsidies) * 100 : 0}%` }}
+                          ></div>
+                        </div>
+                        <div className="ml-2 text-sm font-medium text-gray-700 w-24">
+                          Rs {Math.round(stats.otherExpenses)}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center">
+                    <div className="w-32 text-sm text-gray-600">Remaining</div>
+                    <div className="flex-1 ml-2">
+                      <div className="flex items-center">
+                        <div className="w-full bg-gray-200 rounded-full h-2">
+                          <div 
+                            className="bg-green-600 h-2 rounded-full" 
+                            style={{ width: `${stats.totalNGOSubsidies > 0 ? ((stats.totalNGOSubsidies - stats.totalStaffSalaries - stats.otherExpenses) / stats.totalNGOSubsidies) * 100 : 0}%` }}
+                          ></div>
+                        </div>
+                        <div className="ml-2 text-sm font-medium text-gray-700 w-24">
+                          Rs {Math.round(stats.totalNGOSubsidies - stats.totalStaffSalaries - stats.otherExpenses)}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-4 pt-4 border-t border-gray-200">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">Total Subsidy:</span>
+                    <span className="font-medium">Rs {Math.round(stats.totalNGOSubsidies)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">Total Expenses:</span>
+                    <span className="font-medium">Rs {Math.round(stats.totalStaffSalaries + stats.otherExpenses)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm font-semibold mt-1">
+                    <span className={stats.netProfit >= 0 ? 'text-green-600' : 'text-red-600'}>
+                      Net {stats.netProfit >= 0 ? 'Profit' : 'Loss'}:
+                    </span>
+                    <span className={stats.netProfit >= 0 ? 'text-green-600' : 'text-red-600'}>
+                      Rs {Math.round(Math.abs(stats.netProfit))}
+                    </span>
+                  </div>
+                  
+                  {/* Filter info */}
+                  {(selectedQuarter !== 'all' || selectedYear !== 'all') && (
+                    <div className="mt-2 pt-2 border-t border-gray-100 text-xs text-gray-500">
+                      Showing data for{' '}
+                      {selectedQuarter !== 'all' ? `Q${selectedQuarter} ` : ''}
+                      {selectedYear !== 'all' ? selectedYear : ''}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -571,6 +782,12 @@ const Dashboard = () => {
                   <h1>SCHOOL MANAGEMENT SYSTEM</h1>
                   <p>Recent Activities Report</p>
                   <p>Generated on {new Date().toLocaleDateString()}</p>
+                  {(selectedQuarter !== 'all' || selectedYear !== 'all') && (
+                    <p className="text-sm">
+                      Filtered for {selectedQuarter !== 'all' ? `Q${selectedQuarter} ` : ''}
+                      {selectedYear !== 'all' ? selectedYear : ''}
+                    </p>
+                  )}
                 </div>
               )}
               
@@ -681,6 +898,24 @@ const Dashboard = () => {
                 </div>
               </div>
 
+              {/* Filter info display */}
+              {(selectedQuarter !== 'all' || selectedYear !== 'all') && (
+                <div className="mb-4 p-3 bg-blue-50 rounded-md text-sm text-blue-700 no-print">
+                  Showing activities for{' '}
+                  {selectedQuarter !== 'all' ? `Q${selectedQuarter} ` : ''}
+                  {selectedYear !== 'all' ? selectedYear : ''}
+                  <button 
+                    onClick={() => {
+                      setSelectedQuarter('all');
+                      setSelectedYear('all');
+                    }}
+                    className="ml-2 text-blue-900 font-medium underline"
+                  >
+                    Clear filters
+                  </button>
+                </div>
+              )}
+
               {/* Activities Table */}
               <div className="overflow-hidden rounded-md border border-gray-200">
                 <table className="min-w-full divide-y divide-gray-200">
@@ -703,11 +938,13 @@ const Dashboard = () => {
                                 activity.category === 'Students' ? 'bg-blue-100 text-blue-600' :
                                 activity.category === 'Fees' ? 'bg-green-100 text-green-600' :
                                 activity.category === 'Expenses' ? 'bg-red-100 text-red-600' :
+                                activity.category === 'Income' ? 'bg-emerald-100 text-emerald-600' :
                                 'bg-purple-100 text-purple-600'
                               }`}>
                                 {activity.category === 'Students' && <FaUsers className="h-3.5 w-3.5" />}
                                 {activity.category === 'Fees' && <FaDollarSign className="h-3.5 w-3.5" />}
                                 {activity.category === 'Expenses' && <FaMoneyBillWave className="h-3.5 w-3.5" />}
+                                {activity.category === 'Income' && <FaChartLine className="h-3.5 w-3.5" />}
                                 {activity.category === 'Staff' && <FaChalkboardTeacher className="h-3.5 w-3.5" />}
                               </div>
                               <div className="ml-2">
@@ -723,6 +960,7 @@ const Dashboard = () => {
                               activity.category === 'Students' ? 'bg-blue-100 text-blue-800' :
                               activity.category === 'Fees' ? 'bg-green-100 text-green-800' :
                               activity.category === 'Expenses' ? 'bg-red-100 text-red-800' :
+                              activity.category === 'Income' ? 'bg-emerald-100 text-emerald-800' :
                               'bg-purple-100 text-purple-800'
                             }`}>
                               {activity.category}
@@ -748,118 +986,26 @@ const Dashboard = () => {
               </div>
 
               {/* Summary Stats */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4">
-                <div className="bg-green-50 rounded-lg p-3">
-                  <div className="flex items-center">
-                    <div className="p-2 bg-green-100 rounded-full">
-                      <FaDollarSign className="h-4 w-4 text-green-600" />
-                    </div>
-                    <div className="ml-3">
-                      <p className="text-xs font-medium text-gray-600">Total Income</p>
-                      <p className="text-lg font-semibold text-gray-900">Rs {Math.round(calculateTotals.income)}</p>
-                    </div>
+              <div className="mt-6 pt-6 border-t border-gray-200 no-print">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="bg-green-50 rounded-lg p-4">
+                    <div className="text-sm font-medium text-green-800">Total Income</div>
+                    <div className="text-2xl font-semibold text-green-900">Rs {Math.round(calculateTotals.income)}</div>
                   </div>
-                </div>
-                
-                <div className="bg-red-50 rounded-lg p-3">
-                  <div className="flex items-center">
-                    <div className="p-2 bg-red-100 rounded-full">
-                      <FaMoneyBillWave className="h-4 w-4 text-red-600" />
-                    </div>
-                    <div className="ml-3">
-                      <p className="text-xs font-medium text-gray-600">Total Expense</p>
-                      <p className="text-lg font-semibold text-gray-900">Rs {Math.round(calculateTotals.expense)}</p>
-                    </div>
+                  <div className="bg-red-50 rounded-lg p-4">
+                    <div className="text-sm font-medium text-red-800">Total Expenses</div>
+                    <div className="text-2xl font-semibold text-red-900">Rs {Math.round(calculateTotals.expense)}</div>
                   </div>
-                </div>
-                
-                <div className={`bg-white rounded-lg p-3 border ${calculateTotals.net >= 0 ? 'border-green-500' : 'border-red-500'}`}>
-                  <div className="flex items-center">
-                    <div className="p-2 rounded-full bg-gray-100">
-                      <FaChartLine className="h-4 w-4 text-gray-600" />
+                  <div className={`rounded-lg p-4 ${calculateTotals.net >= 0 ? 'bg-blue-50' : 'bg-amber-50'}`}>
+                    <div className={`text-sm font-medium ${calculateTotals.net >= 0 ? 'text-blue-800' : 'text-amber-800'}`}>
+                      Net {calculateTotals.net >= 0 ? 'Profit' : 'Loss'}
                     </div>
-                    <div className="ml-3">
-                      <p className="text-xs font-medium text-gray-600">Net Amount</p>
-                      <p className={`text-lg font-semibold ${calculateTotals.net >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                        Rs {Math.round(Math.abs(calculateTotals.net))} {calculateTotals.net >= 0 ? '' : '(Loss)'}
-                      </p>
+                    <div className={`text-2xl font-semibold ${calculateTotals.net >= 0 ? 'text-blue-900' : 'text-amber-900'}`}>
+                      Rs {Math.round(Math.abs(calculateTotals.net))} {calculateTotals.net >= 0 ? '' : '(Loss)'}
                     </div>
                   </div>
                 </div>
               </div>
-
-              {/* Fees Stats for Income Report */}
-              {transactionType === 'in' && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
-                  <div className="bg-emerald-50 rounded-lg p-3">
-                    <div className="flex items-center">
-                      <div className="p-2 bg-emerald-100 rounded-full">
-                        <FaDollarSign className="h-4 w-4 text-emerald-600" />
-                      </div>
-                      <div className="ml-3">
-                        <p className="text-xs font-medium text-gray-600">Fees Collected</p>
-                        <p className="text-lg font-semibold text-gray-900">Rs {Math.round(calculateTotals.income)}</p>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="bg-amber-50 rounded-lg p-3">
-                    <div className="flex items-center">
-                      <div className="p-2 bg-amber-100 rounded-full">
-                        <FaMoneyBillWave className="h-4 w-4 text-amber-600" />
-                      </div>
-                      <div className="ml-3">
-                        <p className="text-xs font-medium text-gray-600">Pending Fees</p>
-                        <p className="text-lg font-semibold text-gray-900">Rs {Math.round(stats.totalPendingFees)}</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Print Summary */}
-              {showPrintView && (
-                <div className="print-summary mt-6">
-                  <div className="print-summary-box">
-                    <h4>Total Activities</h4>
-                    <p>{filteredActivities.length}</p>
-                  </div>
-                  <div className="print-summary-box">
-                    <h4>Total Income</h4>
-                    <p>Rs {Math.round(calculateTotals.income)}</p>
-                  </div>
-                  <div className="print-summary-box">
-                    <h4>Total Expense</h4>
-                    <p>Rs {Math.round(calculateTotals.expense)}</p>
-                  </div>
-                  <div className="print-summary-box">
-                    <h4>Net Profit/Loss</h4>
-                    <p>Rs {Math.round(Math.abs(calculateTotals.net))} {calculateTotals.net >= 0 ? '' : '(Loss)'}</p>
-                  </div>
-                </div>
-              )}
-
-              {/* Fees Stats for Print View when Income Report */}
-              {showPrintView && transactionType === 'in' && (
-                <div className="print-summary mt-4">
-                  <div className="print-summary-box">
-                    <h4>Fees Collected</h4>
-                    <p>Rs {Math.round(calculateTotals.income)}</p>
-                  </div>
-                  <div className="print-summary-box">
-                    <h4>Pending Fees</h4>
-                    <p>Rs {Math.round(stats.totalPendingFees)}</p>
-                  </div>
-                </div>
-              )}
-
-              {/* Print Footer */}
-              {showPrintView && (
-                <div className="print-footer mt-6">
-                  <p>Report generated on {new Date().toLocaleString()}</p>
-                  <p>This is a computer-generated report and does not require a signature.</p>
-                </div>
-              )}
             </div>
           </div>
         )}

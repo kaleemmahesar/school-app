@@ -1,7 +1,7 @@
 import React from 'react';
 import { FaSchool, FaUser, FaClipboardList } from 'react-icons/fa';
 
-const BulkMarksheetPrintView = ({ 
+const PrintMarksheetsView = ({ 
   marksheetsData, 
   studentsData, 
   classesData
@@ -26,7 +26,7 @@ const BulkMarksheetPrintView = ({
   }, {});
 
   return (
-    <div className="w-full mx-auto bg-white font-sans bulk-marksheet-print-view">
+    <div className="w-full mx-auto bg-white font-sans">
       {/* Printable Marksheets */}
       <div className="print-container">
         {Object.entries(groupedMarksheets).map(([studentId, studentMarksheets], index) => {
@@ -39,7 +39,7 @@ const BulkMarksheetPrintView = ({
           const section = studentMarksheets[0]?.section || 'N/A';
 
           return (
-            <div key={studentId} className={`student-marksheets ${index > 0 ? 'mt-8' : ''} ${index < Object.keys(groupedMarksheets).length - 1 ? 'student-page-break' : ''}`}>
+            <div key={studentId} className={`student-marksheets ${index > 0 ? 'mt-8' : ''}`}>
               {/* School Header - Hidden in print view */}
               <div className="text-center border-b border-gray-300 pb-2 mb-3 print:hidden">
                 <div className="flex items-center justify-center mb-1">
@@ -154,15 +154,13 @@ const BulkMarksheetPrintView = ({
                 ))}
               </div>
 
-              {/* Page break styling applied directly to container */}
+              {/* Page break after each student (except the last one) */}
+              {index < Object.keys(groupedMarksheets).length - 1 && (
+                <div className="page-break print:block hidden"></div>
+              )}
             </div>
           );
         })}
-      </div>
-
-      {/* Footer for all pages */}
-      <div className="border-t border-gray-300 pt-3 mt-4 text-center text-xs text-gray-500 print:hidden">
-        <p>Generated on {generatedDate} - Official School Documents</p>
       </div>
 
       {/* Print Styles */}
@@ -175,23 +173,12 @@ const BulkMarksheetPrintView = ({
           }
           
           .print-container {
-            padding: 15px;
+            padding: 10px;
             max-width: 100%;
-          }
-          
-          .print-hidden {
-            display: none !important;
-          }
-          
-          .student-page-break {
-            page-break-after: always;
           }
           
           .page-break {
             page-break-after: always;
-            height: 0;
-            margin: 0;
-            padding: 0;
           }
           
           @page {
@@ -199,27 +186,19 @@ const BulkMarksheetPrintView = ({
             margin: 0.5in;
           }
           
-          .bulk-marksheet-print-view {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            overflow: visible;
-          }
-          
           .marksheets-section {
             page-break-inside: avoid;
           }
           
-          /* Enhanced print styling */
+          /* Maintain all styling for print view */
           .text-center { text-align: center; }
           .flex { display: flex; }
           .items-center { align-items: center; }
           .justify-center { justify-content: center; }
-          .justify-between { justify-content: space-between; }
           .border-b { border-bottom: 1px solid #d1d5db; }
-          .border-gray-300 { border-color: #d1d5db; }
           .pb-2 { padding-bottom: 0.5rem; }
           .mb-3 { margin-bottom: 0.75rem; }
           .text-lg { font-size: 1.125rem; }
-          .text-base { font-size: 1rem; }
           .font-bold { font-weight: 700; }
           .text-gray-800 { color: #1f2937; }
           .text-gray-600 { color: #4b5563; }
@@ -236,20 +215,18 @@ const BulkMarksheetPrintView = ({
           .p-2 { padding: 0.5rem; }
           .grid { display: grid; }
           .grid-cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-          .grid-cols-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
           .gap-1 { gap: 0.25rem; }
           .col-span-1 { grid-column: span 1 / span 1; }
           .col-span-2 { grid-column: span 2 / span 2; }
-          .gap-2 { gap: 0.5rem; }
           .border { border: 1px solid #d1d5db; }
           .divide-y > :not([hidden]) ~ :not([hidden]) { border-top: 1px solid #e5e7eb; }
-          .divide-gray-200 > :not([hidden]) ~ :not([hidden]) { border-color: #e5e7eb; }
           .text-right { text-align: right; }
           .bg-green-100 { background-color: #dcfce7; }
           .text-green-800 { color: #166534; }
           .px-1 { padding-left: 0.25rem; padding-right: 0.25rem; }
           .py-0.5 { padding-top: 0.125rem; padding-bottom: 0.125rem; }
           .mb-4 { margin-bottom: 1rem; }
+          .grid-cols-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
           .space-y-6 > :not([hidden]) ~ :not([hidden]) { margin-top: 1.5rem; }
           .mt-8 { margin-top: 2rem; }
         }
@@ -258,4 +235,4 @@ const BulkMarksheetPrintView = ({
   );
 };
 
-export default BulkMarksheetPrintView;
+export default PrintMarksheetsView;

@@ -1,5 +1,5 @@
 import React from 'react';
-import { FaSchool, FaUser, FaClipboardList, FaCalendar, FaPrint, FaDownload } from 'react-icons/fa';
+import { FaSchool, FaUser, FaClipboardList, FaPrint, FaDownload } from 'react-icons/fa';
 
 const MarksheetPrintView = ({ 
   marksheetData, 
@@ -36,8 +36,8 @@ const MarksheetPrintView = ({
 
   return (
     <div className="w-full mx-auto bg-white font-sans">
-      {/* School Header */}
-      <div className="text-center border-b border-gray-300 pb-2 mb-3">
+      {/* School Header - Hidden in print view */}
+      <div className="text-center border-b border-gray-300 pb-2 mb-3 print:hidden">
         <div className="flex items-center justify-center mb-1">
           <FaSchool className="text-blue-600 text-lg mr-2" />
           <h1 className="text-lg font-bold text-gray-800">School Management System</h1>
@@ -156,7 +156,7 @@ const MarksheetPrintView = ({
       </div>
 
       {/* Print Styles */}
-      <style jsx>{`
+      <style>{`
         @media print {
           body {
             margin: 0;
