@@ -12,7 +12,7 @@ const mockMarks = [
     class: 'Class 10',
     section: 'A',
     examType: 'Midterm',
-    year: '2023',
+    year: '2025',
     marks: [
       { subjectId: '10math', subjectName: 'Mathematics', marksObtained: 85, totalMarks: 100, grade: 'A' },
       { subjectId: '10eng', subjectName: 'English', marksObtained: 78, totalMarks: 100, grade: 'B+' },
@@ -31,7 +31,7 @@ const mockMarks = [
     class: 'Class 9',
     section: 'B',
     examType: 'Midterm',
-    year: '2023',
+    year: '2025',
     marks: [
       { subjectId: '9math', subjectName: 'Mathematics', marksObtained: 76, totalMarks: 100, grade: 'B+' },
       { subjectId: '9eng', subjectName: 'English', marksObtained: 82, totalMarks: 100, grade: 'A-' },
@@ -41,6 +41,63 @@ const mockMarks = [
     totalObtained: 324,
     totalMarks: 400,
     percentage: 81.0,
+    overallGrade: 'B+'
+  },
+  {
+    id: '3',
+    studentId: '21',
+    studentName: 'Sara Ali',
+    class: 'Class 10',
+    section: 'A',
+    examType: 'Midterm',
+    year: '2025',
+    marks: [
+      { subjectId: '10math', subjectName: 'Mathematics', marksObtained: 88, totalMarks: 100, grade: 'A' },
+      { subjectId: '10eng', subjectName: 'English', marksObtained: 82, totalMarks: 100, grade: 'A-' },
+      { subjectId: '10sci', subjectName: 'Science', marksObtained: 90, totalMarks: 100, grade: 'A+' },
+      { subjectId: '10hist', subjectName: 'History', marksObtained: 85, totalMarks: 100, grade: 'A' }
+    ],
+    totalObtained: 345,
+    totalMarks: 400,
+    percentage: 86.25,
+    overallGrade: 'A'
+  },
+  {
+    id: '4',
+    studentId: '22',
+    studentName: 'Hamza Rizvi',
+    class: 'Class 9',
+    section: 'B',
+    examType: 'Midterm',
+    year: '2025',
+    marks: [
+      { subjectId: '9math', subjectName: 'Mathematics', marksObtained: 78, totalMarks: 100, grade: 'B+' },
+      { subjectId: '9eng', subjectName: 'English', marksObtained: 84, totalMarks: 100, grade: 'A-' },
+      { subjectId: '9sci', subjectName: 'Science', marksObtained: 87, totalMarks: 100, grade: 'A' },
+      { subjectId: '9geo', subjectName: 'Geography', marksObtained: 80, totalMarks: 100, grade: 'B+' }
+    ],
+    totalObtained: 329,
+    totalMarks: 400,
+    percentage: 82.25,
+    overallGrade: 'B+'
+  },
+  {
+    id: '5',
+    studentId: '23',
+    studentName: 'Zara Khan',
+    class: 'Class 8',
+    section: 'A',
+    examType: 'Midterm',
+    year: '2025',
+    marks: [
+      { subjectId: '8math', subjectName: 'Mathematics', marksObtained: 85, totalMarks: 100, grade: 'A' },
+      { subjectId: '8eng', subjectName: 'English', marksObtained: 79, totalMarks: 100, grade: 'B+' },
+      { subjectId: '8sci', subjectName: 'Science', marksObtained: 88, totalMarks: 100, grade: 'A' },
+      { subjectId: '8hist', subjectName: 'History', marksObtained: 83, totalMarks: 100, grade: 'B+' }
+    ],
+    totalObtained: 335,
+    totalMarks: 400,
+    percentage: 83.75,
     overallGrade: 'B+'
   }
 ];

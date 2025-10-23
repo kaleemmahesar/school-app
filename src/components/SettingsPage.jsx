@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { updateSchoolInfo, fetchSchoolInfo } from '../store/settingsSlice';
-import { FaSchool, FaCog, FaUpload, FaSave, FaUndo } from 'react-icons/fa';
+import { FaSchool, FaCog, FaUpload, FaSave, FaUndo, FaHandHoldingUsd, FaMoneyBillWave, FaSearch } from 'react-icons/fa';
 
 const SettingsPage = () => {
   const dispatch = useDispatch();
@@ -10,7 +10,12 @@ const SettingsPage = () => {
   const [formData, setFormData] = useState({
     name: '',
     level: 'primary',
+    fundingType: 'ngo',
     logo: null,
+    theme: 'light',
+    sidebarCollapsed: false,
+    dateFormat: 'DD/MM/YYYY',
+    currency: 'PKR',
   });
   
   const [logoPreview, setLogoPreview] = useState(null);
@@ -26,7 +31,12 @@ const SettingsPage = () => {
       setFormData({
         name: schoolInfo.name || '',
         level: schoolInfo.level || 'primary',
+        fundingType: schoolInfo.fundingType || 'ngo',
         logo: schoolInfo.logo || null,
+        theme: schoolInfo.theme || 'light',
+        sidebarCollapsed: schoolInfo.sidebarCollapsed || false,
+        dateFormat: schoolInfo.dateFormat || 'DD/MM/YYYY',
+        currency: schoolInfo.currency || 'PKR',
       });
       setLogoPreview(schoolInfo.logo || null);
     }
@@ -70,7 +80,12 @@ const SettingsPage = () => {
       setFormData({
         name: schoolInfo.name || '',
         level: schoolInfo.level || 'primary',
+        fundingType: schoolInfo.fundingType || 'ngo',
         logo: schoolInfo.logo || null,
+        theme: schoolInfo.theme || 'light',
+        sidebarCollapsed: schoolInfo.sidebarCollapsed || false,
+        dateFormat: schoolInfo.dateFormat || 'DD/MM/YYYY',
+        currency: schoolInfo.currency || 'PKR',
       });
       setLogoPreview(schoolInfo.logo || null);
     }
@@ -208,6 +223,154 @@ const SettingsPage = () => {
                   ))}
                 </div>
               </div>
+
+              {/* Funding Type */}
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  School Funding Type
+                </label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div 
+                    className={`border rounded-lg p-4 cursor-pointer transition-colors ${
+                      formData.fundingType === 'traditional' 
+                        ? 'border-blue-500 bg-blue-50' 
+                        : 'border-gray-300 hover:border-gray-400'
+                    }`}
+                    onClick={() => setFormData(prev => ({ ...prev, fundingType: 'traditional' }))}
+                  >
+                    <div className="flex items-center">
+                      <input
+                        type="radio"
+                        id="traditional"
+                        name="fundingType"
+                        value="traditional"
+                        checked={formData.fundingType === 'traditional'}
+                        onChange={handleInputChange}
+                        className="h-4 w-4 text-blue-600 focus:ring-blue-500"
+                      />
+                      <label htmlFor="traditional" className="ml-3 block text-sm font-medium text-gray-700">
+                        <div className="flex items-center">
+                          <FaMoneyBillWave className="mr-2 text-green-500" />
+                          Traditional School
+                        </div>
+                        <p className="mt-1 text-xs text-gray-500">
+                          Collects fees from students
+                        </p>
+                      </label>
+                    </div>
+                  </div>
+                  
+                  <div 
+                    className={`border rounded-lg p-4 cursor-pointer transition-colors ${
+                      formData.fundingType === 'ngo' 
+                        ? 'border-blue-500 bg-blue-50' 
+                        : 'border-gray-300 hover:border-gray-400'
+                    }`}
+                    onClick={() => setFormData(prev => ({ ...prev, fundingType: 'ngo' }))}
+                  >
+                    <div className="flex items-center">
+                      <input
+                        type="radio"
+                        id="ngo"
+                        name="fundingType"
+                        value="ngo"
+                        checked={formData.fundingType === 'ngo'}
+                        onChange={handleInputChange}
+                        className="h-4 w-4 text-blue-600 focus:ring-blue-500"
+                      />
+                      <label htmlFor="ngo" className="ml-3 block text-sm font-medium text-gray-700">
+                        <div className="flex items-center">
+                          <FaHandHoldingUsd className="mr-2 text-blue-500" />
+                          NGO Funded School
+                        </div>
+                        <p className="mt-1 text-xs text-gray-500">
+                          Funded by quarterly NGO subsidies
+                        </p>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Theme Preferences */}
+              <div className="md:col-span-2 border-t border-gray-200 pt-6">
+                <h3 className="text-md font-medium text-gray-900 mb-4">Display Preferences</h3>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Theme Selection */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Theme
+                    </label>
+                    <select
+                      name="theme"
+                      value={formData.theme}
+                      onChange={handleInputChange}
+                      className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                    >
+                      <option value="light">Light</option>
+                      <option value="dark">Dark</option>
+                      <option value="system">System Default</option>
+                    </select>
+                  </div>
+                  
+                  {/* Date Format */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Date Format
+                    </label>
+                    <select
+                      name="dateFormat"
+                      value={formData.dateFormat}
+                      onChange={handleInputChange}
+                      className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                    >
+                      <option value="DD/MM/YYYY">DD/MM/YYYY</option>
+                      <option value="MM/DD/YYYY">MM/DD/YYYY</option>
+                      <option value="YYYY-MM-DD">YYYY-MM-DD</option>
+                      <option value="DD MMM YYYY">DD MMM YYYY</option>
+                    </select>
+                  </div>
+                  
+                  {/* Currency */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Currency
+                    </label>
+                    <select
+                      name="currency"
+                      value={formData.currency}
+                      onChange={handleInputChange}
+                      className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                    >
+                      <option value="PKR">PKR (₨)</option>
+                      <option value="USD">USD ($)</option>
+                      <option value="EUR">EUR (€)</option>
+                      <option value="GBP">GBP (£)</option>
+                    </select>
+                  </div>
+                  
+                  {/* Sidebar Preference */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Sidebar
+                    </label>
+                    <div className="flex items-center">
+                      <input
+                        type="checkbox"
+                        id="sidebarCollapsed"
+                        name="sidebarCollapsed"
+                        checked={formData.sidebarCollapsed}
+                        onChange={(e) => setFormData(prev => ({ ...prev, sidebarCollapsed: e.target.checked }))}
+                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                      />
+                      <label htmlFor="sidebarCollapsed" className="ml-2 block text-sm text-gray-900">
+                        Keep sidebar collapsed by default
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -265,6 +428,44 @@ const SettingsPage = () => {
             <div>
               <h3 className="text-xl font-bold text-gray-900">{formData.name || 'School Name'}</h3>
               <p className="text-sm text-gray-500">{getLevelDescription(formData.level)}</p>
+              <p className="text-sm text-gray-500 mt-1">
+                {formData.fundingType === 'ngo' ? 'NGO Funded School' : 'Traditional School'}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      {/* Search & Filter Demo */}
+      <div className="mt-8 bg-white shadow rounded-lg overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-200">
+          <h2 className="text-lg font-medium text-gray-900 flex items-center">
+            <FaSearch className="mr-2" />
+            Search & Filter Features
+          </h2>
+          <p className="text-sm text-gray-500 mt-1">
+            Universal search and advanced filtering capabilities are now available throughout the application
+          </p>
+        </div>
+        <div className="px-6 py-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="bg-blue-50 rounded-lg p-4 border border-blue-100">
+              <h3 className="font-medium text-blue-900">Universal Search</h3>
+              <p className="text-sm text-blue-700 mt-1">
+                Search across all modules from the header search bar
+              </p>
+            </div>
+            <div className="bg-green-50 rounded-lg p-4 border border-green-100">
+              <h3 className="font-medium text-green-900">Multi-column Sorting</h3>
+              <p className="text-sm text-green-700 mt-1">
+                Sort any table by clicking on column headers
+              </p>
+            </div>
+            <div className="bg-purple-50 rounded-lg p-4 border border-purple-100">
+              <h3 className="font-medium text-purple-900">Advanced Filtering</h3>
+              <p className="text-sm text-purple-700 mt-1">
+                Apply multiple filters with real-time results
+              </p>
             </div>
           </div>
         </div>

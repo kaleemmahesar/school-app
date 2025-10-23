@@ -8,6 +8,9 @@ import usersReducer from './usersSlice';
 import settingsReducer from './settingsSlice';
 import examsReducer from './examsSlice';
 import subsidiesReducer from './subsidiesSlice';
+import reportsReducer from './reportsSlice';
+import attendanceReducer from './attendanceSlice';
+import parentsReducer from './parentsSlice';
 
 export const store = configureStore({
   reducer: {
@@ -20,6 +23,9 @@ export const store = configureStore({
     settings: settingsReducer,
     exams: examsReducer,
     subsidies: subsidiesReducer,
+    reports: reportsReducer,
+    attendance: attendanceReducer,
+    parents: parentsReducer,
   },
 });
 

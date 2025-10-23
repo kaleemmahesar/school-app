@@ -8,6 +8,11 @@ const initialState = {
     name: 'ABC School',
     logo: null, // Base64 string or URL
     level: 'primary', // 'primary', 'middle', or 'high'
+    fundingType: 'ngo', // 'traditional' or 'ngo'
+    theme: 'light', // 'light', 'dark', or 'system'
+    sidebarCollapsed: false,
+    dateFormat: 'DD/MM/YYYY',
+    currency: 'PKR',
     levelDetails: {
       primary: { from: 1, to: 5 },
       middle: { from: 6, to: 8 },

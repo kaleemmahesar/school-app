@@ -33,25 +33,22 @@ const StudentManagement = ({ onAddStudent }) => {
     const available = students.filter(student => {
       const totalFees = parseFloat(student.totalFees) || 0;
       const feesPaid = parseFloat(student.feesPaid) || 0;
-      return feesPaid >= totalFees;
+      // Students who are available are studying and have paid all fees
+      return student.status !== 'left' && student.status !== 'passed_out' && feesPaid >= totalFees;
     });
 
-    // Unavailable students (studying - pending fees)
+    // Unavailable students (passed out or studying with pending fees)
     const unavailable = students.filter(student => {
       const totalFees = parseFloat(student.totalFees) || 0;
       const feesPaid = parseFloat(student.feesPaid) || 0;
-      // Students who are not left but have pending fees
-      const isLeft = student.status === 'left' || student.status === 'passed_out' || 
-                    (student.class && student.class.includes('Passed'));
-      return !isLeft && feesPaid < totalFees;
+      // Students who are unavailable are either passed out or studying with pending fees
+      return student.status === 'passed_out' || 
+             (student.status !== 'left' && feesPaid < totalFees);
     });
 
-    // Left students (passed out or left school)
+    // Left students (left in middle)
     const left = students.filter(student => {
-      const isLeft = student.status === 'left' || student.status === 'passed_out' || 
-                    (student.class && student.class.includes('Passed')) || 
-                    (student.graduationDate && new Date(student.graduationDate) < new Date());
-      return isLeft;
+      return student.status === 'left';
     });
 
     // Family groups

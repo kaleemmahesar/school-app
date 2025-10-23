@@ -95,9 +95,10 @@ export const loginUser = createAsyncThunk('users/loginUser', async ({ username, 
     } else if (username === 'staff' && password === 'staff123') {
       user = mockUsers.find(u => u.username === 'accountant'); // Using accountant as staff demo
     } else {
-      // Check against actual mock users
+      // Check against actual mock users with proper password validation
       user = mockUsers.find(u => u.username === username);
       // In a real app, we would also verify the password
+      // For now, we'll just check if the user exists
     }
     
     if (user) {

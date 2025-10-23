@@ -33,6 +33,7 @@ const mockStudents = [
     familyId: 'family-1', // Family identifier for tracing family relationships
     relationship: 'self',
     parentId: null,
+    status: 'studying',
     feesHistory: [
       { 
         id: 'challan-1-0',
@@ -92,6 +93,7 @@ const mockStudents = [
     familyId: 'family-1',
     relationship: 'sister',
     parentId: '1',
+    status: 'studying',
     feesHistory: [
       { 
         id: 'challan-2-0',
@@ -151,6 +153,9 @@ const mockStudents = [
     familyId: 'family-2',
     relationship: 'self',
     parentId: null,
+    status: 'left',
+    leavingDate: '2025-10-15',
+    leavingReason: 'Family moved to another city',
     feesHistory: [
       { 
         id: 'challan-3-0',
@@ -220,6 +225,7 @@ const mockStudents = [
     familyId: 'family-3',
     relationship: 'self',
     parentId: null,
+    status: 'studying',
     feesHistory: [
       { 
         id: 'challan-4-0',
@@ -279,6 +285,7 @@ const mockStudents = [
     familyId: 'family-4',
     relationship: 'self',
     parentId: null,
+    status: 'studying',
     feesHistory: [
       { 
         id: 'challan-5-0',
@@ -348,6 +355,7 @@ const mockStudents = [
     familyId: 'family-5',
     relationship: 'self',
     parentId: null,
+    status: 'studying',
     feesHistory: [
       { 
         id: 'challan-6-0',
@@ -397,6 +405,7 @@ const mockStudents = [
     familyId: 'family-6',
     relationship: 'self',
     parentId: null,
+    status: 'studying',
     feesHistory: [
       { 
         id: 'challan-7-0',
@@ -466,6 +475,7 @@ const mockStudents = [
     familyId: 'family-7',
     relationship: 'self',
     parentId: null,
+    status: 'studying',
     feesHistory: [
       { 
         id: 'challan-8-0',
@@ -525,6 +535,7 @@ const mockStudents = [
     familyId: 'family-8',
     relationship: 'self',
     parentId: null,
+    status: 'studying',
     feesHistory: [
       { 
         id: 'challan-9-0',

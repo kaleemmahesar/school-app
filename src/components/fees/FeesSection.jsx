@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchStudents, generateChallan, bulkGenerateChallans, bulkUpdateChallanStatuses, payFees } from '../../store/studentsSlice';
-import { FaEye, FaReceipt, FaCheck, FaDollarSign, FaPrint, FaUser, FaUsers } from 'react-icons/fa';
+import { FaEye, FaReceipt, FaCheck, FaDollarSign, FaPrint, FaUser, FaUsers, FaInfoCircle } from 'react-icons/fa';
 import FeesHeader from './FeesHeader';
 import FeesStats from './FeesStats';
 import ViewTabs from './ViewTabs';
@@ -12,10 +12,14 @@ import ChallanModals from './ChallanModals';
 import ChallanPrintView from '../ChallanPrintView';
 import BulkChallanPrintView from '../BulkChallanPrintView';
 import { printChallanAsPDF } from '../../utils/challanPrinter';
+import { useSchoolFunding } from '../../hooks/useSchoolFunding';
+import NGOFundingInfo from '../common/NGOFundingInfo';
 
 const FeesSection = () => {
   const dispatch = useDispatch();
   const { students, loading, error } = useSelector(state => state.students);
+  const { parents } = useSelector(state => state.parents);
+  const { isNGOSchool } = useSchoolFunding();
   const [searchTerm, setSearchTerm] = useState('');
   const [showGenerateModal, setShowGenerateModal] = useState(false);
   const [showStudentDetails, setShowStudentDetails] = useState(false);
@@ -52,9 +56,7 @@ const FeesSection = () => {
   const [selectedClass, setSelectedClass] = useState('');
   const [selectedSection, setSelectedSection] = useState('');
   // Add state for view mode (student or family)
-  const [viewMode, setViewMode] = useState('student'); // 'student' or 'family'
-  // Add state for family management view
-  const [showFamilyManagement, setShowFamilyManagement] = useState(false);
+  const [viewMode, setViewMode] = useState('student');
 
   useEffect(() => {
     dispatch(fetchStudents());
@@ -73,19 +75,26 @@ const FeesSection = () => {
         const paidChallans = monthlyChallans.filter(challan => challan.status === 'paid').length;
         const pendingChallans = totalChallans - paidChallans;
         
-        // Calculate total amount
-        const totalAmount = monthlyChallans.reduce((sum, challan) => sum + (challan.amount || 0), 0);
+        // Calculate total amount including admission fees
+        const totalMonthlyAmount = monthlyChallans.reduce((sum, challan) => sum + (challan.amount || 0), 0);
+        const totalAdmissionAmount = admissionChallans.reduce((sum, challan) => sum + (challan.amount || 0), 0);
+        const totalAmount = totalMonthlyAmount + totalAdmissionAmount;
         
-        const paidAmount = monthlyChallans
+        const paidMonthlyAmount = monthlyChallans
           .filter(challan => challan.status === 'paid')
           .reduce((sum, challan) => sum + (challan.amount || 0), 0);
+        const paidAdmissionAmount = admissionChallans
+          .filter(challan => challan.status === 'paid')
+          .reduce((sum, challan) => sum + (challan.amount || 0), 0);
+        const paidAmount = paidMonthlyAmount + paidAdmissionAmount;
         
         const pendingAmount = totalAmount - paidAmount;
         
         // Check if admission fees have been paid
         const admissionPaid = admissionChallans.length > 0 && admissionChallans.every(challan => challan.status === 'paid');
         
-        setDetailViewStudent({
+        // Create the new detail view student object
+        const newDetailViewStudent = {
           ...updatedStudent,
           totalChallans,
           paidChallans,
@@ -95,16 +104,19 @@ const FeesSection = () => {
           pendingAmount,
           admissionPaid,
           completionRate: totalChallans > 0 ? Math.round((paidChallans / totalChallans) * 100) : 0
-        });
+        };
+        
+        // Always update the detailViewStudent to ensure it reflects the latest Redux state
+        setDetailViewStudent(newDetailViewStudent);
       }
     }
   }, [students, detailViewStudent, showStudentDetails]);
 
   // Get unique classes and sections for filters
-  const uniqueClasses = [...new Set(students.map(student => student.class))];
-  const classSections = selectedClass 
+  const uniqueClasses = useMemo(() => [...new Set(students.map(student => student.class))], [students]);
+  const classSections = useMemo(() => selectedClass 
     ? [...new Set(students.filter(student => student.class === selectedClass).map(student => student.section))]
-    : [];
+    : [], [students, selectedClass]);
 
   // Generate fee statistics for all students
   const generateStudentFeeStats = () => {
@@ -116,11 +128,18 @@ const FeesSection = () => {
       const paidChallans = monthlyChallans.filter(challan => challan.status === 'paid').length;
       const pendingChallans = totalChallans - paidChallans;
       
-      const totalAmount = monthlyChallans.reduce((sum, challan) => sum + (challan.amount || 0), 0);
+      // Calculate total amount including admission fees
+      const totalMonthlyAmount = monthlyChallans.reduce((sum, challan) => sum + (challan.amount || 0), 0);
+      const totalAdmissionAmount = admissionChallans.reduce((sum, challan) => sum + (challan.amount || 0), 0);
+      const totalAmount = totalMonthlyAmount + totalAdmissionAmount;
       
-      const paidAmount = monthlyChallans
+      const paidMonthlyAmount = monthlyChallans
         .filter(challan => challan.status === 'paid')
         .reduce((sum, challan) => sum + (challan.amount || 0), 0);
+      const paidAdmissionAmount = admissionChallans
+        .filter(challan => challan.status === 'paid')
+        .reduce((sum, challan) => sum + (challan.amount || 0), 0);
+      const paidAmount = paidMonthlyAmount + paidAdmissionAmount;
       
       const pendingAmount = totalAmount - paidAmount;
       
@@ -140,9 +159,9 @@ const FeesSection = () => {
     });
   };
 
-  const studentStats = generateStudentFeeStats();
+  const studentStats = useMemo(() => generateStudentFeeStats(), [students]);
 
-  const filteredStudents = studentStats.filter(student => {
+  const filteredStudents = useMemo(() => studentStats.filter(student => {
     const matchesSearch = 
       `${student.firstName} ${student.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
       student.class.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -157,17 +176,27 @@ const FeesSection = () => {
     const matchesSection = !selectedSection || student.section === selectedSection;
     
     return matchesSearch && matchesStatus && matchesClass && matchesSection;
-  });
+  }), [studentStats, searchTerm, filterStatus, selectedClass, selectedSection]);
 
   // Get all challans grouped by family for family view
   const getFamilyChallans = () => {
     const familyMap = {};
     
-    // Group students by familyId and collect all their challans
+    // Group students by parentId (which is now the parent ID) and collect all their challans
     filteredStudents.forEach(student => {
-      if (!familyMap[student.familyId]) {
-        familyMap[student.familyId] = {
-          familyId: student.familyId,
+      // Find the parent for this student
+      const parent = parents.find(p => p.studentIds.includes(student.id));
+      const familyId = parent ? parent.id : student.familyId || `unknown-${student.id}`;
+      
+      if (!familyMap[familyId]) {
+        const familyName = parent 
+          ? `${parent.firstName} ${parent.lastName}'s Family`
+          : student.familyId 
+            ? `${student.firstName} ${student.lastName}'s Family`
+            : 'Unknown Family';
+            
+        familyMap[familyId] = {
+          familyId: familyId,
           students: [],
           totalChallans: 0,
           paidChallans: 0,
@@ -176,17 +205,17 @@ const FeesSection = () => {
           paidAmount: 0,
           pendingAmount: 0,
           completionRate: 0,
-          familyName: `${student.firstName} ${student.lastName}'s Family`,
+          familyName: familyName,
           challans: [] // Add this property to store all family challans
         };
       }
       
-      familyMap[student.familyId].students.push(student);
+      familyMap[familyId].students.push(student);
       
       // Add student's challans to family challans array
       if (student.feesHistory) {
         student.feesHistory.forEach(challan => {
-          familyMap[student.familyId].challans.push({
+          familyMap[familyId].challans.push({
             ...challan,
             studentName: `${student.firstName} ${student.lastName}`,
             studentClass: student.class,
@@ -197,16 +226,16 @@ const FeesSection = () => {
       }
       
       // Aggregate statistics
-      familyMap[student.familyId].totalChallans += student.totalChallans;
-      familyMap[student.familyId].paidChallans += student.paidChallans;
-      familyMap[student.familyId].pendingChallans += student.pendingChallans;
-      familyMap[student.familyId].totalAmount += student.totalAmount;
-      familyMap[student.familyId].paidAmount += student.paidAmount;
-      familyMap[student.familyId].pendingAmount += student.pendingAmount;
+      familyMap[familyId].totalChallans += student.totalChallans;
+      familyMap[familyId].paidChallans += student.paidChallans;
+      familyMap[familyId].pendingChallans += student.pendingChallans;
+      familyMap[familyId].totalAmount += student.totalAmount;
+      familyMap[familyId].paidAmount += student.paidAmount;
+      familyMap[familyId].pendingAmount += student.pendingAmount;
       
       // Calculate completion rate
-      familyMap[student.familyId].completionRate = familyMap[student.familyId].totalChallans > 0 
-        ? Math.round((familyMap[student.familyId].paidChallans / familyMap[student.familyId].totalChallans) * 100)
+      familyMap[familyId].completionRate = familyMap[familyId].totalChallans > 0 
+        ? Math.round((familyMap[familyId].paidChallans / familyMap[familyId].totalChallans) * 100)
         : 0;
     });
     
@@ -214,7 +243,7 @@ const FeesSection = () => {
   };
 
   // Calculate family groups only when needed to avoid "Cannot access 'filteredStudents' before initialization"
-  const familyGroups = viewMode === 'family' ? getFamilyChallans() : [];
+  const familyGroups = useMemo(() => viewMode === 'family' ? getFamilyChallans() : [], [viewMode, filteredStudents]);
 
   // Bulk operation functions
   const handleBulkGenerate = () => {
@@ -266,6 +295,33 @@ const FeesSection = () => {
         setBulkSelectedChallans(pendingChallanIds);
       }
     }
+  };
+
+  // Submit challan function (this was missing)
+  const submitChallan = (data) => {
+    if (!data.studentId || !data.month || !data.amount) {
+      alert('Please fill in all required fields.');
+      return;
+    }
+    
+    dispatch(generateChallan({
+      studentId: data.studentId,
+      challanData: {
+        month: data.month,
+        amount: parseFloat(data.amount),
+        dueDate: data.dueDate,
+        description: data.description || ''
+      }
+    }));
+    
+    setShowGenerateModal(false);
+    setChallanData({
+      studentId: '',
+      month: '',
+      amount: '',
+      dueDate: '',
+      description: ''
+    });
   };
 
   // Submit bulk generate function
@@ -366,6 +422,16 @@ const FeesSection = () => {
     }, 100);
     
     setShowPaymentModal(false);
+  };
+
+  // Handle pay fees function for family view
+  const handlePayFees = (challanId) => {
+    setPaymentData({
+      challanId: challanId,
+      paymentMethod: 'cash',
+      paymentDate: new Date().toISOString().split('T')[0]
+    });
+    setShowPaymentModal(true);
   };
 
   const handleGenerateChallan = () => {
@@ -683,20 +749,29 @@ const FeesSection = () => {
     </div>
   </div>;
 
-  // If family management view is active, show the FamilyManagement component
-  if (showFamilyManagement) {
+  // If NGO school, show funding information instead of fees
+  if (isNGOSchool) {
     return (
       <div className="p-6">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">Family Management</h1>
-          <button
-            onClick={() => setShowFamilyManagement(false)}
-            className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-          >
-            Back to Fees
-          </button>
+        <div className="bg-white rounded-2xl shadow-lg p-6">
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">Fees Management</h1>
+          <p className="text-gray-600 mb-6">Manage student fees and financial records</p>
+          
+          <NGOFundingInfo />
+          
+          <div className="mt-6 bg-blue-50 rounded-lg p-4 border border-blue-100">
+            <div className="flex items-start">
+              <FaInfoCircle className="h-5 w-5 text-blue-500 mt-0.5 flex-shrink-0" />
+              <div className="ml-3">
+                <h3 className="text-sm font-medium text-blue-800">NGO Funded School</h3>
+                <div className="mt-2 text-sm text-blue-700">
+                  <p>As an NGO funded school, this section is not applicable as no fees are collected from students.</p>
+                  <p className="mt-1">All financial management is handled through the NGO Subsidies section.</p>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
-        <FamilyManagement />
       </div>
     );
   }
@@ -809,7 +884,6 @@ const FeesSection = () => {
         <ViewTabs 
           viewMode={viewMode}
           setViewMode={setViewMode}
-          setShowFamilyManagement={setShowFamilyManagement}
         />
         
         {/* Student Fees Summary Table */}
@@ -892,7 +966,7 @@ const FeesSection = () => {
           // Student Details View
           <div className="bg-white rounded-2xl shadow-lg p-6">
             {detailViewStudent && (
-              <>
+              <div key={`${detailViewStudent.id}-${detailViewStudent.feesHistory ? detailViewStudent.feesHistory.length : 0}`}>
                 <div className="flex items-center justify-between mb-6">
                   <div className="flex items-center">
                     <button
@@ -1132,7 +1206,7 @@ const FeesSection = () => {
                     </div>
                   </div>
                 </div>
-              </>
+              </div>
             )}
           </div>
         )}

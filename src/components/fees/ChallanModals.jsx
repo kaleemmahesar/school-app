@@ -30,12 +30,21 @@ const ChallanModals = ({
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md">
             <h3 className="text-xl font-semibold text-gray-900 mb-4">Process Payment</h3>
-            <form onSubmit={submitPayment} className="space-y-4">
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              const formData = new FormData(e.target);
+              const data = {
+                challanId: paymentData.challanId,
+                paymentMethod: formData.get('paymentMethod'),
+                paymentDate: formData.get('paymentDate')
+              };
+              submitPayment(data);
+            }} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Payment Method</label>
                 <select
-                  value={paymentData.paymentMethod}
-                  onChange={(e) => setPaymentData({...paymentData, paymentMethod: e.target.value})}
+                  name="paymentMethod"
+                  defaultValue={paymentData.paymentMethod}
                   className="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
                   required
                 >
@@ -50,8 +59,8 @@ const ChallanModals = ({
                 <label className="block text-sm font-medium text-gray-700 mb-1">Payment Date</label>
                 <input
                   type="date"
-                  value={paymentData.paymentDate}
-                  onChange={(e) => setPaymentData({...paymentData, paymentDate: e.target.value})}
+                  name="paymentDate"
+                  defaultValue={paymentData.paymentDate}
                   className="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
                   required
                 />

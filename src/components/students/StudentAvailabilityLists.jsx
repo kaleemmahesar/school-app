@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useDispatch } from 'react-redux';
 import { useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
-import { FaUserCheck, FaUserTimes, FaSearch, FaFilter, FaEdit } from 'react-icons/fa';
+import { FaUserCheck, FaUserTimes, FaSearch, FaFilter, FaEdit, FaDownload, FaPrint } from 'react-icons/fa';
 import Pagination from '../common/Pagination';
 import { markStudentAsLeft } from '../../store/studentsSlice';
 
@@ -42,7 +42,7 @@ const StudentAvailabilityLists = ({ activeTab: propActiveTab,
         .map(student => student.section))]
     : [];
 
-  // Categorize students
+  // Categorize students based on certificate status
   const categorizeStudents = () => {
     return students.reduce((acc, student) => {
       // Students who have passed out (generated pass certificate)
@@ -53,7 +53,7 @@ const StudentAvailabilityLists = ({ activeTab: propActiveTab,
       else if (student.status === 'left') {
         acc.left.push(student);
       }
-      // Available students (studying - all fees paid)
+      // Available students (studying and all fees paid)
       else {
         const totalFees = parseFloat(student.totalFees) || 0;
         const feesPaid = parseFloat(student.feesPaid) || 0;
@@ -62,6 +62,7 @@ const StudentAvailabilityLists = ({ activeTab: propActiveTab,
         if (isAvailable) {
           acc.available.push(student);
         } else {
+          // Students who are studying but have pending fees
           acc.unavailable.push(student);
         }
       }
@@ -118,6 +119,39 @@ const StudentAvailabilityLists = ({ activeTab: propActiveTab,
     navigate('/students/admission', { state: { studentData: student } });
   };
 
+  // Export to CSV function
+  const exportToCSV = () => {
+    const csvContent = [
+      ['GR No', 'Name', 'Father Name', 'Class', 'Section', 'Religion', 'Status', 'Total Fees', 'Fees Paid'],
+      ...currentFilteredList.map(student => [
+        student.grNo || '',
+        `"${student.firstName} ${student.lastName}"`,
+        student.fatherName || '',
+        student.class || '',
+        student.section || '',
+        student.religion || '',
+        student.status || '',
+        student.totalFees || 0,
+        student.feesPaid || 0
+      ])
+    ].map(row => row.join(',')).join('\n');
+    
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `students_${activeTab}_report.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // Print report function
+  const printReport = () => {
+    window.print();
+  };
+
   // Notify parent of filter changes
   const notifyParentOfFilterChange = () => {
     if (onFilterChange) {
@@ -126,12 +160,16 @@ const StudentAvailabilityLists = ({ activeTab: propActiveTab,
       
       const filteredAvailableStudents = allFilteredStudents.filter(student => {
         // Available students are those who are studying and have paid all fees
-        return student.status !== 'passed_out' && student.status !== 'left';
+        const totalFees = parseFloat(student.totalFees) || 0;
+        const feesPaid = parseFloat(student.feesPaid) || 0;
+        return student.status !== 'passed_out' && student.status !== 'left' && feesPaid >= totalFees;
       });
 
       const filteredUnavailableStudents = allFilteredStudents.filter(student => {
-        // Unavailable students are those who have passed out
-        return student.status === 'passed_out';
+        // Unavailable students are those who have passed out OR studying with pending fees
+        const totalFees = parseFloat(student.totalFees) || 0;
+        const feesPaid = parseFloat(student.feesPaid) || 0;
+        return student.status === 'passed_out' || (student.status !== 'left' && feesPaid < totalFees);
       });
 
       const filteredLeftStudents = allFilteredStudents.filter(student => {
@@ -221,16 +259,30 @@ const StudentAvailabilityLists = ({ activeTab: propActiveTab,
                 </select>
               </div>
               
-              <button
-                onClick={() => {
-                  setSearchTerm('');
-                  setSelectedClass('');
-                  setSelectedSection('');
-                }}
-                className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-              >
-                Clear
-              </button>
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={exportToCSV}
+                  className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+                >
+                  <FaDownload className="mr-1" /> Export CSV
+                </button>
+                <button
+                  onClick={printReport}
+                  className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+                >
+                  <FaPrint className="mr-1" /> Print
+                </button>
+                <button
+                  onClick={() => {
+                    setSearchTerm('');
+                    setSelectedClass('');
+                    setSelectedSection('');
+                  }}
+                  className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                >
+                  Clear
+                </button>
+              </div>
             </div>
           </div>
           
@@ -241,7 +293,7 @@ const StudentAvailabilityLists = ({ activeTab: propActiveTab,
                 activeTab === 'available' ? available.length :
                 activeTab === 'unavailable' ? unavailable.length :
                 left.length
-              } {activeTab} students
+              } {activeTab === 'unavailable' ? 'passed out' : activeTab === 'left' ? 'left in middle' : activeTab} students
             </span>
             {(selectedClass || selectedSection || searchTerm) && (
               <button 

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useSelector } from 'react-redux'; // Add useSelector import
 import { FaBook, FaDollarSign, FaTrash, FaPlus } from 'react-icons/fa';
 
 const ClassFormModal = ({ onClose, onSubmit, classData, students }) => { // Add students prop
@@ -7,6 +8,11 @@ const ClassFormModal = ({ onClose, onSubmit, classData, students }) => { // Add 
     monthlyFees: '',
     sections: [{ id: `${Date.now()}-A`, name: 'A' }], // Default section A with proper ID
   });
+  
+  // Access school settings to check funding type
+  const { schoolInfo } = useSelector(state => state.settings);
+  const isNGOFunded = schoolInfo?.fundingType === 'ngo';
+  
   const isEditMode = !!classData;
 
   useEffect(() => {
@@ -140,22 +146,25 @@ const ClassFormModal = ({ onClose, onSubmit, classData, students }) => { // Add 
               </div>
             </div>
 
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Monthly Fees</label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <FaDollarSign className="h-5 w-5 text-gray-400" />
+            {/* Conditionally render Monthly Fees field based on funding type */}
+            {!isNGOFunded && (
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Monthly Fees</label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <FaDollarSign className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <input
+                    type="number"
+                    name="monthlyFees"
+                    value={formData.monthlyFees}
+                    onChange={handleInputChange}
+                    className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="4000"
+                  />
                 </div>
-                <input
-                  type="number"
-                  name="monthlyFees"
-                  value={formData.monthlyFees}
-                  onChange={handleInputChange}
-                  className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="4000"
-                />
               </div>
-            </div>
+            )}
 
             <div className="mb-4">
               <div className="flex justify-between items-center mb-2">

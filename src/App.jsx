@@ -17,6 +17,9 @@ import AdmissionPage from './components/AdmissionPage'
 import LoginPage from './components/LoginPage'
 import SettingsPage from './components/SettingsPage'
 import FeesSection from './components/fees/FeesSection'
+import AttendanceManagement from './components/students/AttendanceManagement'
+import StudentReportGenerator from './components/students/StudentReportGenerator'
+import FinancialReporting from './components/FinancialReporting'
 import { ToastContainer } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
 import './index.css'
@@ -31,6 +34,8 @@ function App() {
             <Route path="/" element={<Layout><Dashboard /></Layout>} />
             <Route path="/students" element={<Layout><StudentsSection /></Layout>} />
             <Route path="/students/admission" element={<Layout><AdmissionPage /></Layout>} />
+            <Route path="/students/attendance" element={<Layout><AttendanceManagement /></Layout>} />
+            <Route path="/students/reports" element={<Layout><StudentReportGenerator /></Layout>} />
             <Route path="/fees" element={<Layout><FeesSection /></Layout>} />
             <Route path="/expenses" element={<Layout><ExpensesSection /></Layout>} />
             <Route path="/staff" element={<Layout><StaffSection /></Layout>} />
@@ -40,8 +45,9 @@ function App() {
             <Route path="/examinations" element={<Layout><ExaminationSection /></Layout>} />
             <Route path="/marksheets" element={<Layout><MarksheetsSection /></Layout>} />
             <Route path="/certificates" element={<Layout><CertificatesSection /></Layout>} />
-            <Route path="/timetable" element={<Layout><TimeTableSection /></Layout>} />
+            {/* <Route path="/timetable" element={<Layout><TimeTableSection /></Layout>} /> */}
             <Route path="/settings" element={<Layout><SettingsPage /></Layout>} />
+            <Route path="/financial-reporting" element={<Layout><FinancialReporting /></Layout>} />
           </Routes>
           <ToastContainer 
             position="top-right"

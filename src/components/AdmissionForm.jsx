@@ -3,14 +3,17 @@ import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { addStudent, updateStudent, deleteStudent } from '../store/studentsSlice';
 import { fetchClasses } from '../store/classesSlice';
-import { FaUserGraduate, FaIdCard, FaPhone, FaEnvelope, FaCalendar, FaSchool, FaMoneyBillWave, FaCamera, FaTrash, FaInfoCircle } from 'react-icons/fa';
+import { FaUserGraduate, FaIdCard, FaPhone, FaEnvelope, FaCalendar, FaSchool, FaMoneyBillWave, FaCamera, FaTrash, FaInfoCircle, FaHandHoldingUsd } from 'react-icons/fa';
 import PrintableAdmissionForm from './PrintableAdmissionForm';
 import ConfirmationDialog from './common/ConfirmationDialog';
+import { useSchoolFunding } from '../hooks/useSchoolFunding';
+import NGOFundingInfo from './common/NGOFundingInfo';
 
 const AdmissionForm = ({ onClose, studentData }) => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { classes } = useSelector(state => state.classes);
+  const { isNGOSchool } = useSchoolFunding();
   const fileInputRef = useRef(null);
   const [formData, setFormData] = useState({
     firstName: '',
@@ -77,8 +80,8 @@ const AdmissionForm = ({ onClose, studentData }) => {
       [name]: value,
     });
 
-    // Auto-populate monthly fees when class is selected
-    if (name === 'class') {
+    // Auto-populate monthly fees when class is selected (only for traditional schools)
+    if (name === 'class' && !isNGOSchool) {
       const selectedClass = classes.find(cls => cls.name === value);
       if (selectedClass) {
         setFormData(prev => ({
@@ -90,8 +93,8 @@ const AdmissionForm = ({ onClose, studentData }) => {
       }
     }
 
-    // Auto-calculate total fees when admission fees or monthly fees change
-    if (name === 'admissionFees' || name === 'monthlyFees') {
+    // Auto-calculate total fees when admission fees or monthly fees change (only for traditional schools)
+    if ((name === 'admissionFees' || name === 'monthlyFees') && !isNGOSchool) {
       const admissionFees = name === 'admissionFees' ? value : formData.admissionFees;
       const monthlyFees = name === 'monthlyFees' ? value : formData.monthlyFees;
       const total = (parseFloat(admissionFees) || 0) + (parseFloat(monthlyFees) || 0);
@@ -162,6 +165,14 @@ const AdmissionForm = ({ onClose, studentData }) => {
       submissionData.dateOfLeaving = '';
       submissionData.classInWhichLeft = '';
       submissionData.reasonOfLeaving = '';
+    }
+    
+    // For NGO schools, clear fee fields
+    if (isNGOSchool) {
+      submissionData.monthlyFees = '';
+      submissionData.admissionFees = '';
+      submissionData.feesPaid = '';
+      submissionData.totalFees = '';
     }
     
     if (isEditMode) {
@@ -352,7 +363,7 @@ const AdmissionForm = ({ onClose, studentData }) => {
                       value={formData.firstName}
                       onChange={handleInputChange}
                       className="block w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="John"
+                      placeholder="Enter first name"
                       required
                       aria-required="true"
                     />
@@ -369,7 +380,7 @@ const AdmissionForm = ({ onClose, studentData }) => {
                       value={formData.lastName}
                       onChange={handleInputChange}
                       className="block w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="Doe"
+                      placeholder="Enter last name"
                       required
                       aria-required="true"
                     />
@@ -377,126 +388,86 @@ const AdmissionForm = ({ onClose, studentData }) => {
                   
                   <div>
                     <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-                      Email <span className="text-red-500">*</span>
+                      Email Address
                     </label>
-                    <input
-                      type="email"
-                      id="email"
-                      name="email"
-                      value={formData.email}
-                      onChange={handleInputChange}
-                      className="block w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="john.doe@example.com"
-                      required
-                      aria-required="true"
-                    />
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <FaEnvelope className="h-5 w-5 text-gray-400" />
+                      </div>
+                      <input
+                        type="email"
+                        id="email"
+                        name="email"
+                        value={formData.email}
+                        onChange={handleInputChange}
+                        className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="student@example.com"
+                      />
+                    </div>
                   </div>
                   
                   <div>
                     <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
-                      Phone <span className="text-red-500">*</span>
+                      Phone Number
                     </label>
-                    <input
-                      type="tel"
-                      id="phone"
-                      name="phone"
-                      value={formData.phone}
-                      onChange={handleInputChange}
-                      className="block w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="+1 (555) 123-4567"
-                      required
-                      aria-required="true"
-                    />
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <FaPhone className="h-5 w-5 text-gray-400" />
+                      </div>
+                      <input
+                        type="tel"
+                        id="phone"
+                        name="phone"
+                        value={formData.phone}
+                        onChange={handleInputChange}
+                        className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="+92 300 1234567"
+                      />
+                    </div>
                   </div>
                   
                   <div>
                     <label htmlFor="dateOfBirth" className="block text-sm font-medium text-gray-700 mb-1">
                       Date of Birth <span className="text-red-500">*</span>
                     </label>
-                    <input
-                      type="date"
-                      id="dateOfBirth"
-                      name="dateOfBirth"
-                      value={formData.dateOfBirth}
-                      onChange={handleInputChange}
-                      className="block w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                      required
-                      aria-required="true"
-                    />
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <FaCalendar className="h-5 w-5 text-gray-400" />
+                      </div>
+                      <input
+                        type="date"
+                        id="dateOfBirth"
+                        name="dateOfBirth"
+                        value={formData.dateOfBirth}
+                        onChange={handleInputChange}
+                        className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                        required
+                        aria-required="true"
+                      />
+                    </div>
                   </div>
                   
                   <div>
                     <label htmlFor="admissionDate" className="block text-sm font-medium text-gray-700 mb-1">
                       Admission Date <span className="text-red-500">*</span>
                     </label>
-                    <input
-                      type="date"
-                      id="admissionDate"
-                      name="admissionDate"
-                      value={formData.admissionDate}
-                      onChange={handleInputChange}
-                      className="block w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                      required
-                      aria-required="true"
-                    />
-                  </div>
-                </div>
-              </div>
-              
-              {/* Family Relationship Section */}
-              <div className="bg-gray-50 rounded-lg p-4">
-                <h2 className="text-md font-medium text-gray-900 mb-3">Family Relationship</h2>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <label htmlFor="familyId" className="block text-sm font-medium text-gray-700 mb-1">Family ID</label>
-                    <input
-                      type="text"
-                      id="familyId"
-                      name="familyId"
-                      value={formData.familyId}
-                      onChange={handleInputChange}
-                      className="block w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="Enter family ID (optional)"
-                    />
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <FaCalendar className="h-5 w-5 text-gray-400" />
+                      </div>
+                      <input
+                        type="date"
+                        id="admissionDate"
+                        name="admissionDate"
+                        value={formData.admissionDate}
+                        onChange={handleInputChange}
+                        className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                        required
+                        aria-required="true"
+                      />
+                    </div>
                   </div>
                   
-                  <div>
-                    <label htmlFor="relationship" className="block text-sm font-medium text-gray-700 mb-1">Relationship</label>
-                    <select
-                      id="relationship"
-                      name="relationship"
-                      value={formData.relationship}
-                      onChange={handleInputChange}
-                      className="block w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                    >
-                      <option value="">Select Relationship</option>
-                      <option value="brother">Brother</option>
-                      <option value="sister">Sister</option>
-                      <option value="cousin">Cousin</option>
-                      <option value="parent">Parent</option>
-                      <option value="guardian">Guardian</option>
-                    </select>
-                  </div>
-                  
-                  <div>
-                    <label htmlFor="parentId" className="block text-sm font-medium text-gray-700 mb-1">Parent/Guardian ID</label>
-                    <input
-                      type="text"
-                      id="parentId"
-                      name="parentId"
-                      value={formData.parentId}
-                      onChange={handleInputChange}
-                      className="block w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="Enter parent/guardian ID (optional)"
-                    />
-                  </div>
-                </div>
-              </div>
-              
-              {/* Academic Information Section */}
-              <div className="bg-gray-50 rounded-lg p-4">
-                <h2 className="text-md font-medium text-gray-900 mb-3">Academic Information</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label htmlFor="class" className="block text-sm font-medium text-gray-700 mb-1">
                       Class <span className="text-red-500">*</span>
@@ -540,96 +511,105 @@ const AdmissionForm = ({ onClose, studentData }) => {
                 </div>
               </div>
               
-              {/* Fee Details Section */}
-              <div className="bg-gray-50 rounded-lg p-4">
-                <h2 className="text-md font-medium text-gray-900 mb-3">Fee Details</h2>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                  <div>
-                    <label htmlFor="admissionFees" className="block text-sm font-medium text-gray-700 mb-1">
-                      Admission Fees <span className="text-red-500">*</span>
-                    </label>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <span className="text-gray-500 text-sm">Rs</span>
+              {/* NGO Funding Information Section (Only for NGO schools) */}
+              {isNGOSchool && (
+                <div className="bg-blue-50 rounded-lg p-4 border border-blue-100">
+                  <NGOFundingInfo />
+                </div>
+              )}
+              
+              {/* Fee Details Section (Only for traditional schools) */}
+              {!isNGOSchool && (
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <h2 className="text-md font-medium text-gray-900 mb-3">Fee Details</h2>
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                    <div>
+                      <label htmlFor="admissionFees" className="block text-sm font-medium text-gray-700 mb-1">
+                        Admission Fees <span className="text-red-500">*</span>
+                      </label>
+                      <div className="relative">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                          <span className="text-gray-500 text-sm">Rs</span>
+                        </div>
+                        <input
+                          type="number"
+                          id="admissionFees"
+                          name="admissionFees"
+                          value={formData.admissionFees}
+                          onChange={handleInputChange}
+                          className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                          placeholder="5000"
+                          required
+                          aria-required="true"
+                        />
                       </div>
-                      <input
-                        type="number"
-                        id="admissionFees"
-                        name="admissionFees"
-                        value={formData.admissionFees}
-                        onChange={handleInputChange}
-                        className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                        placeholder="5000"
-                        required
-                        aria-required="true"
-                      />
                     </div>
-                  </div>
-                  
-                  <div>
-                    <label htmlFor="monthlyFees" className="block text-sm font-medium text-gray-700 mb-1">
-                      Monthly Fees <span className="text-red-500">*</span>
-                    </label>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <span className="text-gray-500 text-sm">Rs</span>
+                    
+                    <div>
+                      <label htmlFor="monthlyFees" className="block text-sm font-medium text-gray-700 mb-1">
+                        Monthly Fees <span className="text-red-500">*</span>
+                      </label>
+                      <div className="relative">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                          <span className="text-gray-500 text-sm">Rs</span>
+                        </div>
+                        <input
+                          type="number"
+                          id="monthlyFees"
+                          name="monthlyFees"
+                          value={formData.monthlyFees}
+                          onChange={handleInputChange}
+                          className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                          placeholder="4000"
+                          required
+                          aria-required="true"
+                        />
                       </div>
-                      <input
-                        type="number"
-                        id="monthlyFees"
-                        name="monthlyFees"
-                        value={formData.monthlyFees}
-                        onChange={handleInputChange}
-                        className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                        placeholder="4000"
-                        required
-                        aria-required="true"
-                      />
                     </div>
-                  </div>
-                  
-                  <div>
-                    <label htmlFor="totalFees" className="block text-sm font-medium text-gray-700 mb-1">
-                      Total Fees <span className="text-red-500">*</span>
-                    </label>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <span className="text-gray-500 text-sm">Rs</span>
+                    
+                    <div>
+                      <label htmlFor="totalFees" className="block text-sm font-medium text-gray-700 mb-1">
+                        Total Fees <span className="text-red-500">*</span>
+                      </label>
+                      <div className="relative">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                          <span className="text-gray-500 text-sm">Rs</span>
+                        </div>
+                        <input
+                          type="number"
+                          id="totalFees"
+                          name="totalFees"
+                          value={formData.totalFees}
+                          onChange={handleInputChange}
+                          className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-gray-50"
+                          placeholder="9000"
+                          required
+                          aria-required="true"
+                          readOnly
+                        />
                       </div>
-                      <input
-                        type="number"
-                        id="totalFees"
-                        name="totalFees"
-                        value={formData.totalFees}
-                        onChange={handleInputChange}
-                        className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-gray-50"
-                        placeholder="9000"
-                        required
-                        aria-required="true"
-                        readOnly
-                      />
                     </div>
-                  </div>
-                  
-                  <div>
-                    <label htmlFor="feesPaid" className="block text-sm font-medium text-gray-700 mb-1">Fees Paid</label>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <span className="text-gray-500 text-sm">Rs</span>
+                    
+                    <div>
+                      <label htmlFor="feesPaid" className="block text-sm font-medium text-gray-700 mb-1">Fees Paid</label>
+                      <div className="relative">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                          <span className="text-gray-500 text-sm">Rs</span>
+                        </div>
+                        <input
+                          type="number"
+                          id="feesPaid"
+                          name="feesPaid"
+                          value={formData.feesPaid}
+                          onChange={handleInputChange}
+                          className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                          placeholder="0"
+                        />
                       </div>
-                      <input
-                        type="number"
-                        id="feesPaid"
-                        name="feesPaid"
-                        value={formData.feesPaid}
-                        onChange={handleInputChange}
-                        className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                        placeholder="0"
-                      />
                     </div>
                   </div>
                 </div>
-              </div>
+              )}
               
               {/* Transfer Student Information Toggle */}
               <div className="bg-gray-50 rounded-lg p-4">
@@ -704,38 +684,31 @@ const AdmissionForm = ({ onClose, studentData }) => {
                   </div>
                 </div>
               )}
-
+              
               {/* Form Actions */}
-              <div className="flex justify-end space-x-2 pt-2">
+              <div className="flex justify-end space-x-3 pt-4">
                 {isEditMode && (
                   <button
                     type="button"
                     onClick={() => setShowDeleteConfirm(true)}
-                    className="inline-flex items-center px-3 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                    className="inline-flex items-center px-4 py-2 border border-red-300 shadow-sm text-sm font-medium rounded-md text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
                   >
-                    <FaTrash className="mr-1.5 h-4 w-4" />
+                    <FaTrash className="mr-2 -ml-1 h-4 w-4" />
                     Delete Student
                   </button>
                 )}
                 <button
                   type="button"
                   onClick={onClose}
-                  className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+                  className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                 >
                   Cancel
                 </button>
                 <button
-                  type="button"
-                  onClick={handlePrint}
-                  className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
-                >
-                  Print Form
-                </button>
-                <button
                   type="submit"
-                  className="inline-flex items-center px-3 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                 >
-                  {isEditMode ? 'Update Student' : 'Save Student'}
+                  {isEditMode ? 'Update Student' : 'Add Student'}
                 </button>
               </div>
             </form>
@@ -751,7 +724,8 @@ const AdmissionForm = ({ onClose, studentData }) => {
         title="Delete Student"
         message="Are you sure you want to delete this student? This action cannot be undone."
         confirmText="Delete"
-        confirmButtonClass="inline-flex justify-center rounded-md border border-transparent bg-red-600 py-2 px-4 text-sm font-medium text-white shadow-sm hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+        cancelText="Cancel"
+        confirmButtonClass="bg-red-600 hover:bg-red-700"
       />
     </div>
   );

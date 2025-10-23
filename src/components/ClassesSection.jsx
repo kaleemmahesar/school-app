@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchClasses, addClass, updateClass, deleteClass, updateClassFees, addSubjectToClass, removeSubjectFromClass } from '../store/classesSlice';
 import { fetchStudents } from '../store/studentsSlice';
+import { fetchStaff } from '../store/staffSlice';
 import { FaPlus, FaEdit, FaTrash, FaSearch, FaBook, FaUsers, FaSchool, FaDollarSign, FaGraduationCap } from 'react-icons/fa';
 import PageHeader from './common/PageHeader';
 import ClassFormModal from './ClassFormModal';
@@ -10,6 +11,8 @@ const ClassesSection = () => {
   const dispatch = useDispatch();
   const { classes, loading, error } = useSelector(state => state.classes);
   const { students } = useSelector(state => state.students);
+  const { staff } = useSelector(state => state.staff);
+  const { schoolInfo } = useSelector(state => state.settings); // Add this line to access school settings
   const [searchTerm, setSearchTerm] = useState('');
   const [showClassModal, setShowClassModal] = useState(false);
   const [showFeesModal, setShowFeesModal] = useState(false);
@@ -17,11 +20,12 @@ const ClassesSection = () => {
   const [selectedClass, setSelectedClass] = useState(null);
   const [currentClass, setCurrentClass] = useState(null);
   const [feesAmount, setFeesAmount] = useState('');
-  const [subjectData, setSubjectData] = useState({ name: '', teacher: '', maxMarks: 100 });
+  const [subjectData, setSubjectData] = useState({ name: '', teacherId: '', teacherName: '', maxMarks: 100 });
 
   useEffect(() => {
     dispatch(fetchClasses());
-    dispatch(fetchStudents()); // Add this line to fetch students
+    dispatch(fetchStudents());
+    dispatch(fetchStaff());
   }, [dispatch]);
 
   // Calculate student counts for each class and section dynamically
@@ -69,23 +73,26 @@ const ClassesSection = () => {
   const handleManageSubjects = (classItem) => {
     setSelectedClass(classItem);
     // Reset the subject form when opening the modal
-    setSubjectData({ name: '', teacher: '' });
+    setSubjectData({ name: '', teacherId: '', teacherName: '', maxMarks: 100 });
     setShowSubjectModal(true);
   };
 
   const handleAddSubject = (e) => {
     e.preventDefault();
-    if (selectedClass && subjectData.name && subjectData.teacher) {
+    if (selectedClass && subjectData.name && subjectData.teacherId) {
       const newSubject = {
         id: `${selectedClass.id}-${Date.now()}`,
-        ...subjectData
+        name: subjectData.name,
+        teacherId: subjectData.teacherId,
+        teacherName: subjectData.teacherName,
+        maxMarks: subjectData.maxMarks
       };
       dispatch(addSubjectToClass({ 
         classId: selectedClass.id, 
         subject: newSubject 
       }));
       // Reset the form after submission
-      setSubjectData({ name: '', teacher: '', maxMarks: 100 });
+      setSubjectData({ name: '', teacherId: '', teacherName: '', maxMarks: 100 });
     }
   };
 
@@ -139,6 +146,16 @@ const ClassesSection = () => {
 
   // Calculate total sections
   const totalSections = classesWithStudentCounts.reduce((sum, cls) => sum + cls.sections.length, 0);
+
+  // Filter teachers from staff
+  const teachers = staff.filter(member => 
+    member.position.includes('Teacher') || 
+    member.position.includes('Principal') ||
+    member.position.includes('Counselor')
+  );
+
+  // Check if school is NGO funded
+  const isNGOFunded = schoolInfo?.fundingType === 'ngo';
 
   if (loading) return <div className="flex justify-center items-center h-64"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div></div>;
   if (error) return <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded">
@@ -243,7 +260,10 @@ const ClassesSection = () => {
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sections</th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Subjects</th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Students</th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Monthly Fees</th>
+                {/* Conditionally render Monthly Fees column based on funding type */}
+                {!isNGOFunded && (
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Monthly Fees</th>
+                )}
                 <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
@@ -266,7 +286,7 @@ const ClassesSection = () => {
                     <div className="flex flex-wrap gap-1">
                       {classItem.subjects && classItem.subjects.map((subject) => (
                         <span key={subject.id} className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                          <FaGraduationCap className="mr-1" /> {subject.name}
+                          <FaGraduationCap className="mr-1" /> {subject.name} ({subject.teacherName || 'No teacher'})
                         </span>
                       ))}
                       {(!classItem.subjects || classItem.subjects.length === 0) && (
@@ -279,17 +299,23 @@ const ClassesSection = () => {
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {classItem.totalStudents}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    {classItem.monthlyFees ? `Rs ${Math.round(classItem.monthlyFees)}` : 'Not set'}
-                  </td>
+                  {/* Conditionally render Monthly Fees cell based on funding type */}
+                  {!isNGOFunded && (
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                      {classItem.monthlyFees ? `Rs ${Math.round(classItem.monthlyFees)}` : 'Not set'}
+                    </td>
+                  )}
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <div className="flex justify-end space-x-2">
-                      <button
-                        onClick={() => handleSetFees(classItem)}
-                        className="inline-flex items-center px-3 py-1 border border-gray-300 text-xs font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                      >
-                        <FaDollarSign className="mr-1" /> Set Fees
-                      </button>
+                      {/* Conditionally render Set Fees button based on funding type */}
+                      {!isNGOFunded && (
+                        <button
+                          onClick={() => handleSetFees(classItem)}
+                          className="inline-flex items-center px-3 py-1 border border-gray-300 text-xs font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                        >
+                          <FaDollarSign className="mr-1" /> Set Fees
+                        </button>
+                      )}
                       <button
                         onClick={() => handleManageSubjects(classItem)}
                         className="inline-flex items-center px-3 py-1 border border-gray-300 text-xs font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
@@ -339,8 +365,8 @@ const ClassesSection = () => {
         />
       )}
 
-      {/* Fees Modal */}
-      {showFeesModal && selectedClass && (
+      {/* Fees Modal - Only show if not NGO funded */}
+      {!isNGOFunded && showFeesModal && selectedClass && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md">
             <h3 className="text-xl font-semibold text-gray-900 mb-4">Set Monthly Fees</h3>
@@ -390,98 +416,135 @@ const ClassesSection = () => {
 
       {/* Subject Modal */}
       {showSubjectModal && selectedClass && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md">
-            <h3 className="text-xl font-semibold text-gray-900 mb-4">Manage Subjects</h3>
-            <div className="mb-4 p-4 bg-blue-50 rounded-lg">
-              <div className="flex justify-between">
-                <span className="text-sm text-gray-600">Class:</span>
-                <span className="font-medium">{selectedClass.name}</span>
-              </div>
-            </div>
-            
-            {/* Add Subject Form */}
-            <form onSubmit={handleAddSubject} className="space-y-4 mb-6">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-4xl max-h-screen flex flex-col">
+            {/* Modal Header */}
+            <div className="flex justify-between items-center px-6 py-4 border-b border-gray-200">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Subject Name</label>
-                <input
-                  type="text"
-                  value={subjectData.name}
-                  onChange={(e) => setSubjectData({...subjectData, name: e.target.value})}
-                  className="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Mathematics"
-                  required
-                />
+                <h3 className="text-xl font-semibold text-gray-900">Manage Subjects</h3>
+                {/* Get the latest class data from Redux store */}
+                <p className="text-sm text-gray-500 mt-1">
+                  Class: {classes.find(c => c.id === selectedClass.id)?.name || selectedClass.name}
+                </p>
               </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Teacher</label>
-                <input
-                  type="text"
-                  value={subjectData.teacher}
-                  onChange={(e) => setSubjectData({...subjectData, teacher: e.target.value})}
-                  className="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Teacher Name"
-                  required
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Maximum Marks</label>
-                <input
-                  type="number"
-                  value={subjectData.maxMarks}
-                  onChange={(e) => setSubjectData({...subjectData, maxMarks: parseInt(e.target.value) || 100})}
-                  className="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="100"
-                  min="1"
-                  required
-                />
-              </div>
-              
-              <button
-                type="submit"
-                className="w-full inline-flex items-center justify-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-              >
-                Add Subject
-              </button>
-            </form>
-            
-            {/* Existing Subjects */}
-            {selectedClass.subjects && selectedClass.subjects.length > 0 && (
-              <div>
-                <h4 className="text-sm font-medium text-gray-700 mb-2">Existing Subjects</h4>
-                <div className="space-y-2">
-                  {selectedClass.subjects.map((subject) => (
-                    <div key={subject.id} className="flex justify-between items-center p-2 bg-gray-50 rounded-lg">
-                      <div>
-                        <div className="text-sm font-medium text-gray-900">{subject.name}</div>
-                        <div className="text-xs text-gray-500">Teacher: {subject.teacher} | Max Marks: {subject.maxMarks || 100}</div>
-                      </div>
-                      <button
-                        onClick={() => handleRemoveSubject(subject.id)}
-                        className="inline-flex items-center px-2 py-1 border border-transparent text-xs font-medium rounded-lg text-white bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-                      >
-                        <FaTrash size={12} />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-            
-            <div className="flex justify-end pt-4">
               <button
                 type="button"
                 onClick={() => setShowSubjectModal(false)}
-                className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                className="text-gray-500 hover:text-gray-700"
               >
-                Close
+                <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
               </button>
+            </div>
+            
+            {/* Modal Content */}
+            <div className="flex-1 overflow-y-auto p-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Add Subject Form */}
+                <div>
+                  <h4 className="text-lg font-medium text-gray-900 mb-3">Add New Subject</h4>
+                  <form onSubmit={handleAddSubject} className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Subject Name</label>
+                      <input
+                        type="text"
+                        value={subjectData.name}
+                        onChange={(e) => setSubjectData({...subjectData, name: e.target.value})}
+                        className="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="Mathematics"
+                        required
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Teacher</label>
+                      <select
+                        value={subjectData.teacherId}
+                        onChange={(e) => {
+                          const selectedTeacher = teachers.find(teacher => teacher.id === e.target.value);
+                          setSubjectData({
+                            ...subjectData, 
+                            teacherId: e.target.value,
+                            teacherName: selectedTeacher ? `${selectedTeacher.firstName} ${selectedTeacher.lastName}` : ''
+                          });
+                        }}
+                        className="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                        required
+                      >
+                        <option value="">Select a teacher</option>
+                        {teachers.map((teacher) => (
+                          <option key={teacher.id} value={teacher.id}>
+                            {teacher.firstName} {teacher.lastName} ({teacher.position})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Maximum Marks</label>
+                      <input
+                        type="number"
+                        value={subjectData.maxMarks}
+                        onChange={(e) => setSubjectData({...subjectData, maxMarks: parseInt(e.target.value) || 100})}
+                        className="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="100"
+                        min="1"
+                        required
+                      />
+                    </div>
+                    
+                    <button
+                      type="submit"
+                      className="w-full inline-flex items-center justify-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                    >
+                      Add Subject
+                    </button>
+                  </form>
+                </div>
+                
+                {/* Existing Subjects - Get latest data from Redux */}
+                <div>
+                  <h4 className="text-lg font-medium text-gray-900 mb-3">Existing Subjects</h4>
+                  {/* Get the latest class data from Redux store */}
+                  {(() => {
+                    const currentClassData = classes.find(c => c.id === selectedClass.id) || selectedClass;
+                    return currentClassData.subjects && currentClassData.subjects.length > 0 ? (
+                      <div className="space-y-3 max-h-96 overflow-y-auto">
+                        {currentClassData.subjects.map((subject) => (
+                          <div key={subject.id} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                            <div className="flex-1 min-w-0">
+                              <div className="text-sm font-medium text-gray-900 truncate">{subject.name}</div>
+                              <div className="text-xs text-gray-500 truncate">
+                                Teacher: {subject.teacherName || 'No teacher assigned'}
+                              </div>
+                              <div className="text-xs text-gray-500">
+                                Max Marks: {subject.maxMarks || 100}
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => handleRemoveSubject(subject.id)}
+                              className="ml-2 inline-flex items-center px-2 py-1 border border-transparent text-xs font-medium rounded-lg text-white bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 flex-shrink-0"
+                            >
+                              <FaTrash size={12} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-8 text-gray-500">
+                        <FaBook className="mx-auto h-8 w-8" />
+                        <p className="mt-2">No subjects added yet</p>
+                      </div>
+                    );
+                  })()}
+                </div>
+              </div>
             </div>
           </div>
         </div>
       )}
+
     </>
   );
 };

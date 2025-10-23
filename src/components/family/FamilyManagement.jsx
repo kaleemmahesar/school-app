@@ -2,59 +2,73 @@ import React, { useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { FaUsers, FaUser, FaPlus, FaEdit, FaTrash, FaSearch, FaFilter } from 'react-icons/fa';
 import { addStudent, updateStudent } from '../../store/studentsSlice';
+import { addParent, updateParent } from '../../store/parentsSlice';
 import Pagination from '../common/Pagination';
 import SearchableStudentDropdown from '../common/SearchableStudentDropdown';
+import MultiSelectSearchableStudentDropdown from '../common/MultiSelectSearchableStudentDropdown';
 
 const FamilyManagement = () => {
   const dispatch = useDispatch();
   const { students } = useSelector(state => state.students);
+  const { parents } = useSelector(state => state.parents);
   const [activeTab, setActiveTab] = useState('view'); // 'view' or 'manage'
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedFamily, setSelectedFamily] = useState('');
   const [showAddFamilyModal, setShowAddFamilyModal] = useState(false);
   const [showEditFamilyModal, setShowEditFamilyModal] = useState(false);
-  const [editingFamily, setEditingFamily] = useState(null);
+  const [editingParent, setEditingParent] = useState(null);
   const [newFamilyData, setNewFamilyData] = useState({
-    familyId: '',
-    familyName: '',
-    headMemberId: ''
+    parentId: '',
+    parentName: '',
+    studentIds: []
   });
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 3; // Show 3 families per page
 
-  // Group students by family
+  // Group students by family based on parents
   const groupStudentsByFamily = () => {
     const familyGroups = {};
     
-    students.forEach(student => {
-      const familyId = student.familyId || `unknown-${student.id}`;
-      
-      if (!familyGroups[familyId]) {
-        familyGroups[familyId] = {
-          familyInfo: student.familyId ? {
-            id: student.familyId,
-            name: `Family ${student.familyId}`
-          } : {
-            id: `unknown-${student.id}`,
-            name: 'Unknown Family'
-          },
-          members: [],
-          totalFees: 0,
-          feesPaid: 0,
-          feesPending: 0
-        };
-      }
-      
-      // For NGO schools, we don't need to calculate fees
-      // Just add the student to the family
-      familyGroups[familyId].members.push(student);
+    // First, create family groups based on parents
+    parents.forEach(parent => {
+      familyGroups[parent.id] = {
+        familyInfo: {
+          id: parent.id,
+          name: `${parent.firstName} ${parent.lastName} Family`,
+          head: parent
+        },
+        members: [],
+        totalFees: 0,
+        feesPaid: 0,
+        feesPending: 0
+      };
     });
     
-    // Enhance family info with head of family
-    Object.values(familyGroups).forEach(familyGroup => {
-      const familyHead = familyGroup.members.find(member => !member.parentId) || familyGroup.members[0];
-      familyGroup.familyInfo.name = `${familyHead.firstName} ${familyHead.lastName} Family`;
-      familyGroup.familyInfo.head = familyHead;
+    // Then, add students to their respective family groups
+    students.forEach(student => {
+      // Find the parent for this student
+      const parent = parents.find(p => p.studentIds.includes(student.id));
+      
+      if (parent && familyGroups[parent.id]) {
+        familyGroups[parent.id].members.push(student);
+      } else {
+        // Handle students without parents (orphaned students)
+        const familyId = `unknown-${student.id}`;
+        if (!familyGroups[familyId]) {
+          familyGroups[familyId] = {
+            familyInfo: {
+              id: familyId,
+              name: 'Unknown Family',
+              head: null
+            },
+            members: [],
+            totalFees: 0,
+            feesPaid: 0,
+            feesPending: 0
+          };
+        }
+        familyGroups[familyId].members.push(student);
+      }
     });
     
     return familyGroups;
@@ -130,43 +144,55 @@ const FamilyManagement = () => {
   const handleAddFamily = (e) => {
     e.preventDefault();
     
-    // Generate a unique family ID if not provided
-    const familyId = newFamilyData.familyId || `family-${Date.now()}`;
+    // Create a new parent
+    const parentId = `parent-${Date.now()}`;
+    const [firstName, ...lastNameParts] = newFamilyData.parentName.trim().split(' ');
+    const lastName = lastNameParts.join(' ') || '';
     
-    // Find the head member
-    const headMember = students.find(s => s.id === newFamilyData.headMemberId);
+    const newParent = {
+      id: parentId,
+      firstName: firstName,
+      lastName: lastName,
+      email: '',
+      phone: '',
+      address: '',
+      relationship: 'father',
+      studentIds: newFamilyData.studentIds
+    };
     
-    if (headMember) {
-      // Update the head member with the new family ID
-      dispatch(updateStudent({
-        id: headMember.id,
-        updates: {
-          familyId: familyId,
-          relationship: 'self',
-          parentId: null
-        }
-      }));
-      
-      // Close modal and reset form
-      setShowAddFamilyModal(false);
-      setNewFamilyData({
-        familyId: '',
-        familyName: '',
-        headMemberId: ''
-      });
-      
-      // Reset to first page when adding a new family
-      setCurrentPage(1);
-    }
+    dispatch(addParent(newParent));
+    
+    // Update students with the parent ID
+    newFamilyData.studentIds.forEach(studentId => {
+      const student = students.find(s => s.id === studentId);
+      if (student) {
+        dispatch(updateStudent({
+          id: student.id,
+          parentId: parentId,
+          familyId: parentId
+        }));
+      }
+    });
+    
+    // Close modal and reset form
+    setShowAddFamilyModal(false);
+    setNewFamilyData({
+      parentId: '',
+      parentName: '',
+      studentIds: []
+    });
+    
+    // Reset to first page when adding a new family
+    setCurrentPage(1);
   };
 
   // Handle editing a family
   const handleEditFamily = (family) => {
-    setEditingFamily(family);
+    setEditingParent(family.familyInfo.head);
     setNewFamilyData({
-      familyId: family.familyInfo.id,
-      familyName: family.familyInfo.name,
-      headMemberId: family.familyInfo.head?.id || ''
+      parentId: family.familyInfo.head?.id || '',
+      parentName: family.familyInfo.head ? `${family.familyInfo.head.firstName} ${family.familyInfo.head.lastName}` : '',
+      studentIds: family.members.map(member => member.id)
     });
     setShowEditFamilyModal(true);
   };
@@ -175,45 +201,43 @@ const FamilyManagement = () => {
   const handleUpdateFamily = (e) => {
     e.preventDefault();
     
-    if (editingFamily && newFamilyData.headMemberId) {
-      // Find the new head member
-      const newHeadMember = students.find(s => s.id === newFamilyData.headMemberId);
+    if (editingParent) {
+      // Update the parent
+      const updatedParent = {
+        ...editingParent,
+        studentIds: newFamilyData.studentIds
+      };
       
-      if (newHeadMember) {
-        // Update the new head member with family information
-        dispatch(updateStudent({
-          id: newHeadMember.id,
-          updates: {
-            familyId: newFamilyData.familyId,
-            relationship: 'self',
-            parentId: null
-          }
-        }));
-        
-        // If the head member has changed, we need to update the previous head member
-        if (editingFamily.familyInfo.head && editingFamily.familyInfo.head.id !== newHeadMember.id) {
-          const previousHead = students.find(s => s.id === editingFamily.familyInfo.head.id);
-          if (previousHead) {
-            // Update the previous head to be a regular family member
-            dispatch(updateStudent({
-              id: previousHead.id,
-              updates: {
-                relationship: previousHead.relationship !== 'self' ? previousHead.relationship : 'member',
-                parentId: newHeadMember.id
-              }
-            }));
-          }
+      dispatch(updateParent(updatedParent));
+      
+      // Update students with the parent ID
+      students.forEach(student => {
+        // If student was previously in this family but is no longer, remove the family reference
+        if (student.familyId === editingParent.id && !newFamilyData.studentIds.includes(student.id)) {
+          dispatch(updateStudent({
+            id: student.id,
+            parentId: null,
+            familyId: null
+          }));
         }
-        
-        // Close modal and reset form
-        setShowEditFamilyModal(false);
-        setEditingFamily(null);
-        setNewFamilyData({
-          familyId: '',
-          familyName: '',
-          headMemberId: ''
-        });
-      }
+        // If student is now in this family, add the family reference
+        else if (newFamilyData.studentIds.includes(student.id)) {
+          dispatch(updateStudent({
+            id: student.id,
+            parentId: editingParent.id,
+            familyId: editingParent.id
+          }));
+        }
+      });
+      
+      // Close modal and reset form
+      setShowEditFamilyModal(false);
+      setEditingParent(null);
+      setNewFamilyData({
+        parentId: '',
+        parentName: '',
+        studentIds: []
+      });
     }
   };
 
@@ -393,21 +417,17 @@ const FamilyManagement = () => {
             <div className="ml-3">
               <h3 className="text-sm font-medium text-blue-800">How to Manage Families</h3>
               <div className="mt-2 text-sm text-blue-700">
-                <p>Families in this system are automatically created when students are added with the same Family ID.</p>
+                <p>Families in this system are managed through parents who are the head of each family.</p>
                 <p className="mt-2">To create a new family:</p>
                 <ol className="list-decimal list-inside mt-2 space-y-1">
                   <li>Click the "Add New Family" button above</li>
-                  <li>Enter a unique Family ID (or leave blank to auto-generate)</li>
-                  <li>Select a student to be the head of the family</li>
-                  <li>Add other family members by editing their records and assigning the same Family ID</li>
+                  <li>Enter the parent's full name (this will be the family head)</li>
+                  <li>Select students to be part of this family</li>
                 </ol>
                 <p className="mt-2">To add a student to an existing family:</p>
                 <ol className="list-decimal list-inside mt-2 space-y-1">
-                  <li>Go to the Students section</li>
-                  <li>Find the student you want to add to a family</li>
-                  <li>Edit their record</li>
-                  <li>Enter the Family ID of the family you want to add them to</li>
-                  <li>Specify their relationship to the family head (e.g., brother, sister)</li>
+                  <li>Click the "Edit" button for the family</li>
+                  <li>Select additional students to add to the family</li>
                 </ol>
               </div>
             </div>
@@ -422,24 +442,24 @@ const FamilyManagement = () => {
             <h3 className="text-lg font-semibold text-gray-900 mb-3">Add New Family</h3>
             <form onSubmit={handleAddFamily} className="space-y-3">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Family ID (Optional)</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Parent Name</label>
                 <input
                   type="text"
-                  value={newFamilyData.familyId}
-                  onChange={(e) => setNewFamilyData({...newFamilyData, familyId: e.target.value})}
+                  value={newFamilyData.parentName}
+                  onChange={(e) => setNewFamilyData({...newFamilyData, parentName: e.target.value})}
                   className="block w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-sm"
-                  placeholder="Leave blank to auto-generate"
+                  placeholder="Enter parent's full name"
+                  required
                 />
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Select Family Head</label>
-                <SearchableStudentDropdown
+                <label className="block text-sm font-medium text-gray-700 mb-1">Select Students</label>
+                <MultiSelectSearchableStudentDropdown
                   students={students}
-                  value={newFamilyData.headMemberId}
-                  onChange={(studentId) => setNewFamilyData({...newFamilyData, headMemberId: studentId})}
-                  placeholder="Search and select a student..."
-                  required
+                  values={newFamilyData.studentIds}
+                  onChange={(selectedIds) => setNewFamilyData({...newFamilyData, studentIds: selectedIds})}
+                  placeholder="Search and select students..."
                 />
               </div>
               
@@ -470,34 +490,23 @@ const FamilyManagement = () => {
             <h3 className="text-lg font-semibold text-gray-900 mb-3">Edit Family</h3>
             <form onSubmit={handleUpdateFamily} className="space-y-3">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Family ID</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Parent Name</label>
                 <input
                   type="text"
-                  value={newFamilyData.familyId}
-                  onChange={(e) => setNewFamilyData({...newFamilyData, familyId: e.target.value})}
+                  value={newFamilyData.parentName}
+                  onChange={(e) => setNewFamilyData({...newFamilyData, parentName: e.target.value})}
                   className="block w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-sm"
                   readOnly
                 />
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Family Name</label>
-                <input
-                  type="text"
-                  value={newFamilyData.familyName}
-                  onChange={(e) => setNewFamilyData({...newFamilyData, familyName: e.target.value})}
-                  className="block w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-sm"
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Select Family Head</label>
-                <SearchableStudentDropdown
+                <label className="block text-sm font-medium text-gray-700 mb-1">Select Students</label>
+                <MultiSelectSearchableStudentDropdown
                   students={students}
-                  value={newFamilyData.headMemberId}
-                  onChange={(studentId) => setNewFamilyData({...newFamilyData, headMemberId: studentId})}
-                  placeholder="Search and select a student..."
-                  required
+                  values={newFamilyData.studentIds}
+                  onChange={(selectedIds) => setNewFamilyData({...newFamilyData, studentIds: selectedIds})}
+                  placeholder="Search and select students..."
                 />
               </div>
               

@@ -11,8 +11,8 @@ const mockExams = [
     class: 'Class 10',
     section: 'A',
     examType: 'Midterm',
-    startDate: '2023-10-15',
-    endDate: '2023-10-20',
+    startDate: '2025-10-15',
+    endDate: '2025-10-20',
     subjects: [
       { id: '10math', name: 'Mathematics', date: '2023-10-15', time: '09:00', duration: 180 },
       { id: '10eng', name: 'English', date: '2023-10-16', time: '09:00', duration: 180 },
@@ -35,6 +35,37 @@ const mockExams = [
       { id: '9eng', name: 'English', date: '2023-12-02', time: '09:00', duration: 180 },
       { id: '9sci', name: 'Science', date: '2023-12-03', time: '09:00', duration: 180 },
       { id: '9geo', name: 'Geography', date: '2023-12-04', time: '09:00', duration: 180 }
+    ],
+    maxMarks: 100,
+    status: 'scheduled'
+  },
+  {
+    id: '3',
+    name: 'Monthly Test',
+    class: 'Class 10',
+    section: 'A',
+    examType: 'Monthly',
+    startDate: '2025-10-20',
+    endDate: '2025-10-22',
+    subjects: [
+      { id: '10math', name: 'Mathematics', date: '2025-10-20', time: '09:00', duration: 180 },
+      { id: '10eng', name: 'English', date: '2025-10-21', time: '09:00', duration: 180 },
+      { id: '10sci', name: 'Science', date: '2025-10-22', time: '09:00', duration: 180 }
+    ],
+    maxMarks: 50,
+    status: 'scheduled'
+  },
+  {
+    id: '4',
+    name: 'Class Assessment',
+    class: 'Class 8',
+    section: 'A',
+    examType: 'Assessment',
+    startDate: '2025-10-25',
+    endDate: '2025-10-26',
+    subjects: [
+      { id: '8math', name: 'Mathematics', date: '2025-10-25', time: '09:00', duration: 120 },
+      { id: '8eng', name: 'English', date: '2025-10-26', time: '09:00', duration: 120 }
     ],
     maxMarks: 100,
     status: 'scheduled'

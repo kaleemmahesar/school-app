@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchExpenses, addExpense, updateExpense, deleteExpense, addCategory } from '../store/expensesSlice';
-import { FaPlus, FaEdit, FaTrash, FaSearch, FaMoneyBillWave, FaTag, FaChartBar } from 'react-icons/fa';
+import { FaPlus, FaEdit, FaTrash, FaSearch, FaMoneyBillWave, FaTag, FaChartBar, FaDownload, FaPrint } from 'react-icons/fa';
 import ExpenseFormModal from './ExpenseFormModal';
 import CategoryFormModal from './CategoryFormModal';
 
@@ -42,6 +42,34 @@ const ExpensesSection = () => {
   const handleCategorySubmit = (categoryName) => {
     dispatch(addCategory(categoryName));
     setShowCategoryModal(false);
+  };
+
+  // Export to CSV function
+  const exportToCSV = () => {
+    const csvContent = [
+      ['Description', 'Category', 'Date', 'Amount'],
+      ...filteredExpenses.map(expense => [
+        `"${expense.description.replace(/"/g, '""')}"`,
+        expense.category,
+        expense.date,
+        expense.amount
+      ])
+    ].map(row => row.join(',')).join('\n');
+    
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'expenses_report.csv');
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // Print report function
+  const printReport = () => {
+    window.print();
   };
 
   const filteredExpenses = expenses.filter(expense => {
@@ -95,6 +123,18 @@ const ExpensesSection = () => {
             <p className="mt-1 text-sm text-gray-600">Track and manage all school expenses</p>
           </div>
           <div className="mt-4 md:mt-0 flex space-x-2">
+            <button
+              onClick={exportToCSV}
+              className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+            >
+              <FaDownload className="mr-2" /> Export CSV
+            </button>
+            <button
+              onClick={printReport}
+              className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+            >
+              <FaPrint className="mr-2" /> Print
+            </button>
             <button
               onClick={() => {
                 setCurrentExpense(null);

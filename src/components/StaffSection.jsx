@@ -3,7 +3,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { fetchStaff, addStaff, updateStaff, deleteStaff, addStaffAdvance, payStaffSalary } from '../store/staffSlice';
 import { fetchClasses } from '../store/classesSlice';
-import { FaPlus, FaEdit, FaTrash, FaSearch, FaChalkboardTeacher, FaUser, FaPhone, FaCalendar, FaDollarSign, FaBriefcase, FaMoneyBillWave, FaCamera } from 'react-icons/fa';
+import { FaPlus, FaEdit, FaTrash, FaSearch, FaChalkboardTeacher, FaUser, FaPhone, FaCalendar, FaDollarSign, FaBriefcase, FaMoneyBillWave, FaCamera, FaDownload, FaPrint } from 'react-icons/fa';
 import PageHeader from './common/PageHeader';
 import StaffFormModal from './StaffFormModal';
 import StaffFinancialModal from './StaffFinancialModal';
@@ -77,6 +77,47 @@ const StaffSection = () => {
   const handleClearFilters = () => {
     setSearchTerm('');
     setCurrentPage(1); // Reset to first page when clearing filters
+  };
+
+  // Export to CSV function
+  const exportToCSV = () => {
+    const csvContent = [
+      ['Name', 'Position', 'Subject', 'Salary', 'Allowances', 'Total Monthly', 'Date of Joining', 'Phone', 'Email'],
+      ...filteredStaff.map(member => {
+        // Calculate monthly total (salary + allowances)
+        const totalAllowances = (member.allowances || []).reduce((sum, allowance) => {
+          return sum + parseFloat(allowance.amount || 0);
+        }, 0);
+        const monthlyTotal = parseFloat(member.salary || 0) + totalAllowances;
+        
+        return [
+          `"${member.firstName} ${member.lastName}"`,
+          member.position,
+          member.subject || '',
+          member.salary || 0,
+          totalAllowances,
+          monthlyTotal,
+          member.dateOfJoining,
+          member.phone || '',
+          member.email || ''
+        ];
+      })
+    ].map(row => row.join(',')).join('\n');
+    
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'staff_report.csv');
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // Print report function
+  const printReport = () => {
+    window.print();
   };
 
   const filteredStaff = staff.filter(member =>
@@ -174,15 +215,29 @@ const StaffSection = () => {
         title="Staff Management"
         subtitle="Manage staff members, positions, and salaries"
         actionButton={
-          <button
-            onClick={() => {
-              setCurrentStaff(null);
-              setShowStaffModal(true);
-            }}
-            className="inline-flex items-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200"
-          >
-            <FaPlus className="mr-2" /> Add Staff
-          </button>
+          <div className="flex space-x-2">
+            <button
+              onClick={exportToCSV}
+              className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+            >
+              <FaDownload className="mr-2" /> Export CSV
+            </button>
+            <button
+              onClick={printReport}
+              className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+            >
+              <FaPrint className="mr-2" /> Print
+            </button>
+            <button
+              onClick={() => {
+                setCurrentStaff(null);
+                setShowStaffModal(true);
+              }}
+              className="inline-flex items-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200"
+            >
+              <FaPlus className="mr-2" /> Add Staff
+            </button>
+          </div>
         }
       />
 

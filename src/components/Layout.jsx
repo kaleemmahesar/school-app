@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { FaUsers, FaMoneyBillWave, FaChalkboardTeacher, FaBook, FaGraduationCap, FaChartLine, FaDollarSign, FaClipboardList, FaChevronDown, FaQrcode, FaUsersCog, FaFileInvoice, FaTasks, FaListOl, FaFileAlt, FaEdit, FaGraduationCap as FaGraduationCapIcon, FaCalendarAlt, FaCertificate, FaUser, FaSignOutAlt, FaCog, FaTable } from 'react-icons/fa';
+import { FaUsers, FaMoneyBillWave, FaChalkboardTeacher, FaBook, FaGraduationCap, FaChartLine, FaDollarSign, FaClipboardList, FaChevronDown, FaQrcode, FaUsersCog, FaFileInvoice, FaTasks, FaListOl, FaFileAlt, FaEdit, FaGraduationCap as FaGraduationCapIcon, FaCalendarAlt, FaCertificate, FaUser, FaSignOutAlt, FaCog, FaTable, FaSearch, FaHandHoldingUsd } from 'react-icons/fa';
+import UniversalSearch from './common/UniversalSearch';
 import { logoutUser } from '../store/usersSlice';
 import Logo from '../img/logo.png';
+import { useSchoolFunding } from '../hooks/useSchoolFunding';
+import FundingConditional from './common/FundingConditional';
 
 const Layout = ({ children }) => {
   const dispatch = useDispatch();
@@ -14,6 +17,7 @@ const Layout = ({ children }) => {
   const staff = useSelector(state => state.staff.staff);
   const classes = useSelector(state => state.classes.classes);
   const currentUser = useSelector(state => state.users.currentUser);
+  const { isNGOSchool } = useSchoolFunding();
   const [openDropdown, setOpenDropdown] = useState(null);
   const [showUserMenu, setShowUserMenu] = useState(false);
 
@@ -60,7 +64,7 @@ const Layout = ({ children }) => {
     };
   }, []);
 
-  // Navigation items configuration - Simplified for core features
+  // Navigation items configuration with dropdown functionality
   const navItems = [
     {
       name: 'Dashboard',
@@ -71,7 +75,15 @@ const Layout = ({ children }) => {
     {
       name: 'Students',
       path: '/students',
-      icon: <FaUsers className="mr-2" />
+      icon: <FaUsers className="mr-2" />,
+      dropdown: [
+        { name: 'All Students', path: '/students' },
+        { name: 'Attendance', path: '/students/attendance' },
+        { name: 'Reports', path: '/students/reports' },
+        { name: 'Marksheets', path: '/marksheets' },
+        { name: 'Certificates', path: '/certificates' },
+        { name: 'Examinations', path: '/examinations' }
+      ]
     },
     {
       name: 'Classes',
@@ -83,53 +95,42 @@ const Layout = ({ children }) => {
       path: '/staff',
       icon: <FaChalkboardTeacher className="mr-2" />
     },
-    // {
-    //   name: 'Fees',
-    //   path: '/fees',
-    //   icon: <FaFileInvoice className="mr-2" />
-    // },
+    // Conditional navigation for Fees section (only for traditional schools)
+    ...(!isNGOSchool ? [
+      {
+        name: 'Fees',
+        path: '/fees',
+        icon: <FaFileInvoice className="mr-2" />
+      }
+    ] : []),
     {
       name: 'Expenses',
       path: '/expenses',
       icon: <FaMoneyBillWave className="mr-2" />
     },
+    // NGO Subsidies section (only for NGO schools)
+    ...(isNGOSchool ? [
+      {
+        name: 'NGO Subsidies',
+        path: '/subsidies',
+        icon: <FaHandHoldingUsd className="mr-2" />
+      }
+    ] : []),
     {
-      name: 'NGO Subsidies',
-      path: '/subsidies',
-      icon: <FaDollarSign className="mr-2" />
-    },
-    {
-      name: 'Marksheets',
-      path: '/marksheets',
-      icon: <FaClipboardList className="mr-2" />
-    },
-    {
-      name: 'Certificates',
-      path: '/certificates',
-      icon: <FaCertificate className="mr-2" />
-    },
-    {
-      name: 'Examinations',
-      path: '/examinations',
-      icon: <FaCalendarAlt className="mr-2" />
-    },
-    // {
-    //   name: 'Timetable',
-    //   path: '/timetable',
-    //   icon: <FaTable className="mr-2" />
-    // },
-    // {
-    //   name: 'Settings',
-    //   path: '/settings',
-    //   icon: <FaCog className="mr-2" />
-    // }
-    // Only show settings for admin users
-    // ...(currentUser && currentUser.role === 'Administrator' ? [{
-    //   name: 'Settings',
-    //   path: '/settings',
-    //   icon: <FaCog className="mr-2" />
-    // }] : [])
+      name: 'Financial Report',
+      path: '/financial-reporting',
+      icon: <FaChartLine className="mr-2" />
+    }
   ];
+
+  // Add Settings for admin users only
+  if (currentUser && currentUser.role === 'Administrator') {
+    navItems.push({
+      name: 'Settings',
+      path: '/settings',
+      icon: <FaCog className="mr-2" />
+    });
+  }
 
   // Don't show navigation for login page
   const isLoginPage = location.pathname === '/login';
@@ -155,6 +156,9 @@ const Layout = ({ children }) => {
                 <img src={Logo} alt="Logo" className="h-14 w-auto" />
               </div>
               <h1 className="ml-3 text-2xl font-bold text-gray-900">Asad High School Larkana</h1>
+            </div>
+            <div className="flex-1 max-w-lg mx-6">
+              <UniversalSearch />
             </div>
             <div className="flex items-center space-x-4">
               {currentUser ? (
@@ -201,22 +205,58 @@ const Layout = ({ children }) => {
       {/* Navigation */}
       <nav className="bg-white shadow-sm border-t border-gray-200 sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex py-3 space-x-6 overflow-x-auto">
+          <div className="flex py-3 space-x-6">
             
             {navItems.map((item, index) => (
               <div key={index} className="dropdown-container relative">
-                <Link
-                  to={item.path}
-                  className={`flex items-center px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors duration-200 ${
-                    isActive(item.path)
-                      ? 'bg-blue-50 text-blue-700 border border-blue-200'
-                      : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
-                  }`}
-                  onClick={closeDropdowns}
-                >
-                  {item.icon}
-                  {item.name}
-                </Link>
+                {item.dropdown ? (
+                  <>
+                    <button
+                      onClick={() => toggleDropdown(item.name)}
+                      className={`flex items-center px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors duration-200 ${
+                        isActive(item.path) || item.dropdown.some(subItem => isActive(subItem.path))
+                          ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                          : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                      }`}
+                    >
+                      {item.icon}
+                      {item.name}
+                      <FaChevronDown className="ml-1 text-xs" />
+                    </button>
+                    
+                    {openDropdown === item.name && (
+                      <div className="absolute left-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50 border border-gray-200">
+                        {item.dropdown.map((subItem, subIndex) => (
+                          <Link
+                            key={subIndex}
+                            to={subItem.path}
+                            className={`block px-4 py-2 text-sm ${
+                              isActive(subItem.path)
+                                ? 'bg-blue-50 text-blue-700'
+                                : 'text-gray-700 hover:bg-gray-100'
+                            }`}
+                            onClick={closeDropdowns}
+                          >
+                            {subItem.name}
+                          </Link>
+                        ))}
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <Link
+                    to={item.path}
+                    className={`flex items-center px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors duration-200 ${
+                      isActive(item.path)
+                        ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                        : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                    }`}
+                    onClick={closeDropdowns}
+                  >
+                    {item.icon}
+                    {item.name}
+                  </Link>
+                )}
               </div>
             ))}
           </div>
