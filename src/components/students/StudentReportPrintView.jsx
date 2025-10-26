@@ -8,7 +8,7 @@ const StudentReportPrintView = ({ report }) => {
 
   // Get school info from settings (mock data for now)
   const schoolInfo = {
-    name: "Asad High School Larkana",
+    name: "SEF High School Larkana",
     address: "123 Education Street, Larkana, Sindh",
     phone: "+92 (021) 123-4567",
     email: "info@asadhighschool.edu.pk"

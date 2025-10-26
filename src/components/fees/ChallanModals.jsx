@@ -1,5 +1,6 @@
 import React from 'react';
 import { FaUser, FaCalendar, FaDollarSign, FaReceipt, FaCheck } from 'react-icons/fa';
+import SearchableStudentDropdown from '../common/SearchableStudentDropdown';
 
 const ChallanModals = ({
   showGenerateModal,
@@ -23,6 +24,23 @@ const ChallanModals = ({
   submitPayment,
   detailViewStudent
 }) => {
+  // Get student's monthly fees when student is selected
+  const getStudentMonthlyFees = (studentId) => {
+    if (!studentId) return 0;
+    const student = students.find(s => s.id === studentId);
+    return student ? student.monthlyFees || 0 : 0;
+  };
+
+  // Update amount when student changes
+  const handleStudentChangeWithFees = (studentId) => {
+    const monthlyFees = getStudentMonthlyFees(studentId);
+    setChallanData({
+      ...challanData,
+      studentId,
+      amount: monthlyFees
+    });
+  };
+
   return (
     <>
       {/* Payment Modal */}
@@ -98,19 +116,13 @@ const ChallanModals = ({
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <FaUser className="h-5 w-5 text-gray-400" />
                   </div>
-                  <select
+                  <SearchableStudentDropdown
+                    students={students}
                     value={challanData.studentId}
-                    onChange={handleStudentChange}
-                    className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                    onChange={handleStudentChangeWithFees}
+                    placeholder="Select a student..."
                     required
-                  >
-                    <option value="">Select Student</option>
-                    {students.map(student => (
-                      <option key={student.id} value={student.id}>
-                        {student.firstName} {student.lastName} - {student.class} {student.section}
-                      </option>
-                    ))}
-                  </select>
+                  />
                 </div>
               </div>
               
@@ -131,7 +143,7 @@ const ChallanModals = ({
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Amount</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Amount (Monthly Fees)</label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <FaDollarSign className="h-5 w-5 text-gray-400" />
@@ -145,6 +157,9 @@ const ChallanModals = ({
                     required
                   />
                 </div>
+                <p className="mt-1 text-xs text-blue-600 bg-blue-50 p-2 rounded border border-blue-100">
+                  Auto-filled from student's class monthly fees: Rs {getStudentMonthlyFees(challanData.studentId)}. You can edit this amount if needed.
+                </p>
               </div>
               
               <div>

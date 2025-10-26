@@ -5,7 +5,7 @@ import {
   FaUsers, FaMoneyBillWave, FaChalkboardTeacher, FaBook, FaGraduationCap, 
   FaChartLine, FaPlus, FaSearch, FaDollarSign, FaChartPie, FaChartBar, 
   FaFilter, FaPrint, FaDownload, FaCalendarAlt, FaChevronLeft, FaChevronRight,
-  FaHandHoldingUsd
+  FaHandHoldingUsd, FaUserTie
 } from 'react-icons/fa';
 import PageHeader from './common/PageHeader';
 import ActivitiesPrintView from './dashboard/ActivitiesPrintView';
@@ -59,11 +59,17 @@ const Dashboard = () => {
   const expenses = useSelector(state => state.expenses.expenses);
   const staff = useSelector(state => state.staff.staff);
   const classes = useSelector(state => state.classes.classes);
+  const subsidies = useSelector(state => state.subsidies.subsidies);
   const schoolInfo = useSelector(state => state.settings.schoolInfo);
   const { isNGOSchool } = useSchoolFunding();
   
-  // State for view mode
+  // State for view mode - automatically set based on funding type
   const [viewMode, setViewMode] = useState(isNGOSchool ? 'subsidies' : 'fees'); // 'fees' or 'subsidies'
+  
+  // Update view mode when funding type changes
+  React.useEffect(() => {
+    setViewMode(isNGOSchool ? 'subsidies' : 'fees');
+  }, [isNGOSchool]);
   
   // State for recent activities table
   const [activityType, setActivityType] = useState('all');
@@ -84,12 +90,10 @@ const Dashboard = () => {
   const availableYears = useMemo(() => {
     if (viewMode === 'subsidies') {
       const years = new Set();
-      mockSubsidies.forEach(subsidy => {
-        if (subsidy.date) {
-          const year = new Date(subsidy.date).getFullYear();
-          if (year) {
-            years.add(year);
-          }
+      subsidies.forEach(subsidy => {
+        // Only include years for received subsidies
+        if (subsidy.year && subsidy.status === 'received') {
+          years.add(subsidy.year);
         }
       });
       return Array.from(years).sort((a, b) => b - a);
@@ -109,14 +113,15 @@ const Dashboard = () => {
       });
       return Array.from(years).sort((a, b) => b - a);
     }
-  }, [students, viewMode]);
+  }, [students, subsidies, viewMode]);
 
   // Get available quarters
   const availableQuarters = useMemo(() => {
     if (viewMode === 'subsidies') {
       const quarters = new Set();
-      mockSubsidies.forEach(subsidy => {
-        if (subsidy.quarter) {
+      subsidies.forEach(subsidy => {
+        // Only include quarters for received subsidies
+        if (subsidy.quarter && subsidy.status === 'received') {
           const quarterNumber = parseInt(subsidy.quarter.replace('Q', ''));
           if (quarterNumber >= 1 && quarterNumber <= 4) {
             quarters.add(quarterNumber);
@@ -142,14 +147,14 @@ const Dashboard = () => {
       });
       return Array.from(quarters).sort((a, b) => a - b);
     }
-  }, [students, viewMode]);
+  }, [students, subsidies, viewMode]);
 
   // Filter data based on selected quarter and year
   const filteredData = useMemo(() => {
     // If no filter is applied, return all data
     if (selectedQuarter === 'all' && selectedYear === 'all') {
       if (viewMode === 'subsidies') {
-        return { filteredExpenses: expenses, filteredStaff: staff, filteredSubsidies: mockSubsidies };
+        return { filteredExpenses: expenses, filteredStaff: staff, filteredSubsidies: subsidies };
       } else {
         return { filteredExpenses: expenses, filteredStaff: staff, filteredFees: students };
       }
@@ -157,7 +162,7 @@ const Dashboard = () => {
     
     if (viewMode === 'subsidies') {
       // Filter subsidies by quarter and year
-      const filteredSubsidies = mockSubsidies.filter(subsidy => {
+      const filteredSubsidies = subsidies.filter(subsidy => {
         // Check year filter
         if (selectedYear !== 'all' && subsidy.year !== parseInt(selectedYear)) {
           return false;
@@ -322,9 +327,6 @@ const Dashboard = () => {
     // Use filtered data if filters are applied, otherwise use all data
     const { filteredExpenses, filteredStaff, filteredFees, filteredSubsidies } = filteredData;
     
-    // Total expenses
-    const totalExpenses = filteredExpenses.reduce((sum, expense) => sum + parseFloat(expense.amount), 0);
-    
     // Total staff salaries (including allowances)
     const totalStaffSalaries = filteredStaff.reduce((sum, member) => {
       const allowances = (member.allowances || []).reduce((allowanceSum, allowance) => {
@@ -338,6 +340,9 @@ const Dashboard = () => {
       .filter(expense => expense.category !== 'Salary')
       .reduce((sum, expense) => sum + parseFloat(expense.amount), 0);
     
+    // Total expenses (staff salaries + other expenses)
+    const totalExpenses = totalStaffSalaries + otherExpenses;
+    
     // Total students
     const totalStudents = students.length;
 
@@ -348,7 +353,7 @@ const Dashboard = () => {
         .reduce((sum, subsidy) => sum + parseFloat(subsidy.amount || 0), 0);
       
       // Net profit/loss (income - expenses)
-      const netProfit = totalSubsidiesReceived - (totalStaffSalaries + otherExpenses);
+      const netProfit = totalSubsidiesReceived - totalExpenses;
       
       // Students by class - include all classes, even those without students
       const studentsByClass = {};
@@ -382,6 +387,17 @@ const Dashboard = () => {
         return acc;
       }, {});
 
+      // Calculate total classes and sections
+      const totalClasses = classes.length;
+      const totalSections = classes.reduce((sum, classItem) => sum + (classItem.sections?.length || 0), 0);
+      
+      // Calculate total subjects (unique subjects only)
+      const allSubjectNames = classes.flatMap(classItem => 
+        classItem.subjects?.map(subject => subject.name) || []
+      );
+      const uniqueSubjectNames = [...new Set(allSubjectNames)];
+      const totalSubjects = uniqueSubjectNames.length;
+      
       return {
         totalExpenses,
         totalStaffSalaries,
@@ -392,7 +408,10 @@ const Dashboard = () => {
         studentsByClass,
         expensesByCategory,
         staffByPosition,
-        totalStaff: filteredStaff.length
+        totalStaff: filteredStaff.length,
+        totalClasses,
+        totalSections,
+        totalSubjects
       };
     } else {
       // Calculate total fees collected based on filtered paid fees
@@ -406,7 +425,7 @@ const Dashboard = () => {
       }, 0);
       
       // Net profit/loss (income - expenses)
-      const netProfit = totalFeesCollected - (totalStaffSalaries + otherExpenses);
+      const netProfit = totalFeesCollected - totalExpenses;
       
       // Students by class - include all classes, even those without students
       const studentsByClass = {};
@@ -440,6 +459,17 @@ const Dashboard = () => {
         return acc;
       }, {});
 
+      // Calculate total classes and sections
+      const totalClasses = classes.length;
+      const totalSections = classes.reduce((sum, classItem) => sum + (classItem.sections?.length || 0), 0);
+      
+      // Calculate total subjects (unique subjects only)
+      const allSubjectNames = classes.flatMap(classItem => 
+        classItem.subjects?.map(subject => subject.name) || []
+      );
+      const uniqueSubjectNames = [...new Set(allSubjectNames)];
+      const totalSubjects = uniqueSubjectNames.length;
+      
       return {
         totalExpenses,
         totalStaffSalaries,
@@ -450,7 +480,10 @@ const Dashboard = () => {
         studentsByClass,
         expensesByCategory,
         staffByPosition,
-        totalStaff: filteredStaff.length
+        totalStaff: filteredStaff.length,
+        totalClasses,
+        totalSections,
+        totalSubjects
       };
     }
   }, [students, filteredData, classes, selectedQuarter, selectedYear, viewMode]);
@@ -479,12 +512,12 @@ const Dashboard = () => {
     if (viewMode === 'subsidies') {
       // Add subsidy activities based on filtered data (only received subsidies)
       filteredSubsidies.forEach(subsidy => {
-        if (subsidy.status === 'received' && subsidy.date) {
+        if (subsidy.status === 'received' && subsidy.receivedDate) {
           activities.push({
             id: `subsidy-${subsidy.id}`,
             type: 'Subsidy Received',
             description: `${subsidy.description} for ${subsidy.quarter} ${subsidy.year}`,
-            date: subsidy.date,
+            date: subsidy.receivedDate,
             category: 'Income',
             amount: parseFloat(subsidy.amount)
           });
@@ -685,163 +718,215 @@ const Dashboard = () => {
     setCurrentPage(1);
   }, [filteredActivities]);
 
+  // Prepare quarter and year dropdowns for subsidy view
+  const quarterYearFilters = viewMode === 'subsidies' ? (
+    <>
+      <select
+        value={selectedYear}
+        onChange={(e) => setSelectedYear(e.target.value)}
+        className="block w-full md:w-auto pl-3 pr-10 py-1 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-sm"
+      >
+        <option value="all">All Years</option>
+        {availableYears.map(year => (
+          <option key={year} value={year}>{year}</option>
+        ))}
+      </select>
+      
+      <select
+        value={selectedQuarter}
+        onChange={(e) => setSelectedQuarter(e.target.value)}
+        className="block w-full md:w-auto pl-3 pr-10 py-1 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-sm"
+      >
+        <option value="all">All Quarters</option>
+        {availableQuarters.map(quarter => (
+          <option key={quarter} value={quarter}>{`Q${quarter}`}</option>
+        ))}
+      </select>
+    </>
+  ) : null;
+
   return (
     <div>
       <PageHeader
         title="Dashboard"
         subtitle="Welcome back! Here's what's happening with your school today."
+        quarterYearFilters={quarterYearFilters}
       />
 
       {/* NGO Funding Info Banner */}
       <FundingConditional showFor="ngo">
-        <div className="mb-6">
+        {/* <div className="mb-6">
           <NGOFundingInfo />
-        </div>
+        </div> */}
       </FundingConditional>
 
-      {/* View Mode Toggle - Only show for traditional schools */}
-      <FundingConditional showFor="traditional">
-        <div className="flex mb-6">
-          <button
-            onClick={() => setViewMode('fees')}
-            className={`px-4 py-2 rounded-l-lg border ${
-              viewMode === 'fees'
-                ? 'bg-blue-600 text-white border-blue-600'
-                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-            }`}
-          >
-            <FaMoneyBillWave className="inline mr-2" />
-            Fees View
-          </button>
-          <button
-            onClick={() => setViewMode('subsidies')}
-            className={`px-4 py-2 rounded-r-lg border ${
-              viewMode === 'subsidies'
-                ? 'bg-blue-600 text-white border-blue-600'
-                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-            }`}
-          >
-            <FaChartLine className="inline mr-2" />
-            Subsidies View
-          </button>
-        </div>
-      </FundingConditional>
+
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-        <div className="bg-white rounded-2xl shadow-lg p-6">
-          <div className="flex items-center">
-            <div className="bg-blue-100 p-3 rounded-full">
-              <FaUsers className="text-blue-600 text-xl" />
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+        {/* Financial Stats */}
+        <div className="bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl shadow-lg p-6 text-white transform transition-all duration-300 hover:scale-[1.02]">
+          <div className="flex items-start justify-between mb-5">
+            <div>
+              <h3 className="text-white text-opacity-90 text-sm font-medium mb-1">Financial Overview</h3>
+              <p className="text-white text-opacity-70 text-xs">Income and expenses summary</p>
             </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Total Students</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.totalStudents}</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-2xl shadow-lg p-6">
-          <div className="flex items-center">
-            <div className="bg-green-100 p-3 rounded-full">
+            <div className="p-3 bg-white bg-opacity-20 rounded-lg">
               <FundingConditional showFor="traditional">
-                <FaDollarSign className="text-green-600 text-xl" />
+                <FaDollarSign className="text-white text-xl" />
               </FundingConditional>
               <FundingConditional showFor="ngo">
-                <FaHandHoldingUsd className="text-green-600 text-xl" />
+                <FaHandHoldingUsd className="text-white text-xl" />
               </FundingConditional>
             </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">
+          </div>
+          
+          <div className="space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-white border-opacity-20">
+              <div>
+                <p className="text-white text-opacity-90 text-sm font-medium">
+                  <FundingConditional showFor="traditional">Fees Collected</FundingConditional>
+                  <FundingConditional showFor="ngo">Subsidies Received</FundingConditional>
+                </p>
+                <p className="text-2xl font-bold mt-1">
+                  Rs <FundingConditional showFor="traditional">{stats.totalFeesCollected?.toLocaleString()}</FundingConditional>
+                  <FundingConditional showFor="ngo">{stats.totalSubsidiesReceived?.toLocaleString()}</FundingConditional>
+                </p>
+              </div>
+              <div className="p-2 bg-white bg-opacity-20 rounded-lg">
                 <FundingConditional showFor="traditional">
-                  Fees Collected
+                  <FaDollarSign className="text-white" />
                 </FundingConditional>
                 <FundingConditional showFor="ngo">
-                  Subsidies Received
+                  <FaHandHoldingUsd className="text-white" />
                 </FundingConditional>
-              </p>
-              <p className="text-2xl font-bold text-gray-900">
-                Rs <FundingConditional showFor="traditional">{stats.totalFeesCollected?.toLocaleString()}</FundingConditional>
-                <FundingConditional showFor="ngo">{stats.totalSubsidiesReceived?.toLocaleString()}</FundingConditional>
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-2xl shadow-lg p-6">
-          <div className="flex items-center">
-            <div className="bg-red-100 p-3 rounded-full">
-              <FaChartPie className="text-red-600 text-xl" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Total Expenses</p>
-              <p className="text-2xl font-bold text-gray-900">Rs {stats.totalExpenses?.toLocaleString()}</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-2xl shadow-lg p-6">
-          <div className="flex items-center">
-            <div className="bg-purple-100 p-3 rounded-full">
-              <FaChartBar className="text-purple-600 text-xl" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Net Position</p>
-              <p className={`text-2xl font-bold ${stats.netProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                Rs {Math.abs(stats.netProfit)?.toLocaleString()} {stats.netProfit < 0 ? '(Loss)' : ''}
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Quick Actions */}
-      <div className="bg-white rounded-2xl shadow-lg p-6 mb-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4">
-          <Link to="/students/admission" className="flex flex-col items-center justify-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-            <div className="bg-blue-100 p-3 rounded-full mb-2">
-              <FaUsers className="text-blue-600 text-xl" />
-            </div>
-            <span className="text-xs font-medium text-gray-900 text-center">New Admission</span>
-          </Link>
-          
-          <FundingConditional showFor="traditional">
-            <Link to="/fees" className="flex flex-col items-center justify-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-              <div className="bg-green-100 p-3 rounded-full mb-2">
-                <FaMoneyBillWave className="text-green-600 text-xl" />
               </div>
-              <span className="text-xs font-medium text-gray-900 text-center">Fee Collection</span>
-            </Link>
-          </FundingConditional>
-          
-          <Link to="/expenses" className="flex flex-col items-center justify-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-            <div className="bg-red-100 p-3 rounded-full mb-2">
-              <FaChartPie className="text-red-600 text-xl" />
             </div>
-            <span className="text-xs font-medium text-gray-900 text-center">Add Expense</span>
-          </Link>
-          
-          <Link to="/staff" className="flex flex-col items-center justify-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-            <div className="bg-purple-100 p-3 rounded-full mb-2">
-              <FaChalkboardTeacher className="text-purple-600 text-xl" />
+            
+            <div className="flex items-center justify-between pb-3 border-b border-white border-opacity-20">
+              <div>
+                <p className="text-white text-opacity-90 text-sm font-medium">Total Expenses</p>
+                <p className="text-2xl font-bold mt-1">Rs {stats.totalExpenses?.toLocaleString()}</p>
+              </div>
+              <div className="p-2 bg-white bg-opacity-20 rounded-lg">
+                <FaChartPie className="text-white" />
+              </div>
             </div>
-            <span className="text-xs font-medium text-gray-900 text-center">Add Staff</span>
-          </Link>
-          
-          <Link to="/classes" className="flex flex-col items-center justify-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-            <div className="bg-yellow-100 p-3 rounded-full mb-2">
-              <FaBook className="text-yellow-600 text-xl" />
+            
+            <div className="space-y-3 pt-2">
+              <div className="flex justify-between items-center">
+                <div className="flex items-center">
+                  <div className="w-2 h-2 rounded-full bg-white bg-opacity-50 mr-2"></div>
+                  <span className="text-white text-opacity-80 text-sm">Staff Salaries</span>
+                </div>
+                <span className="font-medium text-sm">Rs {stats.totalStaffSalaries?.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <div className="flex items-center">
+                  <div className="w-2 h-2 rounded-full bg-white bg-opacity-50 mr-2"></div>
+                  <span className="text-white text-opacity-80 text-sm">Other Expenses</span>
+                </div>
+                <span className="font-medium text-sm">Rs {stats.otherExpenses?.toLocaleString()}</span>
+              </div>
             </div>
-            <span className="text-xs font-medium text-gray-900 text-center">Manage Classes</span>
-          </Link>
-          
-          <Link to="/subsidies" className="flex flex-col items-center justify-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-            <div className="bg-indigo-100 p-3 rounded-full mb-2">
-              <FaHandHoldingUsd className="text-indigo-600 text-xl" />
+          </div>
+        </div>
+        
+        {/* Student & Class Stats */}
+        <div className="bg-gradient-to-br from-blue-500 to-cyan-600 rounded-2xl shadow-lg p-6 text-white transform transition-all duration-300 hover:scale-[1.02]">
+          <div className="flex items-start justify-between mb-5">
+            <div>
+              <h3 className="text-white text-opacity-90 text-sm font-medium mb-1">Academic Overview</h3>
+              <p className="text-white text-opacity-70 text-xs">Students, classes and subjects</p>
             </div>
-            <span className="text-xs font-medium text-gray-900 text-center">Subsidies</span>
-          </Link>
+            <div className="p-3 bg-white bg-opacity-20 rounded-lg">
+              <FaUsers className="text-white text-xl" />
+            </div>
+          </div>
+          
+          <div className="space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-white border-opacity-20">
+              <div>
+                <p className="text-white text-opacity-90 text-sm font-medium">Total Students</p>
+                <p className="text-2xl font-bold mt-1">{stats.totalStudents}</p>
+              </div>
+              <div className="p-2 bg-white bg-opacity-20 rounded-lg">
+                <FaUsers className="text-white" />
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-3 pt-2">
+              <div className="bg-white bg-opacity-10 rounded-lg p-3">
+                <p className="text-white text-opacity-80 text-xs mb-1">Classes</p>
+                <p className="text-xl font-bold">{stats.totalClasses}</p>
+              </div>
+              <div className="bg-white bg-opacity-10 rounded-lg p-3">
+                <p className="text-white text-opacity-80 text-xs mb-1">Sections</p>
+                <p className="text-xl font-bold">{stats.totalSections}</p>
+              </div>
+              <div className="bg-white bg-opacity-10 rounded-lg p-3">
+                <p className="text-white text-opacity-80 text-xs mb-1">Subjects</p>
+                <p className="text-xl font-bold">{stats.totalSubjects}</p>
+              </div>
+              <div className="bg-white bg-opacity-10 rounded-lg p-3">
+                <p className="text-white text-opacity-80 text-xs mb-1">Avg. per Class</p>
+                <p className="text-xl font-bold">{stats.totalClasses > 0 ? Math.round(stats.totalStudents / stats.totalClasses) : 0}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        {/* Staff & Net Position Stats */}
+        <div className="bg-gradient-to-br from-purple-500 to-fuchsia-600 rounded-2xl shadow-lg p-6 text-white transform transition-all duration-300 hover:scale-[1.02]">
+          <div className="flex items-start justify-between mb-5">
+            <div>
+              <h3 className="text-white text-opacity-90 text-sm font-medium mb-1">Staff & Finance</h3>
+              <p className="text-white text-opacity-70 text-xs">Team size and financial position</p>
+            </div>
+            <div className="p-3 bg-white bg-opacity-20 rounded-lg">
+              <FaUserTie className="text-white text-xl" />
+            </div>
+          </div>
+          
+          <div className="space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-white border-opacity-20">
+              <div>
+                <p className="text-white text-opacity-90 text-sm font-medium">Total Staff</p>
+                <p className="text-2xl font-bold mt-1">{stats.totalStaff}</p>
+              </div>
+              <div className="p-2 bg-white bg-opacity-20 rounded-lg">
+                <FaUserTie className="text-white" />
+              </div>
+            </div>
+            
+            <div className="flex items-center justify-between pb-3 border-b border-white border-opacity-20">
+              <div>
+                <p className="text-white text-opacity-90 text-sm font-medium">Net Position</p>
+                <p className={`text-2xl font-bold mt-1 ${stats.netProfit >= 0 ? 'text-green-200' : 'text-red-200'}`}>
+                  Rs {Math.abs(stats.netProfit)?.toLocaleString()} {stats.netProfit < 0 ? '(Loss)' : ''}
+                </p>
+              </div>
+              <div className="p-2 bg-white bg-opacity-20 rounded-lg">
+                <FaChartBar className="text-white" />
+              </div>
+            </div>
+            
+            <div className="pt-2">
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-white text-opacity-80 text-sm">Financial Health</span>
+                <span className={`text-xs font-medium px-2 py-1 rounded-full ${stats.netProfit >= 0 ? 'bg-green-500 bg-opacity-30 text-green-100' : 'bg-red-500 bg-opacity-30 text-red-100'}`}>
+                  {stats.netProfit >= 0 ? 'Positive' : 'Negative'}
+                </span>
+              </div>
+              <div className="w-full bg-white bg-opacity-20 rounded-full h-2">
+                <div 
+                  className={`h-2 rounded-full ${stats.netProfit >= 0 ? 'bg-green-300' : 'bg-red-300'}`}
+                  style={{ width: `${Math.min(100, Math.abs(stats.netProfit) / (stats.totalExpenses || 1) * 100)}%` }}
+                ></div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -881,19 +966,7 @@ const Dashboard = () => {
               <option value="out">Expenses</option>
             </select>
             
-            {/* Show year dropdown only in subsidy view */}
-            {viewMode === 'subsidies' && (
-              <select
-                value={selectedYear}
-                onChange={(e) => setSelectedYear(e.target.value)}
-                className="block w-full md:w-auto pl-3 pr-10 py-1 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-sm"
-              >
-                <option value="all">All Years</option>
-                {availableYears.map(year => (
-                  <option key={year} value={year}>{year}</option>
-                ))}
-              </select>
-            )}
+
             
             {/* Search */}
             <div className="relative flex-grow max-w-md md:max-w-xs">

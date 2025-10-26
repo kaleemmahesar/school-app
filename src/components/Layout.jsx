@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { FaUsers, FaMoneyBillWave, FaChalkboardTeacher, FaBook, FaGraduationCap, FaChartLine, FaDollarSign, FaClipboardList, FaChevronDown, FaQrcode, FaUsersCog, FaFileInvoice, FaTasks, FaListOl, FaFileAlt, FaEdit, FaGraduationCap as FaGraduationCapIcon, FaCalendarAlt, FaCertificate, FaUser, FaSignOutAlt, FaCog, FaTable, FaSearch, FaHandHoldingUsd } from 'react-icons/fa';
-import UniversalSearch from './common/UniversalSearch';
 import { logoutUser } from '../store/usersSlice';
 import Logo from '../img/logo.png';
 import { useSchoolFunding } from '../hooks/useSchoolFunding';
@@ -155,10 +154,7 @@ const Layout = ({ children }) => {
               <div className="rounded-xl">
                 <img src={Logo} alt="Logo" className="h-14 w-auto" />
               </div>
-              <h1 className="ml-3 text-2xl font-bold text-gray-900">Asad High School Larkana</h1>
-            </div>
-            <div className="flex-1 max-w-lg mx-6">
-              <UniversalSearch />
+              <h1 className="ml-3 text-2xl font-bold text-gray-900">SEF High School Larkana</h1>
             </div>
             <div className="flex items-center space-x-4">
               {currentUser ? (
@@ -205,7 +201,7 @@ const Layout = ({ children }) => {
       {/* Navigation */}
       <nav className="bg-white shadow-sm border-t border-gray-200 sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex py-3 space-x-6">
+          <div className="flex py-3 space-x-6 justify-between">
             
             {navItems.map((item, index) => (
               <div key={index} className="dropdown-container relative">

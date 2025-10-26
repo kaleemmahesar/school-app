@@ -84,21 +84,27 @@ const ExpensesSection = () => {
     return matchesSearch && matchesCategory;
   });
 
-  // Calculate total expenses based on filtered results
-  const totalFilteredExpenses = filteredExpenses.reduce((sum, expense) => sum + parseFloat(expense.amount), 0);
+  // Calculate total expenses based on filtered results (excluding salary expenses)
+  const totalFilteredExpenses = filteredExpenses
+    .filter(expense => expense.category !== 'Salary')
+    .reduce((sum, expense) => sum + parseFloat(expense.amount), 0);
 
-  // Group expenses by category for summary based on filtered results
-  const filteredExpensesByCategory = filteredExpenses.reduce((acc, expense) => {
-    if (!acc[expense.category]) {
-      acc[expense.category] = { total: 0, count: 0 };
-    }
-    acc[expense.category].total += parseFloat(expense.amount);
-    acc[expense.category].count += 1;
-    return acc;
-  }, {});
+  // Group expenses by category for summary based on filtered results (excluding salary)
+  const filteredExpensesByCategory = filteredExpenses
+    .filter(expense => expense.category !== 'Salary')
+    .reduce((acc, expense) => {
+      if (!acc[expense.category]) {
+        acc[expense.category] = { total: 0, count: 0 };
+      }
+      acc[expense.category].total += parseFloat(expense.amount);
+      acc[expense.category].count += 1;
+      return acc;
+    }, {});
 
-  // Use all categories for the dropdown, but show stats based on filtered results
-  const totalCategories = new Set(filteredExpenses.map(expense => expense.category)).size;
+  // Use all categories for the dropdown, but show stats based on filtered results (excluding salary)
+  const totalCategories = new Set(filteredExpenses
+    .filter(expense => expense.category !== 'Salary')
+    .map(expense => expense.category)).size;
 
   if (loading) return <div className="flex justify-center items-center h-64"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div></div>;
   if (error) return <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded">

@@ -1,6 +1,6 @@
 import React from 'react';
 
-const PageHeader = ({ title, subtitle, actionButton, children }) => {
+const PageHeader = ({ title, subtitle, actionButton, quarterYearFilters, children }) => {
   return (
     <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
       <div>
@@ -8,7 +8,10 @@ const PageHeader = ({ title, subtitle, actionButton, children }) => {
         {subtitle && <p className="mt-1 text-sm text-gray-600">{subtitle}</p>}
         {children && <div className="mt-2">{children}</div>}
       </div>
-      {actionButton && <div className="mt-4 md:mt-0">{actionButton}</div>}
+      <div className="flex items-center space-x-2 mt-4 md:mt-0">
+        {quarterYearFilters && <div className="flex space-x-2">{quarterYearFilters}</div>}
+        {actionButton && <div>{actionButton}</div>}
+      </div>
     </div>
   );
 };

@@ -1369,8 +1369,8 @@ export const deleteStudent = createDeleteThunk(
  */
 export const payFees = createAsyncThunkWithToast(
   'students/payFees',
-  async ({ studentId, amount, month, paymentMethod, paymentDate }) => {
-    return { studentId, amount, month, paymentMethod, paymentDate };
+  async ({ challanId, paymentMethod, paymentDate }) => {
+    return { challanId, paymentMethod, paymentDate };
   },
   {
     successMessage: 'Fees paid successfully',
@@ -1486,21 +1486,21 @@ const studentsSlice = createSlice({
         state.students = state.students.filter(student => student.id !== action.payload);
       })
       .addCase(payFees.fulfilled, (state, action) => {
-        const { studentId, amount, month, paymentMethod, paymentDate } = action.payload;
-        const student = state.students.find(s => s.id === studentId);
+        const { challanId, paymentMethod, paymentDate } = action.payload;
+        // Find the student who has this challan
+        const student = state.students.find(s => 
+          s.feesHistory && s.feesHistory.some(f => f.id === challanId)
+        );
         if (student) {
-          student.feesPaid = (parseFloat(student.feesPaid) || 0) + parseFloat(amount || 0);
-          // First try to find by ID (for specific challan updates)
-          let feeRecord = student.feesHistory.find(f => f.id === month);
-          // If not found, try to find by month (for backward compatibility)
-          if (!feeRecord) {
-            feeRecord = student.feesHistory.find(f => f.month === month);
-          }
+          const feeRecord = student.feesHistory.find(f => f.id === challanId);
           if (feeRecord) {
             feeRecord.paid = true;
             feeRecord.status = 'paid';
             feeRecord.date = paymentDate || new Date().toISOString().split('T')[0];
             feeRecord.paymentMethod = paymentMethod || 'cash'; // Default to cash if not provided
+            
+            // Update total fees paid
+            student.feesPaid = (parseFloat(student.feesPaid) || 0) + parseFloat(feeRecord.amount || 0);
           }
         }
       })

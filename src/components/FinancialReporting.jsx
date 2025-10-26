@@ -180,72 +180,72 @@ const FinancialReporting = () => {
       </div>
       
       {/* NGO Funding Info Banner */}
-      <FundingConditional showFor="ngo">
+      {/* <FundingConditional showFor="ngo">
         <div className="mb-6">
           <NGOFundingInfo />
         </div>
-      </FundingConditional>
+      </FundingConditional> */}
       
       {/* Summary Cards */}
-      <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-${isNGOSchool ? '3' : '5'} gap-4 mb-6`}>
+      <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-${isNGOSchool ? '4' : '4'} gap-6 mb-6`}>
         <FundingConditional showFor="traditional">
-          <div className="bg-white rounded-lg shadow p-4">
+          <div className="bg-white rounded-2xl shadow-lg p-6">
             <div className="flex items-center">
-              <div className="p-3 rounded-full bg-green-100">
-                <FaDollarSign className="text-green-600" />
+              <div className="p-3 rounded-full bg-blue-100">
+                <FaDollarSign className="text-blue-600" />
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-500">Fees Collected</p>
-                <p className="text-lg font-semibold text-gray-900">{formatCurrency(financialSummary.totalFeesCollected)}</p>
+                <p className="text-sm font-medium text-gray-600">Fees Collected</p>
+                <p className="text-2xl font-bold text-gray-900">{formatCurrency(financialSummary.totalFeesCollected)}</p>
               </div>
             </div>
           </div>
         </FundingConditional>
         
-        <div className="bg-white rounded-lg shadow p-4">
+        <div className="bg-white rounded-2xl shadow-lg p-6">
           <div className="flex items-center">
-            <div className="p-3 rounded-full bg-blue-100">
-              <FaBuilding className="text-blue-600" />
+            <div className="p-3 rounded-full bg-green-100">
+              <FaBuilding className="text-green-600" />
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-500">Subsidies Received</p>
-              <p className="text-lg font-semibold text-gray-900">{formatCurrency(financialSummary.totalSubsidiesReceived)}</p>
+              <p className="text-sm font-medium text-gray-600">Subsidies Received</p>
+              <p className="text-2xl font-bold text-gray-900">{formatCurrency(financialSummary.totalSubsidiesReceived)}</p>
             </div>
           </div>
         </div>
         
-        <div className="bg-white rounded-lg shadow p-4">
+        <div className="bg-white rounded-2xl shadow-lg p-6">
           <div className="flex items-center">
-            <div className="p-3 rounded-full bg-purple-100">
-              <FaChartLine className="text-purple-600" />
+            <div className="p-3 rounded-full bg-green-100">
+              <FaChartLine className="text-green-600" />
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-500">Total Income</p>
-              <p className="text-lg font-semibold text-gray-900">{formatCurrency(financialSummary.totalIncome)}</p>
+              <p className="text-sm font-medium text-gray-600">Total Income</p>
+              <p className="text-2xl font-bold text-gray-900">{formatCurrency(financialSummary.totalIncome)}</p>
             </div>
           </div>
         </div>
         
-        <div className="bg-white rounded-lg shadow p-4">
+        <div className="bg-white rounded-2xl shadow-lg p-6">
           <div className="flex items-center">
             <div className="p-3 rounded-full bg-red-100">
               <FaMoneyBillWave className="text-red-600" />
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-500">Total Expenses</p>
-              <p className="text-lg font-semibold text-gray-900">{formatCurrency(financialSummary.totalExpenses)}</p>
+              <p className="text-sm font-medium text-gray-600">Total Expenses</p>
+              <p className="text-2xl font-bold text-gray-900">{formatCurrency(financialSummary.totalExpenses)}</p>
             </div>
           </div>
         </div>
         
-        <div className={`bg-white rounded-lg shadow p-4 ${financialSummary.netBalance >= 0 ? 'border-t-4 border-green-500' : 'border-t-4 border-red-500'}`}>
+        <div className={`bg-white rounded-2xl shadow-lg p-6 ${financialSummary.netBalance >= 0 ? 'border-t-4 border-green-500' : 'border-t-4 border-red-500'}`}>
           <div className="flex items-center">
             <div className={`p-3 rounded-full ${financialSummary.netBalance >= 0 ? 'bg-green-100' : 'bg-red-100'}`}>
               <FaChartLine className={financialSummary.netBalance >= 0 ? 'text-green-600' : 'text-red-600'} />
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-500">Net Balance</p>
-              <p className={`text-lg font-semibold ${financialSummary.netBalance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+              <p className="text-sm font-medium text-gray-600">Net Balance</p>
+              <p className={`text-2xl font-bold ${financialSummary.netBalance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                 {formatCurrency(financialSummary.netBalance)}
               </p>
             </div>

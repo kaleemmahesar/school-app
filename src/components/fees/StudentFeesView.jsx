@@ -1,25 +1,37 @@
 import React from 'react';
-import { FaEye } from 'react-icons/fa';
+import { FaEye, FaCheckCircle, FaExclamationCircle } from 'react-icons/fa';
 
 const StudentFeesView = ({ filteredStudents, onViewDetails }) => {
   return (
     <tbody className="bg-white divide-y divide-gray-200">
       {filteredStudents.map((student) => (
-        <tr key={student.id} className="hover:bg-gray-50">
-          <td className="px-6 py-4 whitespace-nowrap">
+        <tr 
+          key={student.id} 
+          className={`hover:bg-gray-50 border-l-4 ${
+            student.completionRate < 100 || !student.admissionPaid 
+              ? 'border-l-red-500' 
+              : 'border-l-green-500'
+          }`}
+        >
+          <td className="px-4 py-3 whitespace-nowrap">
             <div className="flex items-center">
-              <div className="bg-gray-200 border-2 border-dashed rounded-xl w-10 h-10" />
-              <div className="ml-4">
-                <div className="text-sm font-medium text-gray-900">
-                  {student.firstName} {student.lastName}
-                </div>
-                <div className="text-sm text-gray-500">ID: {student.id}</div>
+              <div className="bg-gray-200 border-2 border-dashed rounded-xl w-8 h-8 flex items-center justify-center">
+                <svg className="w-4 h-4 text-gray-500" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+                </svg>
               </div>
             </div>
           </td>
-          <td className="px-6 py-4 whitespace-nowrap">
-            <div className="text-sm text-gray-900">{student.class}</div>
-            <div className="text-sm text-gray-500">Section {student.section}</div>
+          <td className="px-4 py-3 whitespace-nowrap">
+            <div className="text-sm text-gray-900">
+              {student.grNo ? student.grNo.replace('GR', '') : 'N/A'}
+            </div>
+          </td>
+          <td className="px-4 py-3 whitespace-nowrap">
+            <div className="text-sm font-medium text-gray-900">{student.firstName} {student.lastName}</div>
+          </td>
+          <td className="px-4 py-3 whitespace-nowrap">
+            <div className="text-sm text-gray-900">{student.class} - {student.section}</div>
           </td>
           <td className="px-6 py-4 whitespace-nowrap">
             <div className="text-sm text-gray-900">{student.paidChallans}/{student.totalChallans}</div>
@@ -31,7 +43,10 @@ const StudentFeesView = ({ filteredStudents, onViewDetails }) => {
             <div className="flex items-center">
               <div className="w-24 bg-gray-200 rounded-full h-2 mr-2">
                 <div 
-                  className="bg-blue-600 h-2 rounded-full" 
+                  className={`h-2 rounded-full ${
+                    student.completionRate === 100 ? 'bg-green-500' : 
+                    student.completionRate >= 50 ? 'bg-yellow-500' : 'bg-red-500'
+                  }`} 
                   style={{ width: `${student.completionRate}%` }}
                 ></div>
               </div>
@@ -39,12 +54,19 @@ const StudentFeesView = ({ filteredStudents, onViewDetails }) => {
             </div>
           </td>
           <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-            <button
-              onClick={() => onViewDetails(student)}
-              className="inline-flex items-center px-3 py-1 border border-gray-300 text-xs font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50"
-            >
-              <FaEye className="mr-1" /> View Details
-            </button>
+            <div className="flex items-center justify-end space-x-2">
+              {student.completionRate < 100 || !student.admissionPaid ? (
+                <FaExclamationCircle className="text-red-500" />
+              ) : (
+                <FaCheckCircle className="text-green-500" />
+              )}
+              <button
+                onClick={() => onViewDetails(student)}
+                className="inline-flex items-center px-3 py-1 border border-gray-300 text-xs font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50"
+              >
+                <FaEye className="mr-1" /> View Details
+              </button>
+            </div>
           </td>
         </tr>
       ))}

@@ -90,38 +90,38 @@ const SubsidySection = () => {
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center">
-              <div className="p-3 rounded-full bg-green-100">
-                <FaDollarSign className="text-green-600" />
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-500">Total Received</p>
-                <p className="text-2xl font-semibold text-gray-900">Rs {totalReceived.toLocaleString()}</p>
-              </div>
-            </div>
-          </div>
-          
-          <div className="bg-white rounded-lg shadow p-6">
+          <div className="bg-white rounded-2xl shadow-lg p-6">
             <div className="flex items-center">
               <div className="p-3 rounded-full bg-blue-100">
-                <FaCalendar className="text-blue-600" />
+                <FaDollarSign className="text-blue-600" />
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-500">Expected Subsidies</p>
-                <p className="text-2xl font-semibold text-gray-900">Rs {totalExpected.toLocaleString()}</p>
+                <p className="text-sm font-medium text-gray-600">Total Received</p>
+                <p className="text-2xl font-bold text-gray-900">Rs {totalReceived.toLocaleString()}</p>
               </div>
             </div>
           </div>
           
-          <div className="bg-white rounded-lg shadow p-6">
+          <div className="bg-white rounded-2xl shadow-lg p-6">
+            <div className="flex items-center">
+              <div className="p-3 rounded-full bg-purple-100">
+                <FaCalendar className="text-purple-600" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Expected Subsidies</p>
+                <p className="text-2xl font-bold text-gray-900">Rs {totalExpected.toLocaleString()}</p>
+              </div>
+            </div>
+          </div>
+          
+          <div className="bg-white rounded-2xl shadow-lg p-6">
             <div className="flex items-center">
               <div className="p-3 rounded-full bg-purple-100">
                 <FaBuilding className="text-purple-600" />
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-500">Active NGOs</p>
-                <p className="text-2xl font-semibold text-gray-900">
+                <p className="text-sm font-medium text-gray-600">Active NGOs</p>
+                <p className="text-2xl font-bold text-gray-900">
                   {[...new Set(ngoSubsidies.map(s => s.ngoName))].length}
                 </p>
               </div>
