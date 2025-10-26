@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate, useLocation } from 'react-router-dom';
 import DatePicker from 'react-datepicker';
@@ -9,6 +9,8 @@ import { validateForm } from '../utils/validation';
 import { admissionFormValidationRules } from '../utils/validation';
 import PrintableAdmissionForm from './PrintableAdmissionForm';
 import PageHeader from './common/PageHeader';
+import { useSchoolFunding } from '../hooks/useSchoolFunding';
+import FundingConditional from './common/FundingConditional';
 import 'react-datepicker/dist/react-datepicker.css';
 
 const AdmissionPage = () => {
@@ -16,6 +18,7 @@ const AdmissionPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { classes } = useSelector(state => state.classes);
+  const { isNGOSchool } = useSchoolFunding();
   const fileInputRef = useRef(null);
   
   // Check if we're editing an existing student
@@ -36,6 +39,11 @@ const AdmissionPage = () => {
     dateOfAdmission: new Date(), // Default to today
     class: '',
     section: '', // Add section field
+    // Fee-related fields for traditional schools
+    admissionFees: '',
+    monthlyFees: '',
+    feesPaid: '',
+    totalFees: '',
     // Transfer student fields with isTransferStudent flag
     isTransferStudent: false,
     dateOfLeaving: null,
@@ -141,6 +149,8 @@ const AdmissionPage = () => {
   };
 
   const validateFormFields = () => {
+    // Temporarily disabled validation
+    /*
     // Create a copy of the validation rules
     const validationRules = { ...admissionFormValidationRules };
     
@@ -163,6 +173,8 @@ const AdmissionPage = () => {
     const formErrors = validateForm(formData, validationRules);
     setErrors(formErrors);
     return Object.keys(formErrors).length === 0;
+    */
+    return true;
   };
 
 
@@ -170,9 +182,12 @@ const AdmissionPage = () => {
     e.preventDefault();
     
     // Validate form before submitting
+    // Temporarily disabled validation
+    /*
     if (!validateFormFields()) {
       return;
     }
+    */
     
     // Create form data to send to the backend
     const submissionData = { 
@@ -214,9 +229,12 @@ const AdmissionPage = () => {
 
   const handlePrint = () => {
     // Validate form before printing
+    // Temporarily disabled validation
+    /*
     if (!validateFormFields()) {
       return;
     }
+    */
     setShowPrintView(true);
   };
 
@@ -334,8 +352,7 @@ const AdmissionPage = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {/* Photo Upload Section */}
                   <div className="md:col-span-3">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Photo</label>
-                    <div className="flex items-start space-x-4">
+                    <div className="flex flex-col items-start space-y-4 mb-6">
                       <div className="flex-shrink-0">
                         {photoPreview ? (
                           <img 
@@ -393,9 +410,12 @@ const AdmissionPage = () => {
                       className={`block w-full px-4 py-2.5 border ${errors.grNo ? 'border-red-300' : 'border-gray-300'} rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 transition`}
                       placeholder="Enter GR Number"
                     />
+                    {/* Temporarily disabled validation error display */}
+                    {/*
                     {errors.grNo && (
                       <p className="mt-1 text-sm text-red-600">{errors.grNo}</p>
                     )}
+                    */}
                   </div>
                   
                   <div>
@@ -410,9 +430,12 @@ const AdmissionPage = () => {
                       className={`block w-full px-4 py-2.5 border ${errors.firstName ? 'border-red-300' : 'border-gray-300'} rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 transition`}
                       placeholder="Enter Student Name"
                     />
+                    {/* Temporarily disabled validation error display */}
+                    {/*
                     {errors.firstName && (
                       <p className="mt-1 text-sm text-red-600">{errors.firstName}</p>
                     )}
+                    */}
                   </div>
                   
                   <div>
@@ -427,9 +450,12 @@ const AdmissionPage = () => {
                       className={`block w-full px-4 py-2.5 border ${errors.fatherName ? 'border-red-300' : 'border-gray-300'} rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 transition`}
                       placeholder="Enter Father's Name"
                     />
+                    {/* Temporarily disabled validation error display */}
+                    {/*
                     {errors.fatherName && (
                       <p className="mt-1 text-sm text-red-600">{errors.fatherName}</p>
                     )}
+                    */}
                   </div>
                   
                   <div>
@@ -471,9 +497,12 @@ const AdmissionPage = () => {
                         <span className={`text-sm ${formData.religion === 'Christian' ? 'text-blue-600 font-medium' : 'text-gray-700'}`}>Christian</span>
                       </label>
                     </div>
+                    {/* Temporarily disabled validation error display */}
+                    {/*
                     {errors.religion && (
                       <p className="mt-1 text-sm text-red-600">{errors.religion}</p>
                     )}
+                    */}
                   </div>
                   
                   {/* Address field spanning full width */}
@@ -489,9 +518,12 @@ const AdmissionPage = () => {
                       className={`block w-full px-4 py-2.5 border ${errors.address ? 'border-red-300' : 'border-gray-300'} rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 transition`}
                       placeholder="Enter Full Address"
                     />
+                    {/* Temporarily disabled validation error display */}
+                    {/*
                     {errors.address && (
                       <p className="mt-1 text-sm text-red-600">{errors.address}</p>
                     )}
+                    */}
                   </div>
                   
                   <div>
@@ -512,9 +544,12 @@ const AdmissionPage = () => {
                         <FaCalendar className="h-5 w-5 text-gray-400" />
                       </div>
                     </div>
+                    {/* Temporarily disabled validation error display */}
+                    {/*
                     {errors.dateOfBirth && (
                       <p className="mt-1 text-sm text-red-600">{errors.dateOfBirth}</p>
                     )}
+                    */}
                   </div>
                   
                   <div>
@@ -529,9 +564,12 @@ const AdmissionPage = () => {
                       className={`block w-full px-4 py-2.5 border ${errors.birthPlace ? 'border-red-300' : 'border-gray-300'} rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 transition`}
                       placeholder="Enter Place of Birth"
                     />
+                    {/* Temporarily disabled validation error display */}
+                    {/*
                     {errors.birthPlace && (
                       <p className="mt-1 text-sm text-red-600">{errors.birthPlace}</p>
                     )}
+                    */}
                   </div>
                   
                   <div>
@@ -546,9 +584,12 @@ const AdmissionPage = () => {
                       className={`block w-full px-4 py-2.5 border ${errors.lastSchoolAttended ? 'border-red-300' : 'border-gray-300'} rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 transition`}
                       placeholder="Enter Last School Attended"
                     />
+                    {/* Temporarily disabled validation error display */}
+                    {/*
                     {errors.lastSchoolAttended && (
                       <p className="mt-1 text-sm text-red-600">{errors.lastSchoolAttended}</p>
                     )}
+                    */}
                   </div>
                   
                   <div>
@@ -569,9 +610,12 @@ const AdmissionPage = () => {
                         <FaCalendar className="h-5 w-5 text-gray-400" />
                       </div>
                     </div>
+                    {/* Temporarily disabled validation error display */}
+                    {/*
                     {errors.dateOfAdmission && (
                       <p className="mt-1 text-sm text-red-600">{errors.dateOfAdmission}</p>
                     )}
+                    */}
                   </div>
                   
                   {/* Class Field */}
@@ -595,9 +639,12 @@ const AdmissionPage = () => {
                         ))}
                       </select>
                     </div>
+                    {/* Temporarily disabled validation error display */}
+                    {/*
                     {errors.class && (
                       <p className="mt-1 text-sm text-red-600">{errors.class}</p>
                     )}
+                    */}
                   </div>
 
                   {/* Section Field */}
@@ -622,9 +669,12 @@ const AdmissionPage = () => {
                         ))}
                       </select>
                     </div>
+                    {/* Temporarily disabled validation error display */}
+                    {/*
                     {errors.section && (
                       <p className="mt-1 text-sm text-red-600">{errors.section}</p>
                     )}
+                    */}
                   </div>
                   
                   {/* Transfer Student Information Toggle */}
@@ -666,9 +716,12 @@ const AdmissionPage = () => {
                             <FaCalendar className="h-5 w-5 text-gray-400" />
                           </div>
                         </div>
+                        {/* Temporarily disabled validation error display */}
+                        {/*
                         {errors.dateOfLeaving && (
                           <p className="mt-1 text-sm text-red-600">{errors.dateOfLeaving}</p>
                         )}
+                        */}
                       </div>
                       
                       <div>
@@ -683,9 +736,12 @@ const AdmissionPage = () => {
                           className={`block w-full px-4 py-2.5 border ${errors.classInWhichLeft ? 'border-red-300' : 'border-gray-300'} rounded-lg focus:ring-blue-500 focus:border-blue-500 transition`}
                           placeholder="Enter Class at time of removal"
                         />
+                        {/* Temporarily disabled validation error display */}
+                        {/*
                         {errors.classInWhichLeft && (
                           <p className="mt-1 text-sm text-red-600">{errors.classInWhichLeft}</p>
                         )}
+                        */}
                       </div>
                       
                       <div>
@@ -700,9 +756,12 @@ const AdmissionPage = () => {
                           className={`block w-full px-4 py-2.5 border ${errors.reasonOfLeaving ? 'border-red-300' : 'border-gray-300'} rounded-lg focus:ring-blue-500 focus:border-blue-500 transition`}
                           placeholder="Enter Reason for leaving"
                         />
+                        {/* Temporarily disabled validation error display */}
+                        {/*
                         {errors.reasonOfLeaving && (
                           <p className="mt-1 text-sm text-red-600">{errors.reasonOfLeaving}</p>
                         )}
+                        */}
                       </div>
                     </>
                   )}
@@ -719,22 +778,146 @@ const AdmissionPage = () => {
                       className={`block w-full px-4 py-2.5 border ${errors.remarks ? 'border-red-300' : 'border-gray-300'} rounded-lg focus:ring-blue-500 focus:border-blue-500 transition`}
                       placeholder="Enter Remarks"
                     />
+                    {/* Temporarily disabled validation error display */}
+                    {/*
                     {errors.remarks && (
                       <p className="mt-1 text-sm text-red-600">{errors.remarks}</p>
                     )}
+                    */}
                   </div>
                 </div>
               </div>
               
-              {/* NGO Funding Section */}
-              <div className="bg-white rounded-lg shadow-lg p-6">
-                <h2 className="text-lg font-semibold text-gray-900 mb-4 border-b border-gray-200 pb-2">NGO Funding</h2>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                  <div className="md:col-span-4">
-                    <p className="text-gray-600">This school is funded by quarterly NGO subsidies. No fees are charged to students.</p>
+              {/* Fee Information Section - Only for traditional schools */}
+              <FundingConditional showFor="traditional">
+                <div className="bg-white rounded-lg shadow-lg p-6">
+                  <h2 className="text-lg font-semibold text-gray-900 mb-4 border-b border-gray-200 pb-2">Fee Information</h2>
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Admission Fees
+                      </label>
+                      <div className="relative">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                          <FaMoneyBillWave className="h-5 w-5 text-gray-400" />
+                        </div>
+                        <input
+                          type="number"
+                          name="admissionFees"
+                          value={formData.admissionFees}
+                          onChange={handleInputChange}
+                          className={`block w-full pl-10 pr-3 py-2.5 border ${errors.admissionFees ? 'border-red-300' : 'border-gray-300'} rounded-lg focus:ring-blue-500 focus:border-blue-500 transition`}
+                          placeholder="Enter Admission Fees"
+                        />
+                      </div>
+                      {/* Temporarily disabled validation error display */}
+                      {/*
+                      {errors.admissionFees && (
+                        <p className="mt-1 text-sm text-red-600">{errors.admissionFees}</p>
+                      )}
+                      */}
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Monthly Fees
+                      </label>
+                      <div className="relative">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                          <FaMoneyBillWave className="h-5 w-5 text-gray-400" />
+                        </div>
+                        <input
+                          type="number"
+                          name="monthlyFees"
+                          value={formData.monthlyFees}
+                          onChange={handleInputChange}
+                          className={`block w-full pl-10 pr-3 py-2.5 border ${errors.monthlyFees ? 'border-red-300' : 'border-gray-300'} rounded-lg focus:ring-blue-500 focus:border-blue-500 transition`}
+                          placeholder="Enter Monthly Fees"
+                        />
+                      </div>
+                      {/* Temporarily disabled validation error display */}
+                      {/*
+                      {errors.monthlyFees && (
+                        <p className="mt-1 text-sm text-red-600">{errors.monthlyFees}</p>
+                      )}
+                      */}
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Fees Paid
+                      </label>
+                      <div className="relative">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                          <FaMoneyBillWave className="h-5 w-5 text-gray-400" />
+                        </div>
+                        <input
+                          type="number"
+                          name="feesPaid"
+                          value={formData.feesPaid}
+                          onChange={handleInputChange}
+                          className={`block w-full pl-10 pr-3 py-2.5 border ${errors.feesPaid ? 'border-red-300' : 'border-gray-300'} rounded-lg focus:ring-blue-500 focus:border-blue-500 transition`}
+                          placeholder="Enter Paid Fees"
+                        />
+                      </div>
+                      {/* Temporarily disabled validation error display */}
+                      {/*
+                      {errors.feesPaid && (
+                        <p className="mt-1 text-sm text-red-600">{errors.feesPaid}</p>
+                      )}
+                      */}
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Total Fees
+                      </label>
+                      <div className="relative">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                          <FaMoneyBillWave className="h-5 w-5 text-gray-400" />
+                        </div>
+                        <input
+                          type="number"
+                          name="totalFees"
+                          value={formData.totalFees}
+                          onChange={handleInputChange}
+                          className={`block w-full pl-10 pr-3 py-2.5 border ${errors.totalFees ? 'border-red-300' : 'border-gray-300'} rounded-lg focus:ring-blue-500 focus:border-blue-500 transition`}
+                          placeholder="Enter Total Fees"
+                        />
+                      </div>
+                      {/* Temporarily disabled validation error display */}
+                      {/*
+                      {errors.totalFees && (
+                        <p className="mt-1 text-sm text-red-600">{errors.totalFees}</p>
+                      )}
+                      */}
+                    </div>
                   </div>
                 </div>
-              </div>
+              </FundingConditional>
+              
+              {/* NGO Funding Section - Only for NGO schools */}
+              <FundingConditional showFor="ngo">
+                <div className="bg-white rounded-lg shadow-lg p-6">
+                  <h2 className="text-lg font-semibold text-gray-900 mb-4 border-b border-gray-200 pb-2">NGO Funding</h2>
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                    <div className="md:col-span-4">
+                      <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded">
+                        <div className="flex">
+                          <div className="flex-shrink-0">
+                            <FaInfoCircle className="h-5 w-5 text-blue-500" />
+                          </div>
+                          <div className="ml-3">
+                            <p className="text-sm text-blue-700">
+                              This school is funded by quarterly NGO subsidies. No fees are charged to students.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </FundingConditional>
               
               {/* Form Actions */}
               <div className="flex justify-end space-x-4 pt-6">

@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { updateSchoolInfo, fetchSchoolInfo } from '../store/settingsSlice';
-import { FaSchool, FaCog, FaUpload, FaSave, FaUndo, FaHandHoldingUsd, FaMoneyBillWave, FaSearch } from 'react-icons/fa';
+import { FaSchool, FaCog, FaUpload, FaSave, FaUndo, FaHandHoldingUsd, FaMoneyBillWave, FaSearch, FaBook, FaQuestionCircle } from 'react-icons/fa';
+import AppGuideModal from './settings/AppGuideModal';
 
 const SettingsPage = () => {
   const dispatch = useDispatch();
@@ -20,6 +21,7 @@ const SettingsPage = () => {
   
   const [logoPreview, setLogoPreview] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
+  const [isGuideOpen, setIsGuideOpen] = useState(false);
 
   // Initialize form with school info
   useEffect(() => {
@@ -125,9 +127,18 @@ const SettingsPage = () => {
 
       <div className="bg-white shadow rounded-lg overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-200">
-          <div className="flex items-center">
-            <FaCog className="text-gray-500 mr-2" />
-            <h2 className="text-lg font-medium text-gray-900">School Information</h2>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <FaCog className="text-gray-500 mr-2" />
+              <h2 className="text-lg font-medium text-gray-900">School Information</h2>
+            </div>
+            <button
+              onClick={() => setIsGuideOpen(true)}
+              className="inline-flex items-center px-3 py-1.5 border border-blue-300 rounded-md shadow-sm text-sm font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            >
+              <FaQuestionCircle className="mr-1.5 h-4 w-4" />
+              App Guide
+            </button>
           </div>
         </div>
 
@@ -470,6 +481,9 @@ const SettingsPage = () => {
           </div>
         </div>
       </div>
+
+      {/* App Guide Modal */}
+      <AppGuideModal isOpen={isGuideOpen} onClose={() => setIsGuideOpen(false)} />
     </div>
   );
 };

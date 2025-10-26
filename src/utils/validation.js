@@ -1,42 +1,56 @@
 // Generic validation utility functions
 
 export const validateRequired = (value, fieldName) => {
+  // Temporarily disabled validation
+  /*
   if (!value || value.toString().trim() === '') {
     return `${fieldName} is required`;
   }
+  */
   return null;
 };
 
 export const validateEmail = (email) => {
+  // Temporarily disabled validation
+  /*
   if (!email) return null;
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!emailRegex.test(email)) {
     return 'Please enter a valid email address';
   }
+  */
   return null;
 };
 
 export const validatePhone = (phone) => {
+  // Temporarily disabled validation
+  /*
   if (!phone) return null;
   // Simple phone validation - at least 10 digits
   const phoneRegex = /^\+?[\d\s\-\(\)]{10,}$/;
   if (!phoneRegex.test(phone)) {
     return 'Please enter a valid phone number';
   }
+  */
   return null;
 };
 
 export const validateDate = (date, fieldName) => {
+  // Temporarily disabled validation
+  /*
   if (!date) return null;
   const dateObj = new Date(date);
   if (isNaN(dateObj.getTime())) {
     return `Please enter a valid ${fieldName}`;
   }
+  */
   return null;
 };
 
 // New: Validate date is not in the future
 export const validateDateNotInFuture = (date, fieldName) => {
+  // Temporarily disabled validation
+  /*
   if (!date) return null;
   const dateObj = new Date(date);
   const today = new Date();
@@ -49,12 +63,14 @@ export const validateDateNotInFuture = (date, fieldName) => {
   if (dateObj > today) {
     return `${fieldName} cannot be in the future`;
   }
-  
+  */
   return null;
 };
 
 // New: Validate date range
 export const validateDateRange = (startDate, endDate, startFieldName, endFieldName) => {
+  // Temporarily disabled validation
+  /*
   if (!startDate || !endDate) return null;
   
   const start = new Date(startDate);
@@ -67,12 +83,14 @@ export const validateDateRange = (startDate, endDate, startFieldName, endFieldNa
   if (start > end) {
     return `${startFieldName} must be before ${endFieldName}`;
   }
-  
+  */
   return null;
 };
 
 // New: Validate admission date is not before date of birth
 export const validateAdmissionAfterBirth = (dateOfBirth, admissionDate) => {
+  // Temporarily disabled validation
+  /*
   if (!dateOfBirth || !admissionDate) return null;
   
   const birth = new Date(dateOfBirth);
@@ -85,11 +103,13 @@ export const validateAdmissionAfterBirth = (dateOfBirth, admissionDate) => {
   if (admission < birth) {
     return 'Admission date cannot be before date of birth';
   }
-  
+  */
   return null;
 };
 
 export const validateNumber = (value, fieldName, min = 0, max = null) => {
+  // Temporarily disabled validation
+  /*
   if (value === '' || value === undefined || value === null) return null;
   const num = parseFloat(value);
   if (isNaN(num)) {
@@ -101,10 +121,13 @@ export const validateNumber = (value, fieldName, min = 0, max = null) => {
   if (max !== null && num > max) {
     return `${fieldName} must be no more than ${max}`;
   }
+  */
   return null;
 };
 
 export const validateLength = (value, fieldName, minLength, maxLength) => {
+  // Temporarily disabled validation
+  /*
   if (!value) return null;
   const length = value.toString().length;
   if (length < minLength) {
@@ -113,11 +136,14 @@ export const validateLength = (value, fieldName, minLength, maxLength) => {
   if (maxLength && length > maxLength) {
     return `${fieldName} must be no more than ${maxLength} characters`;
   }
+  */
   return null;
 };
 
 // New: Validate CNIC format (Pakistan CNIC: 13 digits)
 export const validateCNIC = (cnic, fieldName) => {
+  // Temporarily disabled validation
+  /*
   if (!cnic) return null;
   // Remove any spaces or dashes for validation
   const cleanCNIC = cnic.replace(/[\s\-]/g, '');
@@ -125,11 +151,14 @@ export const validateCNIC = (cnic, fieldName) => {
   if (!cnicRegex.test(cleanCNIC)) {
     return `${fieldName} must be a valid 13-digit CNIC number`;
   }
+  */
   return null;
 };
 
 // New: Validate URL
 export const validateURL = (url) => {
+  // Temporarily disabled validation
+  /*
   if (!url) return null;
   try {
     new URL(url);
@@ -137,53 +166,73 @@ export const validateURL = (url) => {
   } catch (e) {
     return 'Please enter a valid URL';
   }
+  */
+  return null;
 };
 
 // New: Validate that value matches a pattern
 export const validatePattern = (value, pattern, fieldName, errorMessage) => {
+  // Temporarily disabled validation
+  /*
   if (!value) return null;
   if (!pattern.test(value)) {
     return errorMessage || `${fieldName} format is invalid`;
   }
+  */
   return null;
 };
 
 // New: Conditional validation - only validate if condition is met
 export const validateConditional = (value, condition, validator, ...validatorArgs) => {
+  // Temporarily disabled validation
+  /*
   if (!condition) return null;
   return validator(value, ...validatorArgs);
+  */
+  return null;
 };
 
 // New: Validate that two fields match (e.g., password confirmation)
 export const validateMatch = (value1, value2, fieldName1, fieldName2) => {
+  // Temporarily disabled validation
+  /*
   if (value1 !== value2) {
     return `${fieldName1} and ${fieldName2} must match`;
   }
+  */
   return null;
 };
 
 // New: Validate array minimum length
 export const validateMinArrayLength = (array, minLength, fieldName) => {
+  // Temporarily disabled validation
+  /*
   if (!array || !Array.isArray(array)) {
     return `${fieldName} must be an array`;
   }
   if (array.length < minLength) {
     return `${fieldName} must have at least ${minLength} items`;
   }
+  */
   return null;
 };
 
 // New: Validate that at least one field is filled
 export const validateAtLeastOne = (fields, fieldNames) => {
+  // Temporarily disabled validation
+  /*
   const hasValue = fields.some(field => field && field.toString().trim() !== '');
   if (!hasValue) {
     return `At least one of ${fieldNames.join(', ')} is required`;
   }
+  */
   return null;
 };
 
 // Generic validation function
 export const validateField = (value, rules, fieldName) => {
+  // Temporarily disabled validation
+  /*
   for (const rule of rules) {
     let error = null;
     
@@ -235,12 +284,15 @@ export const validateField = (value, rules, fieldName) => {
       return error;
     }
   }
+  */
   
   return null;
 };
 
 // Validate entire form
 export const validateForm = (formData, validationRules) => {
+  // Temporarily disabled validation
+  /*
   const errors = {};
   
   for (const [fieldName, rules] of Object.entries(validationRules)) {
@@ -262,10 +314,13 @@ export const validateForm = (formData, validationRules) => {
   }
   
   return errors;
+  */
+  return {};
 };
 
 // Validation rules for admission form
 export const admissionFormValidationRules = {
+  /*
   grNo: [
     { type: 'required' },
     { type: 'length', minLength: 1, maxLength: 20 }
@@ -304,5 +359,19 @@ export const admissionFormValidationRules = {
   ],
   section: [
     { type: 'required' }
+  ],
+  // Fee fields for traditional schools (validation will be conditional in the component)
+  admissionFees: [
+    { type: 'number', min: 0 }
+  ],
+  monthlyFees: [
+    { type: 'number', min: 0 }
+  ],
+  feesPaid: [
+    { type: 'number', min: 0 }
+  ],
+  totalFees: [
+    { type: 'number', min: 0 }
   ]
+  */
 };
