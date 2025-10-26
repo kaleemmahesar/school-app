@@ -214,8 +214,27 @@ const LoginPage = () => {
                 <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
                   <div className="flex justify-between items-start">
                     <div>
-                      <p className="font-medium text-gray-900">Administrator</p>
-                      <p className="text-sm text-gray-600 mt-1">Full access to all system features</p>
+                      <p className="font-medium text-gray-900">Owner</p>
+                      <p className="text-sm text-gray-600 mt-1">Full access to all system features including financial information</p>
+                    </div>
+                    <button 
+                      onClick={() => fillDemoCredentials('owner', 'owner123')}
+                      className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded hover:bg-blue-200 transition"
+                    >
+                      Use
+                    </button>
+                  </div>
+                  <div className="mt-2 text-xs text-gray-500">
+                    <p>Username: <span className="font-mono">owner</span></p>
+                    <p>Password: <span className="font-mono">owner123</span></p>
+                  </div>
+                </div>
+                
+                <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <p className="font-medium text-gray-900">Admin</p>
+                      <p className="text-sm text-gray-600 mt-1">Access to all features except financial information</p>
                     </div>
                     <button 
                       onClick={() => fillDemoCredentials('admin', 'admin123')}
@@ -233,8 +252,27 @@ const LoginPage = () => {
                 <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
                   <div className="flex justify-between items-start">
                     <div>
+                      <p className="font-medium text-gray-900">Teacher</p>
+                      <p className="text-sm text-gray-600 mt-1">Access only to marksheets and reports</p>
+                    </div>
+                    <button 
+                      onClick={() => fillDemoCredentials('teacher', 'teacher123')}
+                      className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded hover:bg-blue-200 transition"
+                    >
+                      Use
+                    </button>
+                  </div>
+                  <div className="mt-2 text-xs text-gray-500">
+                    <p>Username: <span className="font-mono">teacher</span></p>
+                    <p>Password: <span className="font-mono">teacher123</span></p>
+                  </div>
+                </div>
+                
+                <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
+                  <div className="flex justify-between items-start">
+                    <div>
                       <p className="font-medium text-gray-900">Staff</p>
-                      <p className="text-sm text-gray-600 mt-1">Access to student, fees, and expenses management</p>
+                      <p className="text-sm text-gray-600 mt-1">Access to fees, marksheets, certificates, reports, attendance, and student management</p>
                     </div>
                     <button 
                       onClick={() => fillDemoCredentials('staff', 'staff123')}

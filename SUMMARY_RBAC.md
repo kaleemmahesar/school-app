@@ -6,14 +6,14 @@ This document summarizes the role-based access control system implemented in the
 
 ### 1. User Roles and Permissions
 
-Three distinct roles have been defined with appropriate permissions:
+Four distinct roles have been defined with appropriate permissions:
 
 1. **Owner**
    - Complete access to all system features
    - Can view and manage financial information (fees, expenses)
    - Full administrative privileges
 
-2. **Administrator**
+2. **Admin**
    - Access to all features except financial information
    - Cannot view or manage fees and expenses
    - Can manage students, classes, staff, and reports
@@ -22,6 +22,12 @@ Three distinct roles have been defined with appropriate permissions:
    - Limited access to student-related work
    - View-only permissions for students, attendance, and marksheets
    - Cannot modify financial or administrative data
+
+4. **Staff**
+   - Access to operational features
+   - Can generate challans, marksheets, certificates, reports, attendance
+   - Can add new students
+   - Cannot access financial overview or settings
 
 ### 2. Core Components
 
@@ -40,15 +46,13 @@ Three distinct roles have been defined with appropriate permissions:
 - Financial sections only visible to owners
 
 #### UserManagement.jsx
-- Updated to use new role configuration
-- Simplified permission management by tying permissions to roles
 
 ### 3. Permission Checking Mechanisms
 
 #### usePermissions Hook
 - Custom hook for checking user permissions in components
 - Provides functions: `hasPermission`, `hasAnyPermission`, `hasAllPermissions`
-- Role checking functions: `isOwner`, `isAdmin`, `isTeacher`
+- Role checking functions: `isOwner`, `isAdmin`, `isTeacher`, `isStaff`
 
 #### ProtectedRoute Component
 - Higher-order component for protecting entire routes
@@ -63,7 +67,7 @@ Three distinct roles have been defined with appropriate permissions:
 ### 4. Protected Sections
 
 #### Financial Sections
-- **FeesSection**: Protected with `ProtectedRoute` - only owners can access
+- **FeesSection**: Protected with `ProtectedRoute` - only owners and staff can access
 - **ExpensesSection**: Protected with `ProtectedRoute` - only owners can access
 - **SubsidySection**: Protected with `ProtectedRoute` - only owners can access
 
@@ -77,12 +81,14 @@ The main navigation automatically filters menu items based on user permissions:
 - Teachers see only student-related sections
 - Administrators see all sections except financial ones
 - Owners see all sections including financial management
+- Staff see operational sections including fees management
 
 ## Demo Credentials
 
 - **Owner**: username `owner`, password `owner123`
 - **Administrator**: username `admin`, password `admin123`
 - **Teacher**: username `teacher`, password `teacher123`
+- **Staff**: username `staff`, password `staff123`
 
 ## Key Implementation Details
 

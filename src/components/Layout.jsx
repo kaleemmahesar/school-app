@@ -6,6 +6,7 @@ import { logoutUser } from '../store/usersSlice';
 import Logo from '../img/logo.png';
 import { useSchoolFunding } from '../hooks/useSchoolFunding';
 import FundingConditional from './common/FundingConditional';
+import { usePermissions } from '../hooks/usePermissions';
 
 const Layout = ({ children }) => {
   const dispatch = useDispatch();
@@ -17,6 +18,7 @@ const Layout = ({ children }) => {
   const classes = useSelector(state => state.classes.classes);
   const currentUser = useSelector(state => state.users.currentUser);
   const { isNGOSchool } = useSchoolFunding();
+  const { hasPermission, isOwner, isAdmin, isTeacher, isStaff } = usePermissions();
   const [openDropdown, setOpenDropdown] = useState(null);
   const [showUserMenu, setShowUserMenu] = useState(false);
 
@@ -64,72 +66,101 @@ const Layout = ({ children }) => {
   }, []);
 
   // Navigation items configuration with dropdown functionality
-  const navItems = [
-    {
-      name: 'Dashboard',
-      path: '/',
-      icon: <FaChartLine className="mr-2" />,
-      exact: true
-    },
-    {
-      name: 'Students',
-      path: '/students',
-      icon: <FaUsers className="mr-2" />,
-      dropdown: [
-        { name: 'All Students', path: '/students' },
-        { name: 'Attendance', path: '/students/attendance' },
-        { name: 'Reports', path: '/students/reports' },
-        { name: 'Marksheets', path: '/marksheets' },
-        { name: 'Certificates', path: '/certificates' },
-        { name: 'Examinations', path: '/examinations' }
-      ]
-    },
-    {
-      name: 'Classes',
-      path: '/classes',
-      icon: <FaBook className="mr-2" />
-    },
-    {
-      name: 'Staff',
-      path: '/staff',
-      icon: <FaChalkboardTeacher className="mr-2" />
-    },
-    // Conditional navigation for Fees section (only for traditional schools)
-    ...(!isNGOSchool ? [
+  // Filter navigation based on user role
+  const getNavItems = () => {
+    const baseItems = [
       {
+        name: 'Dashboard',
+        path: '/',
+        icon: <FaChartLine className="mr-2" />,
+        exact: true
+      }
+    ];
+
+    // Students section - available to Owner, Admin, Staff, Teacher
+    if (hasPermission('students') || hasPermission('attendance') || hasPermission('marksheets') || hasPermission('reports') || hasPermission('certificates') || hasPermission('examinations')) {
+      baseItems.push({
+        name: 'Students',
+        path: '/students',
+        icon: <FaUsers className="mr-2" />,
+        dropdown: [
+          { name: 'All Students', path: '/students' },
+          { name: 'Attendance', path: '/students/attendance', permission: 'attendance' },
+          { name: 'Reports', path: '/students/reports', permission: 'student-reports' },
+          { name: 'Marksheets', path: '/marksheets', permission: 'marksheets' },
+          { name: 'Certificates', path: '/certificates', permission: 'certificates' },
+          { name: 'Examinations', path: '/examinations', permission: 'examinations' }
+        ].filter(item => !item.permission || hasPermission(item.permission))
+      });
+    }
+
+    // Classes section - available to Owner, Admin, Staff
+    if (hasPermission('classes')) {
+      baseItems.push({
+        name: 'Classes',
+        path: '/classes',
+        icon: <FaBook className="mr-2" />
+      });
+    }
+
+    // Staff section - available to Owner, Admin
+    if (hasPermission('staff')) {
+      baseItems.push({
+        name: 'Staff',
+        path: '/staff',
+        icon: <FaChalkboardTeacher className="mr-2" />
+      });
+    }
+
+    // Fees section - available to Owner, Staff (traditional schools only)
+    if (!isNGOSchool && (isOwner() || isStaff() || hasPermission('fees'))) {
+      baseItems.push({
         name: 'Fees',
         path: '/fees',
         icon: <FaFileInvoice className="mr-2" />
-      }
-    ] : []),
-    {
-      name: 'Expenses',
-      path: '/expenses',
-      icon: <FaMoneyBillWave className="mr-2" />
-    },
-    // NGO Subsidies section (only for NGO schools)
-    ...(isNGOSchool ? [
-      {
+      });
+    }
+
+    // Expenses section - available only to Owner
+    if (isOwner() || hasPermission('expenses')) {
+      baseItems.push({
+        name: 'Expenses',
+        path: '/expenses',
+        icon: <FaMoneyBillWave className="mr-2" />
+      });
+    }
+
+    // NGO Subsidies section - available only to Owner (NGO schools only)
+    if (isNGOSchool && (isOwner() || hasPermission('subsidies'))) {
+      baseItems.push({
         name: 'NGO Subsidies',
         path: '/subsidies',
         icon: <FaHandHoldingUsd className="mr-2" />
-      }
-    ] : []),
-    {
-      name: 'Financial Report',
-      path: '/financial-reporting',
-      icon: <FaChartLine className="mr-2" />
+      });
     }
-  ];
 
-  // Add Settings for admin users only
-  if (currentUser && currentUser.role === 'Administrator') {
-    navItems.push({
-      name: 'Settings',
-      path: '/settings',
-      icon: <FaCog className="mr-2" />
-    });
-  }
+    // Financial Report section - available only to Owner
+    if (isOwner() || hasPermission('financial-reports')) {
+      baseItems.push({
+        name: 'Financial Report',
+        path: '/financial-reporting',
+        icon: <FaChartLine className="mr-2" />
+      });
+    }
+
+    // Settings section - available only to Owner
+    if (isOwner() || hasPermission('settings')) {
+      baseItems.push({
+        name: 'Settings',
+        path: '/settings',
+        icon: <FaCog className="mr-2" />
+      });
+    }
+
+    return baseItems;
+  };
+
+  const navItems = getNavItems();
 
   // Don't show navigation for login page
   const isLoginPage = location.pathname === '/login';
@@ -201,7 +232,7 @@ const Layout = ({ children }) => {
       {/* Navigation */}
       <nav className="bg-white shadow-sm border-t border-gray-200 sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex py-3 space-x-6 justify-between">
+          <div className="flex py-3 space-x-6">
             
             {navItems.map((item, index) => (
               <div key={index} className="dropdown-container relative">

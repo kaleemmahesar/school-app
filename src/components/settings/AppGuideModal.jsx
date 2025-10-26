@@ -1,5 +1,5 @@
 import React from 'react';
-import { FaTimes, FaBook, FaUsers, FaMoneyBillWave, FaChalkboardTeacher, FaBook as FaClasses, FaChartLine, FaDollarSign, FaHandHoldingUsd, FaCog, FaQuestionCircle, FaListOl } from 'react-icons/fa';
+import { FaTimes, FaBook, FaUsers, FaMoneyBillWave, FaChalkboardTeacher, FaBook as FaClasses, FaChartLine, FaDollarSign, FaHandHoldingUsd, FaCog, FaQuestionCircle, FaList } from 'react-icons/fa';
 
 const AppGuideModal = ({ isOpen, onClose }) => {
   if (!isOpen) return null;
@@ -31,7 +31,7 @@ const AppGuideModal = ({ isOpen, onClose }) => {
             {/* Table of Contents */}
             <div className="bg-blue-50 rounded-lg p-4 mb-6">
               <h3 className="font-bold text-blue-800 mb-2 flex items-center">
-                <FaListOl className="mr-2" /> Table of Contents
+                <FaList className="mr-2" /> Table of Contents
               </h3>
               <ul className="list-disc pl-5 space-y-1 text-blue-700">
                 <li><a href="#overview" className="hover:underline">System Overview</a></li>

@@ -12,6 +12,7 @@ import ActivitiesPrintView from './dashboard/ActivitiesPrintView';
 import { useSchoolFunding } from '../hooks/useSchoolFunding';
 import FundingConditional from './common/FundingConditional';
 import NGOFundingInfo from './common/NGOFundingInfo';
+import { usePermissions } from '../hooks/usePermissions';
 
 // Mock subsidy data for when viewing subsidies
 const mockSubsidies = [
@@ -61,8 +62,10 @@ const Dashboard = () => {
   const classes = useSelector(state => state.classes.classes);
   const subsidies = useSelector(state => state.subsidies.subsidies);
   const schoolInfo = useSelector(state => state.settings.schoolInfo);
+  const currentUser = useSelector(state => state.users.currentUser);
   const { isNGOSchool } = useSchoolFunding();
-  
+  const { hasPermission, isOwner, isAdmin, isTeacher, isStaff } = usePermissions();
+
   // State for view mode - automatically set based on funding type
   const [viewMode, setViewMode] = useState(isNGOSchool ? 'subsidies' : 'fees'); // 'fees' or 'subsidies'
   
@@ -748,8 +751,8 @@ const Dashboard = () => {
   return (
     <div>
       <PageHeader
-        title="Dashboard"
-        subtitle="Welcome back! Here's what's happening with your school today."
+        title={`Dashboard - ${currentUser?.role || 'Guest'}`}
+        subtitle={`Welcome back, ${currentUser?.username || 'Guest'}! Here's what's happening with your school today.`}
         quarterYearFilters={quarterYearFilters}
       />
 
@@ -760,177 +763,236 @@ const Dashboard = () => {
         </div> */}
       </FundingConditional>
 
-
-
-      {/* Stats Cards */}
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
-        {/* Financial Stats */}
-        <div className="bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl shadow-lg p-6 text-white transform transition-all duration-300 hover:scale-[1.02]">
-          <div className="flex items-start justify-between mb-5">
-            <div>
-              <h3 className="text-white text-opacity-90 text-sm font-medium mb-1">Financial Overview</h3>
-              <p className="text-white text-opacity-70 text-xs">Income and expenses summary</p>
-            </div>
-            <div className="p-3 bg-white bg-opacity-20 rounded-lg">
-              <FundingConditional showFor="traditional">
-                <FaDollarSign className="text-white text-xl" />
-              </FundingConditional>
-              <FundingConditional showFor="ngo">
-                <FaHandHoldingUsd className="text-white text-xl" />
-              </FundingConditional>
-            </div>
-          </div>
-          
-          <div className="space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-white border-opacity-20">
-              <div>
-                <p className="text-white text-opacity-90 text-sm font-medium">
-                  <FundingConditional showFor="traditional">Fees Collected</FundingConditional>
-                  <FundingConditional showFor="ngo">Subsidies Received</FundingConditional>
-                </p>
-                <p className="text-2xl font-bold mt-1">
-                  Rs <FundingConditional showFor="traditional">{stats.totalFeesCollected?.toLocaleString()}</FundingConditional>
-                  <FundingConditional showFor="ngo">{stats.totalSubsidiesReceived?.toLocaleString()}</FundingConditional>
-                </p>
-              </div>
-              <div className="p-2 bg-white bg-opacity-20 rounded-lg">
-                <FundingConditional showFor="traditional">
-                  <FaDollarSign className="text-white" />
-                </FundingConditional>
-                <FundingConditional showFor="ngo">
-                  <FaHandHoldingUsd className="text-white" />
-                </FundingConditional>
-              </div>
-            </div>
-            
-            <div className="flex items-center justify-between pb-3 border-b border-white border-opacity-20">
-              <div>
-                <p className="text-white text-opacity-90 text-sm font-medium">Total Expenses</p>
-                <p className="text-2xl font-bold mt-1">Rs {stats.totalExpenses?.toLocaleString()}</p>
-              </div>
-              <div className="p-2 bg-white bg-opacity-20 rounded-lg">
-                <FaChartPie className="text-white" />
-              </div>
-            </div>
-            
-            <div className="space-y-3 pt-2">
-              <div className="flex justify-between items-center">
-                <div className="flex items-center">
-                  <div className="w-2 h-2 rounded-full bg-white bg-opacity-50 mr-2"></div>
-                  <span className="text-white text-opacity-80 text-sm">Staff Salaries</span>
+      {/* Stats Cards - Only show for Owner users */}
+      {isOwner() && (
+        <>
+          {/* Stats Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+            {/* Financial Stats */}
+            <div className="bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl shadow-lg p-6 text-white transform transition-all duration-300 hover:scale-[1.02]">
+              <div className="flex items-start justify-between mb-5">
+                <div>
+                  <h3 className="text-white text-opacity-90 text-sm font-medium mb-1">Financial Overview</h3>
+                  <p className="text-white text-opacity-70 text-xs">Income and expenses summary</p>
                 </div>
-                <span className="font-medium text-sm">Rs {stats.totalStaffSalaries?.toLocaleString()}</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <div className="flex items-center">
-                  <div className="w-2 h-2 rounded-full bg-white bg-opacity-50 mr-2"></div>
-                  <span className="text-white text-opacity-80 text-sm">Other Expenses</span>
+                <div className="p-3 bg-white bg-opacity-20 rounded-lg">
+                  <FundingConditional showFor="traditional">
+                    <FaDollarSign className="text-white text-xl" />
+                  </FundingConditional>
+                  <FundingConditional showFor="ngo">
+                    <FaHandHoldingUsd className="text-white text-xl" />
+                  </FundingConditional>
                 </div>
-                <span className="font-medium text-sm">Rs {stats.otherExpenses?.toLocaleString()}</span>
               </div>
-            </div>
-          </div>
-        </div>
-        
-        {/* Student & Class Stats */}
-        <div className="bg-gradient-to-br from-blue-500 to-cyan-600 rounded-2xl shadow-lg p-6 text-white transform transition-all duration-300 hover:scale-[1.02]">
-          <div className="flex items-start justify-between mb-5">
-            <div>
-              <h3 className="text-white text-opacity-90 text-sm font-medium mb-1">Academic Overview</h3>
-              <p className="text-white text-opacity-70 text-xs">Students, classes and subjects</p>
-            </div>
-            <div className="p-3 bg-white bg-opacity-20 rounded-lg">
-              <FaUsers className="text-white text-xl" />
-            </div>
-          </div>
-          
-          <div className="space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-white border-opacity-20">
-              <div>
-                <p className="text-white text-opacity-90 text-sm font-medium">Total Students</p>
-                <p className="text-2xl font-bold mt-1">{stats.totalStudents}</p>
-              </div>
-              <div className="p-2 bg-white bg-opacity-20 rounded-lg">
-                <FaUsers className="text-white" />
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-2 gap-3 pt-2">
-              <div className="bg-white bg-opacity-10 rounded-lg p-3">
-                <p className="text-white text-opacity-80 text-xs mb-1">Classes</p>
-                <p className="text-xl font-bold">{stats.totalClasses}</p>
-              </div>
-              <div className="bg-white bg-opacity-10 rounded-lg p-3">
-                <p className="text-white text-opacity-80 text-xs mb-1">Sections</p>
-                <p className="text-xl font-bold">{stats.totalSections}</p>
-              </div>
-              <div className="bg-white bg-opacity-10 rounded-lg p-3">
-                <p className="text-white text-opacity-80 text-xs mb-1">Subjects</p>
-                <p className="text-xl font-bold">{stats.totalSubjects}</p>
-              </div>
-              <div className="bg-white bg-opacity-10 rounded-lg p-3">
-                <p className="text-white text-opacity-80 text-xs mb-1">Avg. per Class</p>
-                <p className="text-xl font-bold">{stats.totalClasses > 0 ? Math.round(stats.totalStudents / stats.totalClasses) : 0}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        {/* Staff & Net Position Stats */}
-        <div className="bg-gradient-to-br from-purple-500 to-fuchsia-600 rounded-2xl shadow-lg p-6 text-white transform transition-all duration-300 hover:scale-[1.02]">
-          <div className="flex items-start justify-between mb-5">
-            <div>
-              <h3 className="text-white text-opacity-90 text-sm font-medium mb-1">Staff & Finance</h3>
-              <p className="text-white text-opacity-70 text-xs">Team size and financial position</p>
-            </div>
-            <div className="p-3 bg-white bg-opacity-20 rounded-lg">
-              <FaUserTie className="text-white text-xl" />
-            </div>
-          </div>
-          
-          <div className="space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-white border-opacity-20">
-              <div>
-                <p className="text-white text-opacity-90 text-sm font-medium">Total Staff</p>
-                <p className="text-2xl font-bold mt-1">{stats.totalStaff}</p>
-              </div>
-              <div className="p-2 bg-white bg-opacity-20 rounded-lg">
-                <FaUserTie className="text-white" />
+              
+              <div className="space-y-4">
+                <div className="flex items-center justify-between pb-3 border-b border-white border-opacity-20">
+                  <div>
+                    <p className="text-white text-opacity-90 text-sm font-medium">
+                      <FundingConditional showFor="traditional">Fees Collected</FundingConditional>
+                      <FundingConditional showFor="ngo">Subsidies Received</FundingConditional>
+                    </p>
+                    <p className="text-2xl font-bold mt-1">
+                      Rs <FundingConditional showFor="traditional">{stats.totalFeesCollected?.toLocaleString()}</FundingConditional>
+                      <FundingConditional showFor="ngo">{stats.totalSubsidiesReceived?.toLocaleString()}</FundingConditional>
+                    </p>
+                  </div>
+                  <div className="p-2 bg-white bg-opacity-20 rounded-lg">
+                    <FundingConditional showFor="traditional">
+                      <FaDollarSign className="text-white" />
+                    </FundingConditional>
+                    <FundingConditional showFor="ngo">
+                      <FaHandHoldingUsd className="text-white" />
+                    </FundingConditional>
+                  </div>
+                </div>
+                
+                <div className="flex items-center justify-between pb-3 border-b border-white border-opacity-20">
+                  <div>
+                    <p className="text-white text-opacity-90 text-sm font-medium">Total Expenses</p>
+                    <p className="text-2xl font-bold mt-1">Rs {stats.totalExpenses?.toLocaleString()}</p>
+                  </div>
+                  <div className="p-2 bg-white bg-opacity-20 rounded-lg">
+                    <FaChartPie className="text-white" />
+                  </div>
+                </div>
+                
+                <div className="space-y-3 pt-2">
+                  <div className="flex justify-between items-center">
+                    <div className="flex items-center">
+                      <div className="w-2 h-2 rounded-full bg-white bg-opacity-50 mr-2"></div>
+                      <span className="text-white text-opacity-80 text-sm">Staff Salaries</span>
+                    </div>
+                    <span className="font-medium text-sm">Rs {stats.totalStaffSalaries?.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <div className="flex items-center">
+                      <div className="w-2 h-2 rounded-full bg-white bg-opacity-50 mr-2"></div>
+                      <span className="text-white text-opacity-80 text-sm">Other Expenses</span>
+                    </div>
+                    <span className="font-medium text-sm">Rs {stats.otherExpenses?.toLocaleString()}</span>
+                  </div>
+                </div>
               </div>
             </div>
             
-            <div className="flex items-center justify-between pb-3 border-b border-white border-opacity-20">
-              <div>
-                <p className="text-white text-opacity-90 text-sm font-medium">Net Position</p>
-                <p className={`text-2xl font-bold mt-1 ${stats.netProfit >= 0 ? 'text-green-200' : 'text-red-200'}`}>
-                  Rs {Math.abs(stats.netProfit)?.toLocaleString()} {stats.netProfit < 0 ? '(Loss)' : ''}
-                </p>
+            {/* Student & Class Stats */}
+            <div className="bg-gradient-to-br from-blue-500 to-cyan-600 rounded-2xl shadow-lg p-6 text-white transform transition-all duration-300 hover:scale-[1.02]">
+              <div className="flex items-start justify-between mb-5">
+                <div>
+                  <h3 className="text-white text-opacity-90 text-sm font-medium mb-1">Academic Overview</h3>
+                  <p className="text-white text-opacity-70 text-xs">Students, classes and subjects</p>
+                </div>
+                <div className="p-3 bg-white bg-opacity-20 rounded-lg">
+                  <FaUsers className="text-white text-xl" />
+                </div>
               </div>
-              <div className="p-2 bg-white bg-opacity-20 rounded-lg">
-                <FaChartBar className="text-white" />
+              
+              <div className="space-y-4">
+                <div className="flex items-center justify-between pb-3 border-b border-white border-opacity-20">
+                  <div>
+                    <p className="text-white text-opacity-90 text-sm font-medium">Total Students</p>
+                    <p className="text-2xl font-bold mt-1">{stats.totalStudents}</p>
+                  </div>
+                  <div className="p-2 bg-white bg-opacity-20 rounded-lg">
+                    <FaUsers className="text-white" />
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-3 pt-2">
+                  <div className="bg-white bg-opacity-10 rounded-lg p-3">
+                    <p className="text-white text-opacity-80 text-xs mb-1">Classes</p>
+                    <p className="text-xl font-bold">{stats.totalClasses}</p>
+                  </div>
+                  <div className="bg-white bg-opacity-10 rounded-lg p-3">
+                    <p className="text-white text-opacity-80 text-xs mb-1">Sections</p>
+                    <p className="text-xl font-bold">{stats.totalSections}</p>
+                  </div>
+                  <div className="bg-white bg-opacity-10 rounded-lg p-3">
+                    <p className="text-white text-opacity-80 text-xs mb-1">Subjects</p>
+                    <p className="text-xl font-bold">{stats.totalSubjects}</p>
+                  </div>
+                  <div className="bg-white bg-opacity-10 rounded-lg p-3">
+                    <p className="text-white text-opacity-80 text-xs mb-1">Avg. per Class</p>
+                    <p className="text-xl font-bold">{stats.totalClasses > 0 ? Math.round(stats.totalStudents / stats.totalClasses) : 0}</p>
+                  </div>
+                </div>
               </div>
             </div>
             
-            <div className="pt-2">
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-white text-opacity-80 text-sm">Financial Health</span>
-                <span className={`text-xs font-medium px-2 py-1 rounded-full ${stats.netProfit >= 0 ? 'bg-green-500 bg-opacity-30 text-green-100' : 'bg-red-500 bg-opacity-30 text-red-100'}`}>
-                  {stats.netProfit >= 0 ? 'Positive' : 'Negative'}
-                </span>
+            {/* Staff & Net Position Stats */}
+            <div className="bg-gradient-to-br from-purple-500 to-fuchsia-600 rounded-2xl shadow-lg p-6 text-white transform transition-all duration-300 hover:scale-[1.02]">
+              <div className="flex items-start justify-between mb-5">
+                <div>
+                  <h3 className="text-white text-opacity-90 text-sm font-medium mb-1">Staff & Finance</h3>
+                  <p className="text-white text-opacity-70 text-xs">Team size and financial position</p>
+                </div>
+                <div className="p-3 bg-white bg-opacity-20 rounded-lg">
+                  <FaUserTie className="text-white text-xl" />
+                </div>
               </div>
-              <div className="w-full bg-white bg-opacity-20 rounded-full h-2">
-                <div 
-                  className={`h-2 rounded-full ${stats.netProfit >= 0 ? 'bg-green-300' : 'bg-red-300'}`}
-                  style={{ width: `${Math.min(100, Math.abs(stats.netProfit) / (stats.totalExpenses || 1) * 100)}%` }}
-                ></div>
+              
+              <div className="space-y-4">
+                <div className="flex items-center justify-between pb-3 border-b border-white border-opacity-20">
+                  <div>
+                    <p className="text-white text-opacity-90 text-sm font-medium">Total Staff</p>
+                    <p className="text-2xl font-bold mt-1">{stats.totalStaff}</p>
+                  </div>
+                  <div className="p-2 bg-white bg-opacity-20 rounded-lg">
+                    <FaUserTie className="text-white" />
+                  </div>
+                </div>
+                
+                <div className="flex items-center justify-between pb-3 border-b border-white border-opacity-20">
+                  <div>
+                    <p className="text-white text-opacity-90 text-sm font-medium">Net Position</p>
+                    <p className={`text-2xl font-bold mt-1 ${stats.netProfit >= 0 ? 'text-green-200' : 'text-red-200'}`}>
+                      Rs {Math.abs(stats.netProfit)?.toLocaleString()} {stats.netProfit < 0 ? '(Loss)' : ''}
+                    </p>
+                  </div>
+                  <div className="p-2 bg-white bg-opacity-20 rounded-lg">
+                    <FaChartBar className="text-white" />
+                  </div>
+                </div>
+                
+                <div className="pt-2">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-white text-opacity-80 text-sm">Financial Health</span>
+                    <span className={`text-xs font-medium px-2 py-1 rounded-full ${stats.netProfit >= 0 ? 'bg-green-500 bg-opacity-30 text-green-100' : 'bg-red-500 bg-opacity-30 text-red-100'}`}>
+                      {stats.netProfit >= 0 ? 'Positive' : 'Negative'}
+                    </span>
+                  </div>
+                  <div className="w-full bg-white bg-opacity-20 rounded-full h-2">
+                    <div 
+                      className={`h-2 rounded-full ${stats.netProfit >= 0 ? 'bg-green-300' : 'bg-red-300'}`}
+                      style={{ width: `${Math.min(100, Math.abs(stats.netProfit) / (stats.totalExpenses || 1) * 100)}%` }}
+                    ></div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      </div>
+        </>
+      )}
 
-      {/* Recent Activities */}
+      {/* Academic Stats for Admin users */}
+      {isAdmin() && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+          {/* Total Students */}
+          <div className="bg-gradient-to-br from-blue-500 to-cyan-600 rounded-2xl shadow-lg p-6 text-white transform transition-all duration-300 hover:scale-[1.02]">
+            <div className="flex items-start justify-between">
+              <div>
+                <h3 className="text-white text-opacity-90 text-sm font-medium mb-1">Total Students</h3>
+                <p className="text-3xl font-bold mt-2">{stats.totalStudents}</p>
+              </div>
+              <div className="p-3 bg-white bg-opacity-20 rounded-lg">
+                <FaUsers className="text-white text-xl" />
+              </div>
+            </div>
+          </div>
+          
+          {/* Total Classes */}
+          <div className="bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl shadow-lg p-6 text-white transform transition-all duration-300 hover:scale-[1.02]">
+            <div className="flex items-start justify-between">
+              <div>
+                <h3 className="text-white text-opacity-90 text-sm font-medium mb-1">Total Classes</h3>
+                <p className="text-3xl font-bold mt-2">{stats.totalClasses}</p>
+              </div>
+              <div className="p-3 bg-white bg-opacity-20 rounded-lg">
+                <FaBook className="text-white text-xl" />
+              </div>
+            </div>
+          </div>
+          
+          {/* Total Sections */}
+          <div className="bg-gradient-to-br from-purple-500 to-fuchsia-600 rounded-2xl shadow-lg p-6 text-white transform transition-all duration-300 hover:scale-[1.02]">
+            <div className="flex items-start justify-between">
+              <div>
+                <h3 className="text-white text-opacity-90 text-sm font-medium mb-1">Total Sections</h3>
+                <p className="text-3xl font-bold mt-2">{stats.totalSections}</p>
+              </div>
+              <div className="p-3 bg-white bg-opacity-20 rounded-lg">
+                <FaGraduationCap className="text-white text-xl" />
+              </div>
+            </div>
+          </div>
+          
+          {/* Total Staff */}
+          <div className="bg-gradient-to-br from-amber-500 to-orange-600 rounded-2xl shadow-lg p-6 text-white transform transition-all duration-300 hover:scale-[1.02]">
+            <div className="flex items-start justify-between">
+              <div>
+                <h3 className="text-white text-opacity-90 text-sm font-medium mb-1">Total Staff</h3>
+                <p className="text-3xl font-bold mt-2">{stats.totalStaff}</p>
+              </div>
+              <div className="p-3 bg-white bg-opacity-20 rounded-lg">
+                <FaUserTie className="text-white text-xl" />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Recent Activities - Show for all users */}
       <div className="bg-white rounded-2xl shadow-lg p-6">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4 md:mb-0">Recent Activities</h3>
@@ -1131,7 +1193,7 @@ const Dashboard = () => {
                   <button
                     onClick={() => paginate(currentPage - 1)}
                     disabled={currentPage === 1}
-                    className={`relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 ${
+                    className={`relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 ${
                       currentPage === 1 ? 'cursor-not-allowed' : ''
                     }`}
                   >

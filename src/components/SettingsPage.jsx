@@ -1,12 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { updateSchoolInfo, fetchSchoolInfo } from '../store/settingsSlice';
-import { FaSchool, FaCog, FaUpload, FaSave, FaUndo, FaHandHoldingUsd, FaMoneyBillWave, FaSearch, FaBook, FaQuestionCircle } from 'react-icons/fa';
+import { FaSchool, FaCog, FaBuilding, FaUpload, FaSave, FaUndo, FaHandHoldingUsd, FaMoneyBillWave, FaSearch, FaBook, FaQuestionCircle, FaGraduationCap, FaSitemap, FaPrint, FaMagic } from 'react-icons/fa';
 import AppGuideModal from './settings/AppGuideModal';
+import FirstRunWizard from './onboarding/FirstRunWizard';
+import RoleBasedGuide from './onboarding/RoleBasedGuide';
+import FaqSection from './help/FaqSection';
+import Glossary from './help/Glossary';
+import VisualFlowcharts from './help/VisualFlowcharts';
+import QuickReference from './help/QuickReference';
 
 const SettingsPage = () => {
   const dispatch = useDispatch();
   const { schoolInfo, loading, error } = useSelector(state => state.settings);
+  const currentUser = useSelector(state => state.users.currentUser);
   
   const [formData, setFormData] = useState({
     name: '',
@@ -22,6 +29,12 @@ const SettingsPage = () => {
   const [logoPreview, setLogoPreview] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
   const [isGuideOpen, setIsGuideOpen] = useState(false);
+  const [isWizardOpen, setIsWizardOpen] = useState(false);
+  const [isRoleGuideOpen, setIsRoleGuideOpen] = useState(false);
+  const [isFaqOpen, setIsFaqOpen] = useState(false);
+  const [isGlossaryOpen, setIsGlossaryOpen] = useState(false);
+  const [isFlowchartsOpen, setIsFlowchartsOpen] = useState(false);
+  const [isQuickReferenceOpen, setIsQuickReferenceOpen] = useState(false);
 
   // Initialize form with school info
   useEffect(() => {
@@ -92,6 +105,14 @@ const SettingsPage = () => {
       setLogoPreview(schoolInfo.logo || null);
     }
     setIsEditing(false);
+  };
+
+  const handleWizardComplete = (schoolData) => {
+    setFormData(prev => ({
+      ...prev,
+      ...schoolData
+    }));
+    setIsWizardOpen(false);
   };
 
   const getLevelDescription = (level) => {
@@ -176,7 +197,7 @@ const SettingsPage = () => {
                       />
                     ) : (
                       <div className="bg-gray-200 border-2 border-dashed rounded-xl w-16 h-16 flex items-center justify-center">
-                        <FaSchool className="text-gray-400 h-8 w-8" />
+                        <FaBuilding className="text-gray-400 h-8 w-8" />
                       </div>
                     )}
                   </div>
@@ -418,6 +439,76 @@ const SettingsPage = () => {
         </form>
       </div>
 
+      {/* Help & Documentation Section */}
+      <div className="mt-8 bg-white shadow rounded-lg overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-200">
+          <h2 className="text-lg font-medium text-gray-900 flex items-center">
+            <FaBook className="mr-2" />
+            Help & Documentation
+          </h2>
+          <p className="text-sm text-gray-500 mt-1">
+            Access guides, tutorials, and support resources
+          </p>
+        </div>
+        <div className="px-6 py-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <button
+              onClick={() => setIsWizardOpen(true)}
+              className="bg-gradient-to-r from-blue-500 to-indigo-600 rounded-lg p-4 text-white hover:from-blue-600 hover:to-indigo-700 transition-all flex flex-col items-center justify-center"
+            >
+              <FaMagic className="text-2xl mb-2" />
+              <h3 className="font-bold mb-1">Setup Wizard</h3>
+              <p className="text-blue-100 text-sm text-center">Step-by-step school configuration</p>
+            </button>
+            
+            <button
+              onClick={() => setIsRoleGuideOpen(true)}
+              className="bg-gradient-to-r from-green-500 to-emerald-600 rounded-lg p-4 text-white hover:from-green-600 hover:to-emerald-700 transition-all flex flex-col items-center justify-center"
+            >
+              <FaGraduationCap className="text-2xl mb-2" />
+              <h3 className="font-bold mb-1">Role Guide</h3>
+              <p className="text-green-100 text-sm text-center">Role-specific instructions</p>
+            </button>
+            
+            <button
+              onClick={() => setIsFaqOpen(true)}
+              className="bg-gradient-to-r from-yellow-500 to-amber-600 rounded-lg p-4 text-white hover:from-yellow-600 hover:to-amber-700 transition-all flex flex-col items-center justify-center"
+            >
+              <FaQuestionCircle className="text-2xl mb-2" />
+              <h3 className="font-bold mb-1">FAQ</h3>
+              <p className="text-yellow-100 text-sm text-center">Frequently asked questions</p>
+            </button>
+            
+            <button
+              onClick={() => setIsGlossaryOpen(true)}
+              className="bg-gradient-to-r from-purple-500 to-violet-600 rounded-lg p-4 text-white hover:from-purple-600 hover:to-violet-700 transition-all flex flex-col items-center justify-center"
+            >
+              <FaBook className="text-2xl mb-2" />
+              <h3 className="font-bold mb-1">Glossary</h3>
+              <p className="text-purple-100 text-sm text-center">Education and system terms</p>
+            </button>
+            
+            <button
+              onClick={() => setIsFlowchartsOpen(true)}
+              className="bg-gradient-to-r from-pink-500 to-rose-600 rounded-lg p-4 text-white hover:from-pink-600 hover:to-rose-700 transition-all flex flex-col items-center justify-center"
+            >
+              <FaSitemap className="text-2xl mb-2" />
+              <h3 className="font-bold mb-1">Flowcharts</h3>
+              <p className="text-pink-100 text-sm text-center">Visual process diagrams</p>
+            </button>
+            
+            <button
+              onClick={() => setIsQuickReferenceOpen(true)}
+              className="bg-gradient-to-r from-cyan-500 to-sky-600 rounded-lg p-4 text-white hover:from-cyan-600 hover:to-sky-700 transition-all flex flex-col items-center justify-center"
+            >
+              <FaPrint className="text-2xl mb-2" />
+              <h3 className="font-bold mb-1">Quick Reference</h3>
+              <p className="text-cyan-100 text-sm text-center">Printable cheat sheets</p>
+            </button>
+          </div>
+        </div>
+      </div>
+
       {/* Preview Section */}
       <div className="mt-8 bg-white shadow rounded-lg overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-200">
@@ -433,7 +524,7 @@ const SettingsPage = () => {
               />
             ) : (
               <div className="bg-gray-200 border-2 border-dashed rounded-xl w-12 h-12 flex items-center justify-center mr-4">
-                <FaSchool className="text-gray-400 h-6 w-6" />
+                <FaBuilding className="text-gray-400 h-6 w-6" />
               </div>
             )}
             <div>
@@ -482,8 +573,22 @@ const SettingsPage = () => {
         </div>
       </div>
 
-      {/* App Guide Modal */}
+      {/* Modals */}
       <AppGuideModal isOpen={isGuideOpen} onClose={() => setIsGuideOpen(false)} />
+      <FirstRunWizard 
+        isOpen={isWizardOpen} 
+        onClose={() => setIsWizardOpen(false)} 
+        onComplete={handleWizardComplete}
+      />
+      <RoleBasedGuide 
+        isOpen={isRoleGuideOpen} 
+        onClose={() => setIsRoleGuideOpen(false)} 
+        userRole={currentUser?.role}
+      />
+      <FaqSection isOpen={isFaqOpen} onClose={() => setIsFaqOpen(false)} />
+      <Glossary isOpen={isGlossaryOpen} onClose={() => setIsGlossaryOpen(false)} />
+      <VisualFlowcharts isOpen={isFlowchartsOpen} onClose={() => setIsFlowchartsOpen(false)} />
+      <QuickReference isOpen={isQuickReferenceOpen} onClose={() => setIsQuickReferenceOpen(false)} />
     </div>
   );
 };

@@ -23,6 +23,9 @@ import FinancialReporting from './components/FinancialReporting'
 import { ToastContainer } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
 import './index.css'
+import ProtectedRoute from './components/common/ProtectedRoute'
+import UnauthorizedPage from './components/UnauthorizedPage'
+import RBACTestPage from './components/RBACTestPage'
 
 function App() {
   return (
@@ -31,23 +34,87 @@ function App() {
         <div className="min-h-screen bg-gray-100">
           <Routes>
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/unauthorized" element={<UnauthorizedPage />} />
             <Route path="/" element={<Layout><Dashboard /></Layout>} />
-            <Route path="/students" element={<Layout><StudentsSection /></Layout>} />
-            <Route path="/students/admission" element={<Layout><AdmissionPage /></Layout>} />
-            <Route path="/students/attendance" element={<Layout><AttendanceManagement /></Layout>} />
-            <Route path="/students/reports" element={<Layout><StudentReportGenerator /></Layout>} />
-            <Route path="/fees" element={<Layout><FeesSection /></Layout>} />
-            <Route path="/expenses" element={<Layout><ExpensesSection /></Layout>} />
-            <Route path="/staff" element={<Layout><StaffSection /></Layout>} />
-            <Route path="/staff/:id" element={<Layout><StaffDetails /></Layout>} />
-            <Route path="/classes" element={<Layout><ClassesSection /></Layout>} />
-            <Route path="/subsidies" element={<Layout><SubsidySection /></Layout>} />
-            <Route path="/examinations" element={<Layout><ExaminationSection /></Layout>} />
-            <Route path="/marksheets" element={<Layout><MarksheetsSection /></Layout>} />
-            <Route path="/certificates" element={<Layout><CertificatesSection /></Layout>} />
+            <Route path="/students" element={
+              <ProtectedRoute permission="students">
+                <Layout><StudentsSection /></Layout>
+              </ProtectedRoute>
+            } />
+            <Route path="/students/admission" element={
+              <ProtectedRoute permission="students">
+                <Layout><AdmissionPage /></Layout>
+              </ProtectedRoute>
+            } />
+            <Route path="/students/attendance" element={
+              <ProtectedRoute permission="attendance">
+                <Layout><AttendanceManagement /></Layout>
+              </ProtectedRoute>
+            } />
+            <Route path="/students/reports" element={
+              <ProtectedRoute permission="student-reports">
+                <Layout><StudentReportGenerator /></Layout>
+              </ProtectedRoute>
+            } />
+            <Route path="/fees" element={
+              <ProtectedRoute permission="fees">
+                <Layout><FeesSection /></Layout>
+              </ProtectedRoute>
+            } />
+            <Route path="/expenses" element={
+              <ProtectedRoute permission="expenses">
+                <Layout><ExpensesSection /></Layout>
+              </ProtectedRoute>
+            } />
+            <Route path="/staff" element={
+              <ProtectedRoute permission="staff">
+                <Layout><StaffSection /></Layout>
+              </ProtectedRoute>
+            } />
+            <Route path="/staff/:id" element={
+              <ProtectedRoute permission="staff">
+                <Layout><StaffDetails /></Layout>
+              </ProtectedRoute>
+            } />
+            <Route path="/classes" element={
+              <ProtectedRoute permission="classes">
+                <Layout><ClassesSection /></Layout>
+              </ProtectedRoute>
+            } />
+            <Route path="/subsidies" element={
+              <ProtectedRoute permission="subsidies">
+                <Layout><SubsidySection /></Layout>
+              </ProtectedRoute>
+            } />
+            <Route path="/examinations" element={
+              <ProtectedRoute permission="examinations">
+                <Layout><ExaminationSection /></Layout>
+              </ProtectedRoute>
+            } />
+            <Route path="/marksheets" element={
+              <ProtectedRoute permission="marksheets">
+                <Layout><MarksheetsSection /></Layout>
+              </ProtectedRoute>
+            } />
+            <Route path="/certificates" element={
+              <ProtectedRoute permission="certificates">
+                <Layout><CertificatesSection /></Layout>
+              </ProtectedRoute>
+            } />
             {/* <Route path="/timetable" element={<Layout><TimeTableSection /></Layout>} /> */}
-            <Route path="/settings" element={<Layout><SettingsPage /></Layout>} />
-            <Route path="/financial-reporting" element={<Layout><FinancialReporting /></Layout>} />
+            <Route path="/settings" element={
+              <ProtectedRoute permission="settings">
+                <Layout><SettingsPage /></Layout>
+              </ProtectedRoute>
+            } />
+            <Route path="/financial-reporting" element={
+              <ProtectedRoute permission="financial-reports">
+                <Layout><FinancialReporting /></Layout>
+              </ProtectedRoute>
+            } />
+            <Route path="/rbac-test" element={
+              <Layout><RBACTestPage /></Layout>
+            } />
           </Routes>
           <ToastContainer 
             position="top-right"
