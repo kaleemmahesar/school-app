@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { FaUsers, FaMoneyBillWave, FaChalkboardTeacher, FaBook, FaGraduationCap, FaChartLine, FaDollarSign, FaClipboardList, FaChevronDown, FaQrcode, FaUsersCog, FaFileInvoice, FaTasks, FaListOl, FaFileAlt, FaEdit, FaGraduationCap as FaGraduationCapIcon, FaCalendarAlt, FaCertificate, FaUser, FaSignOutAlt, FaCog, FaTable, FaSearch, FaHandHoldingUsd } from 'react-icons/fa';
-import { logoutUser } from '../store/usersSlice';
+import { logout } from '../store/usersSlice';
 import Logo from '../img/logo.png';
 import { useSchoolFunding } from '../hooks/useSchoolFunding';
 import FundingConditional from './common/FundingConditional';
@@ -43,7 +43,7 @@ const Layout = ({ children }) => {
 
   const handleLogout = async () => {
     try {
-      await dispatch(logoutUser());
+      await dispatch(logout());
       navigate('/login');
     } catch (error) {
       console.error('Logout failed:', error);
@@ -108,7 +108,12 @@ const Layout = ({ children }) => {
       baseItems.push({
         name: 'Staff',
         path: '/staff',
-        icon: <FaChalkboardTeacher className="mr-2" />
+        icon: <FaChalkboardTeacher className="mr-2" />,
+        dropdown: [
+          { name: 'All Staff', path: '/staff' },
+          { name: 'Attendance', path: '/staff/attendance', permission: 'staff-attendance' },
+          { name: 'Attendance Reports', path: '/staff/attendance-reports', permission: 'staff-attendance' }
+        ].filter(item => !item.permission || hasPermission(item.permission))
       });
     }
 
@@ -291,7 +296,7 @@ const Layout = ({ children }) => {
       </nav>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {children}
       </main>
     </div>

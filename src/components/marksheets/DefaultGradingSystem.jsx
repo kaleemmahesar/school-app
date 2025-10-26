@@ -1,17 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FaGraduationCap, FaPlus, FaTrash, FaSave } from 'react-icons/fa';
 import PageHeader from '../common/PageHeader';
+import { SCHOOL_CONFIG } from '../../config/schoolConfig';
 
 const DefaultGradingSystem = () => {
-  const [gradingRules, setGradingRules] = useState([
-    { id: 1, minPercentage: 90, maxPercentage: 100, grade: 'A+', remarks: 'Excellent' },
-    { id: 2, minPercentage: 80, maxPercentage: 89, grade: 'A', remarks: 'Very Good' },
-    { id: 3, minPercentage: 70, maxPercentage: 79, grade: 'B+', remarks: 'Good' },
-    { id: 4, minPercentage: 60, maxPercentage: 69, grade: 'B', remarks: 'Satisfactory' },
-    { id: 5, minPercentage: 50, maxPercentage: 59, grade: 'C', remarks: 'Average' },
-    { id: 6, minPercentage: 40, maxPercentage: 49, grade: 'D', remarks: 'Below Average' },
-    { id: 7, minPercentage: 0, maxPercentage: 39, grade: 'F', remarks: 'Fail' }
-  ]);
+  const [gradingRules, setGradingRules] = useState(SCHOOL_CONFIG.gradingStructure);
   
   const [newRule, setNewRule] = useState({
     minPercentage: '',

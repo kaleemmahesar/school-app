@@ -227,6 +227,10 @@ const StudentReportGenerator = () => {
                 <div class="stat-label">Late</div>
               </div>
               <div class="stat-card">
+                <div class="stat-value">${currentReport.attendance.leave}</div>
+                <div class="stat-label">Leave</div>
+              </div>
+              <div class="stat-card">
                 <div class="stat-value">${currentReport.attendance.percentage}%</div>
                 <div class="stat-label">Attendance %</div>
               </div>
@@ -322,7 +326,8 @@ const StudentReportGenerator = () => {
       doc.text(`Present: ${currentReport.attendance.present}`, 20, 100);
       doc.text(`Absent: ${currentReport.attendance.absent}`, 20, 110);
       doc.text(`Late: ${currentReport.attendance.late}`, 20, 120);
-      doc.text(`Attendance %: ${currentReport.attendance.percentage}%`, 20, 130);
+      doc.text(`Leave: ${currentReport.attendance.leave}`, 20, 130);
+      doc.text(`Attendance %: ${currentReport.attendance.percentage}%`, 20, 140);
       
       // Add academic performance summary
       doc.setFontSize(16);
@@ -394,6 +399,7 @@ const StudentReportGenerator = () => {
           present: 0,
           absent: 0,
           late: 0,
+          leave: 0,
           total: 0
         };
       }
@@ -407,6 +413,9 @@ const StudentReportGenerator = () => {
           break;
         case 'late':
           weeklyData[weekKey].late++;
+          break;
+        case 'leave':
+          weeklyData[weekKey].leave++;
           break;
       }
       weeklyData[weekKey].total++;
@@ -697,6 +706,10 @@ const StudentReportGenerator = () => {
                       <div className="text-sm font-medium text-yellow-800">Late</div>
                       <div className="text-2xl font-semibold text-yellow-900">{currentReport.attendance.late}</div>
                     </div>
+                    <div className="bg-blue-50 rounded-lg p-4">
+                      <div className="text-sm font-medium text-blue-800">Leave</div>
+                      <div className="text-2xl font-semibold text-blue-900">{currentReport.attendance.leave}</div>
+                    </div>
                     <div className="bg-purple-50 rounded-lg p-4">
                       <div className="text-sm font-medium text-purple-800">Attendance %</div>
                       <div className="text-2xl font-semibold text-purple-900">{currentReport.attendance.percentage}%</div>
@@ -786,6 +799,7 @@ const StudentReportGenerator = () => {
                             <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Present</th>
                             <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Absent</th>
                             <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Late</th>
+                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Leave</th>
                             <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Attendance %</th>
                           </tr>
                         </thead>
@@ -798,6 +812,7 @@ const StudentReportGenerator = () => {
                               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{week.present}</td>
                               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{week.absent}</td>
                               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{week.late}</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{week.leave}</td>
                               <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                                 {week.total > 0 ? Math.round((week.present / week.total) * 100) : 0}%
                               </td>

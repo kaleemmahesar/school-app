@@ -129,6 +129,7 @@ const calculateAttendanceStats = (attendanceData, studentId) => {
       present: 0,
       absent: 0,
       late: 0,
+      leave: 0,
       percentage: 0
     };
   }
@@ -136,6 +137,7 @@ const calculateAttendanceStats = (attendanceData, studentId) => {
   let present = 0;
   let absent = 0;
   let late = 0;
+  let leave = 0;
   
   attendanceData.forEach(record => {
     const studentRecord = record.records.find(r => r.studentId === studentId);
@@ -150,11 +152,14 @@ const calculateAttendanceStats = (attendanceData, studentId) => {
         case 'late':
           late++;
           break;
+        case 'leave':
+          leave++;
+          break;
       }
     }
   });
   
-  const totalDays = present + absent + late;
+  const totalDays = present + absent + late + leave;
   const percentage = totalDays > 0 ? Math.round((present / totalDays) * 100) : 0;
   
   return {
@@ -162,6 +167,7 @@ const calculateAttendanceStats = (attendanceData, studentId) => {
     present,
     absent,
     late,
+    leave,
     percentage
   };
 };

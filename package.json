@@ -5,7 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "prebuild": "node scripts/generate-config.js school-config.json",
     "build": "vite build",
+    "build:school": "node scripts/generate-config.js school-config.json && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "jest"

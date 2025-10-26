@@ -1,14 +1,17 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { createAsyncThunkWithToast } from '../utils/asyncThunkUtils';
-import { API_BASE_URL } from '../utils/apiConfig';
+import { SCHOOL_CONFIG } from '../config/schoolConfig';
 
-// Initial state for school settings
+// Initial state for school settings - now using the configuration file
 const initialState = {
   schoolInfo: {
-    name: 'ABC School',
-    logo: null, // Base64 string or URL
-    level: 'primary', // 'primary', 'middle', or 'high'
-    fundingType: 'ngo', // 'traditional' or 'ngo'
+    name: SCHOOL_CONFIG.name,
+    logo: SCHOOL_CONFIG.logo,
+    level: SCHOOL_CONFIG.level,
+    fundingType: SCHOOL_CONFIG.fundingType,
+    hasPG: SCHOOL_CONFIG.hasPG,
+    hasNursery: SCHOOL_CONFIG.hasNursery,
+    hasKG: SCHOOL_CONFIG.hasKG,
     theme: 'light', // 'light', 'dark', or 'system'
     sidebarCollapsed: false,
     dateFormat: 'DD/MM/YYYY',
@@ -17,7 +20,8 @@ const initialState = {
       primary: { from: 1, to: 5 },
       middle: { from: 6, to: 8 },
       high: { from: 9, to: 10 }
-    }
+    },
+    gradingStructure: SCHOOL_CONFIG.gradingStructure
   },
   loading: false,
   error: null,
@@ -53,8 +57,26 @@ export const fetchSchoolInfo = createAsyncThunk(
       // const response = await api.get('/school/settings');
       // return response.data;
       
-      // Return mock data for now
-      return initialState.schoolInfo;
+      // Return data from the configuration file
+      return {
+        name: SCHOOL_CONFIG.name,
+        logo: SCHOOL_CONFIG.logo,
+        level: SCHOOL_CONFIG.level,
+        fundingType: SCHOOL_CONFIG.fundingType,
+        hasPG: SCHOOL_CONFIG.hasPG,
+        hasNursery: SCHOOL_CONFIG.hasNursery,
+        hasKG: SCHOOL_CONFIG.hasKG,
+        theme: 'light',
+        sidebarCollapsed: false,
+        dateFormat: 'DD/MM/YYYY',
+        currency: 'PKR',
+        levelDetails: {
+          primary: { from: 1, to: 5 },
+          middle: { from: 6, to: 8 },
+          high: { from: 9, to: 10 }
+        },
+        gradingStructure: SCHOOL_CONFIG.gradingStructure
+      };
     } catch (error) {
       return rejectWithValue(error.message || 'Failed to fetch school information');
     }

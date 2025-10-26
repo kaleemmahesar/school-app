@@ -18,6 +18,7 @@ const rolesConfig = {
       'student-reports', // Specific student reports permission
       'settings',
       'attendance',
+      'staff-attendance', // Staff attendance permission
       'marksheets',
       'certificates',
       'examinations'
@@ -28,7 +29,9 @@ const rolesConfig = {
       'students',
       'classes',
       'staff',
+      
       'attendance',
+      'staff-attendance', // Staff attendance permission
       'marksheets',
       'certificates',
       'examinations',
@@ -49,6 +52,7 @@ const rolesConfig = {
     permissions: [
       'students',
       'attendance',
+      'staff-attendance', // Staff attendance permission
       'marksheets',
       'certificates',
       'fees',
@@ -116,7 +120,7 @@ const mockUsers = [
 ];
 
 const initialState = {
-  users: mockUsers,
+  users: JSON.parse(JSON.stringify(mockUsers)),
   currentUser: null,
   loading: false,
   error: null,
@@ -162,15 +166,24 @@ export const selectIsStaff = (state) => {
 export const fetchUsers = createAsyncThunk('users/fetchUsers', async () => {
   // Simulate API delay
   await new Promise(resolve => setTimeout(resolve, 500));
-  return mockUsers;
+  // Return a deep copy to avoid read-only issues
+  return JSON.parse(JSON.stringify(mockUsers));
 });
 
 export const addUser = createAsyncThunk('users/addUser', async (userData) => {
   // Simulate API delay
   await new Promise(resolve => setTimeout(resolve, 500));
+  
+  // Ensure permissions are set based on role
+  let permissions = [];
+  if (rolesConfig[userData.role]) {
+    permissions = rolesConfig[userData.role].permissions;
+  }
+  
   const newUser = {
     id: Date.now().toString(),
     ...userData,
+    permissions,
     loginHistory: []
   };
   return newUser;
@@ -198,60 +211,50 @@ export const loginUser = createAsyncThunk('users/loginUser', async ({ username, 
     let user = null;
     
     // Check for demo credentials
-    if (username === 'owner' && password === 'owner123') {
-      user = mockUsers.find(u => u.username === 'owner');
-    } else if (username === 'admin' && password === 'admin123') {
-      user = mockUsers.find(u => u.username === 'admin');
-    } else if (username === 'teacher' && password === 'teacher123') {
-      user = mockUsers.find(u => u.username === 'teacher');
-    } else if (username === 'staff' && password === 'staff123') {
-      user = mockUsers.find(u => u.username === 'staff');
-    } else {
-      // Check against actual mock users with proper password validation
-      user = mockUsers.find(u => u.username === username);
-      // In a real app, we would also verify the password
-      // For now, we'll just check if the user exists
+    if ((username === 'owner' && password === 'owner123') || 
+        (username === 'admin' && password === 'admin123') ||
+        (username === 'teacher' && password === 'teacher123') ||
+        (username === 'staff' && password === 'staff123')) {
+      const userIndex = mockUsers.findIndex(u => u.username === username);
+      if (userIndex !== -1) {
+        // Create a deep copy of the user object to avoid modifying the original
+        user = JSON.parse(JSON.stringify(mockUsers[userIndex]));
+      }
     }
     
-    if (user) {
-      // Add a new login record
-      const loginRecord = {
-        id: `login-${Date.now()}`,
-        timestamp: new Date().toISOString(),
-        status: 'success',
-        ip: '192.168.1.104' // Mock IP
-      };
-      
-      // Update localStorage to indicate authentication
-      localStorage.setItem('isAuthenticated', 'true');
-      
-      return {
-        ...user,
-        lastLogin: new Date().toISOString(),
-        loginHistory: [loginRecord, ...user.loginHistory.slice(0, 9)] // Keep only last 10 records
-      };
+    if (!user) {
+      throw new Error('Invalid credentials');
     }
     
-    throw new Error('Invalid credentials');
+    // Update last login timestamp on the copied user object
+    user.lastLogin = new Date().toISOString();
+    
+    // Add login attempt to history
+    const loginAttempt = {
+      id: `login-${Date.now()}`,
+      timestamp: new Date().toISOString(),
+      status: 'success',
+      ip: '192.168.1.100' // Mock IP
+    };
+    
+    // In a real app, we'd update the user's login history
+    // For demo, we'll just return the user object
+    return user;
   } catch (error) {
-    return rejectWithValue(error.message);
+    return rejectWithValue(error.message || 'Login failed');
   }
 });
 
-export const logoutUser = createAsyncThunk('users/logoutUser', async () => {
-  // Simulate API delay
-  await new Promise(resolve => setTimeout(resolve, 300));
-  // Remove authentication from localStorage
-  localStorage.removeItem('isAuthenticated');
-  return true;
-});
-
+// Create the users slice
 const usersSlice = createSlice({
   name: 'users',
   initialState,
   reducers: {
-    clearError: (state) => {
-      state.error = null;
+    logout: (state) => {
+      state.currentUser = null;
+    },
+    setCurrentUser: (state, action) => {
+      state.currentUser = action.payload;
     }
   },
   extraReducers: (builder) => {
@@ -269,12 +272,14 @@ const usersSlice = createSlice({
         state.error = action.error.message;
       })
       .addCase(addUser.fulfilled, (state, action) => {
-        state.users.push(action.payload);
+        // Create a deep copy to ensure we're not modifying any references
+        state.users.push(JSON.parse(JSON.stringify(action.payload)));
       })
       .addCase(updateUser.fulfilled, (state, action) => {
         const index = state.users.findIndex(user => user.id === action.payload.id);
         if (index !== -1) {
-          state.users[index] = action.payload;
+          // Create a deep copy to ensure we're not modifying any references
+          state.users[index] = JSON.parse(JSON.stringify(action.payload));
         }
       })
       .addCase(deleteUser.fulfilled, (state, action) => {
@@ -287,22 +292,23 @@ const usersSlice = createSlice({
       .addCase(loginUser.fulfilled, (state, action) => {
         state.loading = false;
         state.currentUser = action.payload;
+        // Also update the user in the users array to reflect the latest login
+        const userIndex = state.users.findIndex(u => u.id === action.payload.id);
+        if (userIndex !== -1) {
+          // Create a deep copy to ensure we're not modifying any references
+          state.users[userIndex] = JSON.parse(JSON.stringify(action.payload));
+        }
+        state.error = null;
       })
       .addCase(loginUser.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.payload || action.error.message;
-      })
-      .addCase(logoutUser.fulfilled, (state) => {
-        state.currentUser = null;
+        state.error = action.payload;
       });
   },
 });
 
-export const { clearError } = usersSlice.actions;
+// Export the actions
+export const { logout, setCurrentUser } = usersSlice.actions;
 
-// Export selectors
-export {
-  rolesConfig
-};
-
+// Export the reducer as default
 export default usersSlice.reducer;

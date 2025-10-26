@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { updateSchoolInfo, fetchSchoolInfo } from '../store/settingsSlice';
-import { FaSchool, FaCog, FaBuilding, FaUpload, FaSave, FaUndo, FaHandHoldingUsd, FaMoneyBillWave, FaSearch, FaBook, FaQuestionCircle, FaGraduationCap, FaSitemap, FaPrint, FaMagic } from 'react-icons/fa';
+import { FaSchool, FaCog, FaBuilding, FaUpload, FaSave, FaUndo, FaHandHoldingUsd, FaMoneyBillWave, FaSearch, FaBook, FaQuestionCircle, FaGraduationCap, FaSitemap, FaPrint, FaMagic, FaToggleOn, FaToggleOff } from 'react-icons/fa';
 import AppGuideModal from './settings/AppGuideModal';
 import FirstRunWizard from './onboarding/FirstRunWizard';
 import RoleBasedGuide from './onboarding/RoleBasedGuide';
@@ -9,6 +9,7 @@ import FaqSection from './help/FaqSection';
 import Glossary from './help/Glossary';
 import VisualFlowcharts from './help/VisualFlowcharts';
 import QuickReference from './help/QuickReference';
+import { SCHOOL_CONFIG } from '../config/schoolConfig';
 
 const SettingsPage = () => {
   const dispatch = useDispatch();
@@ -16,17 +17,20 @@ const SettingsPage = () => {
   const currentUser = useSelector(state => state.users.currentUser);
   
   const [formData, setFormData] = useState({
-    name: '',
-    level: 'primary',
-    fundingType: 'ngo',
-    logo: null,
+    name: SCHOOL_CONFIG.name,
+    level: SCHOOL_CONFIG.level,
+    fundingType: SCHOOL_CONFIG.fundingType,
+    hasPG: SCHOOL_CONFIG.hasPG,
+    hasNursery: SCHOOL_CONFIG.hasNursery,
+    hasKG: SCHOOL_CONFIG.hasKG,
+    logo: SCHOOL_CONFIG.logo,
     theme: 'light',
     sidebarCollapsed: false,
     dateFormat: 'DD/MM/YYYY',
     currency: 'PKR',
   });
   
-  const [logoPreview, setLogoPreview] = useState(null);
+  const [logoPreview, setLogoPreview] = useState(SCHOOL_CONFIG.logo);
   const [isEditing, setIsEditing] = useState(false);
   const [isGuideOpen, setIsGuideOpen] = useState(false);
   const [isWizardOpen, setIsWizardOpen] = useState(false);
@@ -44,16 +48,19 @@ const SettingsPage = () => {
   useEffect(() => {
     if (schoolInfo) {
       setFormData({
-        name: schoolInfo.name || '',
-        level: schoolInfo.level || 'primary',
-        fundingType: schoolInfo.fundingType || 'ngo',
-        logo: schoolInfo.logo || null,
+        name: schoolInfo.name || SCHOOL_CONFIG.name,
+        level: schoolInfo.level || SCHOOL_CONFIG.level,
+        fundingType: schoolInfo.fundingType || SCHOOL_CONFIG.fundingType,
+        hasPG: schoolInfo.hasPG !== undefined ? schoolInfo.hasPG : SCHOOL_CONFIG.hasPG,
+        hasNursery: schoolInfo.hasNursery !== undefined ? schoolInfo.hasNursery : SCHOOL_CONFIG.hasNursery,
+        hasKG: schoolInfo.hasKG !== undefined ? schoolInfo.hasKG : SCHOOL_CONFIG.hasKG,
+        logo: schoolInfo.logo || SCHOOL_CONFIG.logo,
         theme: schoolInfo.theme || 'light',
         sidebarCollapsed: schoolInfo.sidebarCollapsed || false,
         dateFormat: schoolInfo.dateFormat || 'DD/MM/YYYY',
         currency: schoolInfo.currency || 'PKR',
       });
-      setLogoPreview(schoolInfo.logo || null);
+      setLogoPreview(schoolInfo.logo || SCHOOL_CONFIG.logo);
     }
   }, [schoolInfo]);
 
@@ -62,6 +69,13 @@ const SettingsPage = () => {
     setFormData(prev => ({
       ...prev,
       [name]: value
+    }));
+  };
+
+  const handleToggleChange = (field) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: !prev[field]
     }));
   };
 
@@ -91,19 +105,20 @@ const SettingsPage = () => {
   };
 
   const handleReset = () => {
-    if (schoolInfo) {
-      setFormData({
-        name: schoolInfo.name || '',
-        level: schoolInfo.level || 'primary',
-        fundingType: schoolInfo.fundingType || 'ngo',
-        logo: schoolInfo.logo || null,
-        theme: schoolInfo.theme || 'light',
-        sidebarCollapsed: schoolInfo.sidebarCollapsed || false,
-        dateFormat: schoolInfo.dateFormat || 'DD/MM/YYYY',
-        currency: schoolInfo.currency || 'PKR',
-      });
-      setLogoPreview(schoolInfo.logo || null);
-    }
+    setFormData({
+      name: SCHOOL_CONFIG.name,
+      level: SCHOOL_CONFIG.level,
+      fundingType: SCHOOL_CONFIG.fundingType,
+      hasPG: SCHOOL_CONFIG.hasPG,
+      hasNursery: SCHOOL_CONFIG.hasNursery,
+      hasKG: SCHOOL_CONFIG.hasKG,
+      logo: SCHOOL_CONFIG.logo,
+      theme: 'light',
+      sidebarCollapsed: false,
+      dateFormat: 'DD/MM/YYYY',
+      currency: 'PKR',
+    });
+    setLogoPreview(SCHOOL_CONFIG.logo);
     setIsEditing(false);
   };
 
@@ -256,8 +271,74 @@ const SettingsPage = () => {
                 </div>
               </div>
 
+              {/* Early Childhood Education Options */}
+              <div className="md:col-span-2 border-t border-gray-200 pt-6">
+                <h3 className="text-md font-medium text-gray-900 mb-4">Early Childhood Education</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div 
+                    className={`border rounded-lg p-4 cursor-pointer transition-colors ${
+                      formData.hasPG 
+                        ? 'border-green-500 bg-green-50' 
+                        : 'border-gray-300 hover:border-gray-400'
+                    }`}
+                    onClick={() => handleToggleChange('hasPG')}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium text-gray-700">Play Group (PG)</span>
+                      {formData.hasPG ? 
+                        <FaToggleOn className="text-green-500 text-xl" /> : 
+                        <FaToggleOff className="text-gray-400 text-xl" />
+                      }
+                    </div>
+                    <p className="mt-1 text-xs text-gray-500">
+                      Enable Play Group class
+                    </p>
+                  </div>
+                  
+                  <div 
+                    className={`border rounded-lg p-4 cursor-pointer transition-colors ${
+                      formData.hasNursery 
+                        ? 'border-green-500 bg-green-50' 
+                        : 'border-gray-300 hover:border-gray-400'
+                    }`}
+                    onClick={() => handleToggleChange('hasNursery')}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium text-gray-700">Nursery</span>
+                      {formData.hasNursery ? 
+                        <FaToggleOn className="text-green-500 text-xl" /> : 
+                        <FaToggleOff className="text-gray-400 text-xl" />
+                      }
+                    </div>
+                    <p className="mt-1 text-xs text-gray-500">
+                      Enable Nursery class
+                    </p>
+                  </div>
+                  
+                  <div 
+                    className={`border rounded-lg p-4 cursor-pointer transition-colors ${
+                      formData.hasKG 
+                        ? 'border-green-500 bg-green-50' 
+                        : 'border-gray-300 hover:border-gray-400'
+                    }`}
+                    onClick={() => handleToggleChange('hasKG')}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium text-gray-700">Kindergarten (KG)</span>
+                      {formData.hasKG ? 
+                        <FaToggleOn className="text-green-500 text-xl" /> : 
+                        <FaToggleOff className="text-gray-400 text-xl" />
+                      }
+                    </div>
+                    <p className="mt-1 text-xs text-gray-500">
+                      Enable Kindergarten class
+                    </p>
+                  </div>
+                </div>
+              </div>
+
               {/* Funding Type */}
-              <div className="md:col-span-2">
+              <div className="md:col-span-2 border-t border-gray-200 pt-6">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   School Funding Type
                 </label>
@@ -533,6 +614,11 @@ const SettingsPage = () => {
               <p className="text-sm text-gray-500 mt-1">
                 {formData.fundingType === 'ngo' ? 'NGO Funded School' : 'Traditional School'}
               </p>
+              <div className="flex mt-2 space-x-2">
+                {formData.hasPG && <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">PG</span>}
+                {formData.hasNursery && <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">Nursery</span>}
+                {formData.hasKG && <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">KG</span>}
+              </div>
             </div>
           </div>
         </div>

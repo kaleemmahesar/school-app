@@ -9,6 +9,8 @@ const AttendanceRecord = ({ record, onStatusChange }) => {
         return 'bg-red-100 text-red-800';
       case 'late':
         return 'bg-yellow-100 text-yellow-800';
+      case 'leave':
+        return 'bg-blue-100 text-blue-800';
       default:
         return 'bg-gray-100 text-gray-800';
     }
@@ -35,7 +37,7 @@ const AttendanceRecord = ({ record, onStatusChange }) => {
       </div>
       
       <div className="flex space-x-2">
-        {['present', 'absent', 'late'].map((status) => (
+        {['present', 'absent', 'late', 'leave'].map((status) => (
           <button
             key={status}
             onClick={() => onStatusChange(record.studentId, status)}

@@ -69,6 +69,43 @@ src/
    ```
 4. Open your browser to http://localhost:5173
 
+## School Configuration System
+
+This application includes a school-specific configuration system that allows you to customize the school name, logo, and grading structure for different schools.
+
+### Configuration Files
+
+- `school-config.json`: Main configuration file for school-specific settings
+- `src/config/schoolConfig.js`: Auto-generated file during build process
+
+### Building for a Specific School
+
+To build the application for a specific school:
+
+1. Modify the `school-config.json` file with the school's settings
+2. Run the build command:
+   ```
+   npm run build:school
+   ```
+
+Or use the provided batch script:
+```
+build-for-school.bat school-config.json
+```
+
+This will:
+- Generate the `src/config/schoolConfig.js` file based on your configuration
+- Build the application with the school-specific settings baked in
+
+### Configuration Options
+
+The configuration file supports:
+- School name
+- Logo (Base64 encoded or URL)
+- School level (primary, middle, high)
+- Funding type (traditional, ngo)
+- Customizable grading structure
+
 ## Improved UI Features
 
 The application now features a completely redesigned, modern UI with:
@@ -119,4 +156,4 @@ Each main feature is implemented as a separate component:
 
 ## License
 
-This project is open source and available under the MIT License."# school-app" 
+This project is open source and available under the MIT License.

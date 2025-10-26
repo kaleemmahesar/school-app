@@ -638,7 +638,8 @@ export const generateAttendanceReport = async (startDate, endDate, classId) => {
     totalDays: filteredRecords.length,
     present: 0,
     absent: 0,
-    late: 0
+    late: 0,
+    leave: 0
   };
   
   filteredRecords.forEach(record => {
@@ -652,6 +653,9 @@ export const generateAttendanceReport = async (startDate, endDate, classId) => {
           break;
         case 'late':
           stats.late++;
+          break;
+        case 'leave':
+          stats.leave++;
           break;
       }
     });

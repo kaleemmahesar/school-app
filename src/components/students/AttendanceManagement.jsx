@@ -164,11 +164,12 @@ const AttendanceManagement = () => {
     const presentCount = Object.values(attendanceRecords).filter(status => status === 'present').length;
     const absentCount = Object.values(attendanceRecords).filter(status => status === 'absent').length;
     const lateCount = Object.values(attendanceRecords).filter(status => status === 'late').length;
+    const leaveCount = Object.values(attendanceRecords).filter(status => status === 'leave').length;
     
-    return { presentCount, absentCount, lateCount };
+    return { presentCount, absentCount, lateCount, leaveCount };
   };
 
-  const { presentCount, absentCount, lateCount } = useMemo(getAttendanceSummary, [attendanceRecords]);
+  const { presentCount, absentCount, lateCount, leaveCount } = useMemo(getAttendanceSummary, [attendanceRecords]);
 
   // Get button class based on status
   const getButtonClass = (studentId, status) => {
@@ -181,6 +182,8 @@ const AttendanceManagement = () => {
           return 'inline-flex items-center px-3 py-1 border border-red-300 bg-red-100 text-red-800 text-xs font-medium rounded-lg';
         case 'late':
           return 'inline-flex items-center px-3 py-1 border border-yellow-300 bg-yellow-100 text-yellow-800 text-xs font-medium rounded-lg';
+        case 'leave':
+          return 'inline-flex items-center px-3 py-1 border border-blue-300 bg-blue-100 text-blue-800 text-xs font-medium rounded-lg';
         default:
           return 'inline-flex items-center px-3 py-1 border border-gray-300 text-gray-700 bg-white text-xs font-medium rounded-lg hover:bg-gray-50';
       }
@@ -346,6 +349,12 @@ const AttendanceManagement = () => {
                 <FaClock className="mr-1" /> Mark Late
               </button>
               <button
+                onClick={() => markSelectedAs('leave')}
+                className="inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded-lg text-white bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              >
+                <FaClock className="mr-1" /> Mark Leave
+              </button>
+              <button
                 onClick={clearStudentSelection}
                 className="inline-flex items-center px-3 py-1 border border-gray-300 text-xs font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
               >
@@ -476,6 +485,12 @@ const AttendanceManagement = () => {
                       >
                         <FaClock className="mr-1" /> Late
                       </button>
+                      <button
+                        onClick={() => handleAttendanceChange(student.id, 'leave')}
+                        className={getButtonClass(student.id, 'leave')}
+                      >
+                        <FaClock className="mr-1" /> Leave
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -495,6 +510,9 @@ const AttendanceManagement = () => {
                 </td>
                 <td className="px-4 py-3 text-sm text-yellow-700 font-medium">
                   <FaClock className="inline mr-1" /> Late: {lateCount}
+                </td>
+                <td className="px-4 py-3 text-sm text-blue-700 font-medium">
+                  <FaClock className="inline mr-1" /> Leave: {leaveCount}
                 </td>
               </tr>
             </tfoot>

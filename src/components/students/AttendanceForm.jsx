@@ -42,6 +42,8 @@ const AttendanceForm = ({ date, classId, students, onClose }) => {
           return 'bg-red-500 text-white';
         case 'late':
           return 'bg-yellow-500 text-white';
+        case 'leave':
+          return 'bg-blue-500 text-white';
         default:
           return 'bg-gray-200 text-gray-800';
       }
@@ -95,7 +97,7 @@ const AttendanceForm = ({ date, classId, students, onClose }) => {
                     </div>
                     
                     <div className="flex space-x-2">
-                      {['present', 'absent', 'late'].map((status) => (
+                      {['present', 'absent', 'late', 'leave'].map((status) => (
                         <button
                           key={status}
                           type="button"

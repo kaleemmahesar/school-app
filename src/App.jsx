@@ -7,6 +7,7 @@ import StudentsSection from './components/StudentsSection'
 import ExpensesSection from './components/ExpensesSection'
 import StaffSection from './components/StaffSection'
 import StaffDetails from './components/StaffDetails'
+import StaffAttendanceReport from './components/staff/StaffAttendanceReport'
 import ClassesSection from './components/ClassesSection'
 import SubsidySection from './components/SubsidySection'
 import MarksheetsSection from './components/MarksheetsSection'
@@ -20,6 +21,7 @@ import FeesSection from './components/fees/FeesSection'
 import AttendanceManagement from './components/students/AttendanceManagement'
 import StudentReportGenerator from './components/students/StudentReportGenerator'
 import FinancialReporting from './components/FinancialReporting'
+import StaffAttendance from './components/staff/StaffAttendance'
 import { ToastContainer } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
 import './index.css'
@@ -69,6 +71,16 @@ function App() {
             <Route path="/staff" element={
               <ProtectedRoute permission="staff">
                 <Layout><StaffSection /></Layout>
+              </ProtectedRoute>
+            } />
+            <Route path="/staff/attendance" element={
+              <ProtectedRoute permission="staff-attendance">
+                <Layout><StaffAttendance /></Layout>
+              </ProtectedRoute>
+            } />
+            <Route path="/staff/attendance-reports" element={
+              <ProtectedRoute permission="staff-attendance">
+                <Layout><StaffAttendanceReport /></Layout>
               </ProtectedRoute>
             } />
             <Route path="/staff/:id" element={

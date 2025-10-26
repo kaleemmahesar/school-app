@@ -1,4 +1,5 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+import { addStaffAttendanceRecord, getStaffAttendanceByDate } from '../utils/staffAttendanceApi';
 
 // Mock data for staff with enhanced salary management
 // Set all staff to have joined last month (September/October 2025) for 1-2 months of work
@@ -320,6 +321,7 @@ const mockStaff = [
 
 const initialState = {
   staff: mockStaff,
+  attendanceRecords: [], // Add attendance records to state
   loading: false,
   error: null,
 };
@@ -329,6 +331,14 @@ export const fetchStaff = createAsyncThunk('staff/fetchStaff', async () => {
   // Simulate API call
   await new Promise(resolve => setTimeout(resolve, 1000));
   return mockStaff;
+});
+
+// Fetch staff attendance by date
+export const fetchStaffAttendanceByDate = createAsyncThunk('staff/fetchStaffAttendanceByDate', async (date) => {
+  // Simulate API call
+  await new Promise(resolve => setTimeout(resolve, 500));
+  const records = await getStaffAttendanceByDate(date);
+  return records;
 });
 
 export const addStaff = createAsyncThunk('staff/addStaff', async (newStaff) => {
@@ -366,6 +376,14 @@ export const payStaffSalary = createAsyncThunk('staff/payStaffSalary', async ({ 
   return { staffId, month, paymentMethod };
 });
 
+export const addStaffAttendance = createAsyncThunk('staff/addStaffAttendance', async ({ date, records }) => {
+  // Simulate API call
+  await new Promise(resolve => setTimeout(resolve, 500));
+  // Also save to the mock API
+  await addStaffAttendanceRecord({ date, records });
+  return { date, records };
+});
+
 const staffSlice = createSlice({
   name: 'staff',
   initialState,
@@ -385,6 +403,9 @@ const staffSlice = createSlice({
       .addCase(fetchStaff.rejected, (state, action) => {
         state.loading = false;
         state.error = action.error.message;
+      })
+      .addCase(fetchStaffAttendanceByDate.fulfilled, (state, action) => {
+        state.attendanceRecords = action.payload;
       })
       .addCase(addStaff.fulfilled, (state, action) => {
         // Add new staff at the beginning of the array so they appear first
@@ -458,6 +479,40 @@ const staffSlice = createSlice({
             }
             staffMember.salaryHistory.push(newSalaryRecord);
           }
+        }
+      })
+      .addCase(addStaffAttendance.fulfilled, (state, action) => {
+        const { date, records } = action.payload;
+        
+        // Update attendance for each staff member
+        records.forEach(record => {
+          const staffMember = state.staff.find(staff => staff.id === record.staffId);
+          if (staffMember) {
+            // Check if attendance record for this date already exists
+            const existingIndex = staffMember.attendance.findIndex(att => att.date === date);
+            
+            if (existingIndex !== -1) {
+              // Update existing attendance record
+              staffMember.attendance[existingIndex] = {
+                ...staffMember.attendance[existingIndex],
+                status: record.status
+              };
+            } else {
+              // Add new attendance record
+              staffMember.attendance.push({
+                date,
+                status: record.status
+              });
+            }
+          }
+        });
+        
+        // Also update the attendanceRecords in state
+        const existingRecordIndex = state.attendanceRecords.findIndex(record => record.date === date);
+        if (existingRecordIndex !== -1) {
+          state.attendanceRecords[existingRecordIndex] = { date, records };
+        } else {
+          state.attendanceRecords.push({ date, records });
         }
       });
   },
