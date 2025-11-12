@@ -32,7 +32,7 @@ import RBACTestPage from './components/RBACTestPage'
 function App() {
   return (
     <Provider store={store}>
-      <Router basename="/sms-sef">
+      <Router basename="/sms-sef/">
         <div className="min-h-screen bg-gray-100">
           <Routes>
             <Route path="/login" element={<LoginPage />} />

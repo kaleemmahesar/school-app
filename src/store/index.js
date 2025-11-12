@@ -11,6 +11,7 @@ import subsidiesReducer from './subsidiesSlice';
 import reportsReducer from './reportsSlice';
 import attendanceReducer from './attendanceSlice';
 import parentsReducer from './parentsSlice';
+import incomeReducer from './incomeSlice';
 
 export const store = configureStore({
   reducer: {
@@ -26,6 +27,7 @@ export const store = configureStore({
     reports: reportsReducer,
     attendance: attendanceReducer,
     parents: parentsReducer,
+    income: incomeReducer,
   },
 });
 

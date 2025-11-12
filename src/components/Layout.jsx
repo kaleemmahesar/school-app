@@ -2,10 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { FaUsers, FaMoneyBillWave, FaChalkboardTeacher, FaBook, FaGraduationCap, FaChartLine, FaDollarSign, FaClipboardList, FaChevronDown, FaQrcode, FaUsersCog, FaFileInvoice, FaTasks, FaListOl, FaFileAlt, FaEdit, FaGraduationCap as FaGraduationCapIcon, FaCalendarAlt, FaCertificate, FaUser, FaSignOutAlt, FaCog, FaTable, FaSearch, FaHandHoldingUsd } from 'react-icons/fa';
-import { logout } from '../store/usersSlice';
 import Logo from '../img/logo.png';
+import { logout, setCurrentUser } from '../store/usersSlice';
 import { useSchoolFunding } from '../hooks/useSchoolFunding';
-import FundingConditional from './common/FundingConditional';
 import { usePermissions } from '../hooks/usePermissions';
 
 const Layout = ({ children }) => {
@@ -16,11 +15,27 @@ const Layout = ({ children }) => {
   const expenses = useSelector(state => state.expenses.expenses);
   const staff = useSelector(state => state.staff.staff);
   const classes = useSelector(state => state.classes.classes);
-  const currentUser = useSelector(state => state.users.currentUser);
+  const { currentUser } = useSelector(state => state.users);
   const { isNGOSchool } = useSchoolFunding();
   const { hasPermission, isOwner, isAdmin, isTeacher, isStaff } = usePermissions();
   const [openDropdown, setOpenDropdown] = useState(null);
   const [showUserMenu, setShowUserMenu] = useState(false);
+
+  // Check for user in localStorage on initial load
+  useEffect(() => {
+    if (!currentUser) {
+      const storedUser = localStorage.getItem('currentUser');
+      if (storedUser) {
+        try {
+          const parsedUser = JSON.parse(storedUser);
+          dispatch(setCurrentUser(parsedUser));
+        } catch (error) {
+          console.error('Error parsing stored user:', error);
+          localStorage.removeItem('currentUser');
+        }
+      }
+    }
+  }, [currentUser, dispatch]);
 
   // Redirect to login if not authenticated (except for login page)
   useEffect(() => {
@@ -167,7 +182,6 @@ const Layout = ({ children }) => {
 
   const navItems = getNavItems();
 
-  // Don't show navigation for login page
   const isLoginPage = location.pathname === '/login';
   
   // If not authenticated and not on login page, don't render the layout content

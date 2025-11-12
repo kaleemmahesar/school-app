@@ -2,7 +2,7 @@
   "name": "SEF High School Larkana",
   "logo": null,
   "level": "high",
-  "fundingType": "ngo",
+  "fundingType": "traditional", 
   "hasPG": true,
   "hasNursery": true,
   "hasKG": true,
@@ -16,3 +16,5 @@
     { "id": 7, "minPercentage": 0, "maxPercentage": 39, "grade": "F", "remarks": "Fail" }
   ]
 }
+
+

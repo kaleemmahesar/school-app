@@ -121,7 +121,7 @@ const mockUsers = [
 
 const initialState = {
   users: JSON.parse(JSON.stringify(mockUsers)),
-  currentUser: null,
+  currentUser: JSON.parse(localStorage.getItem('currentUser')) || null,
   loading: false,
   error: null,
 };
@@ -252,9 +252,11 @@ const usersSlice = createSlice({
   reducers: {
     logout: (state) => {
       state.currentUser = null;
+      localStorage.removeItem('currentUser');
     },
     setCurrentUser: (state, action) => {
       state.currentUser = action.payload;
+      localStorage.setItem('currentUser', JSON.stringify(action.payload));
     }
   },
   extraReducers: (builder) => {
@@ -292,6 +294,7 @@ const usersSlice = createSlice({
       .addCase(loginUser.fulfilled, (state, action) => {
         state.loading = false;
         state.currentUser = action.payload;
+        localStorage.setItem('currentUser', JSON.stringify(action.payload));
         // Also update the user in the users array to reflect the latest login
         const userIndex = state.users.findIndex(u => u.id === action.payload.id);
         if (userIndex !== -1) {
