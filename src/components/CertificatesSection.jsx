@@ -3,6 +3,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { FaCertificate, FaSearch, FaFilter, FaUserCheck, FaUserTimes, FaUsers } from 'react-icons/fa';
 import { updateStudent } from '../store/studentsSlice';
 import CertificateGenerator from './students/CertificateGenerator';
+import Pagination from './common/Pagination';
 
 const CertificatesSection = () => {
   const dispatch = useDispatch();
@@ -13,6 +14,10 @@ const CertificatesSection = () => {
   const [certificateType, setCertificateType] = useState('all'); // 'all', 'leaving', 'pass', 'character'
   const [showCertificateModal, setShowCertificateModal] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState(null);
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10); // Adjust as needed
 
   // Get unique classes for dropdown
   const uniqueClasses = [...new Set(students.map(student => student.class))];
@@ -47,6 +52,22 @@ const CertificatesSection = () => {
   };
 
   const filteredStudents = filterStudents();
+  
+  // Calculate pagination values
+  const totalPages = Math.ceil(filteredStudents.length / itemsPerPage);
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentStudents = filteredStudents.slice(indexOfFirstItem, indexOfLastItem);
+
+  // Reset pagination when filters change
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, selectedClass, selectedSection, certificateType]);
+
+  // Pagination functions
+  const paginate = (pageNumber) => setCurrentPage(pageNumber);
+  const nextPage = () => setCurrentPage(prev => Math.min(prev + 1, totalPages));
+  const prevPage = () => setCurrentPage(prev => Math.max(prev - 1, 1));
 
   // Get students who have left (for leaving certificates) - based on filtered results
   const leftStudents = filteredStudents.filter(student => 
@@ -214,7 +235,7 @@ const CertificatesSection = () => {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {filteredStudents.map((student) => (
+                {currentStudents.map((student) => (
                   <tr key={student.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
@@ -285,6 +306,21 @@ const CertificatesSection = () => {
               <p className="mt-1 text-sm text-gray-500">
                 Try adjusting your search or filter criteria
               </p>
+            </div>
+          )}
+          
+          {/* Pagination */}
+          {filteredStudents.length > itemsPerPage && (
+            <div className="mt-4">
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                itemsPerPage={itemsPerPage}
+                totalItems={filteredStudents.length}
+                paginate={paginate}
+                nextPage={nextPage}
+                prevPage={prevPage}
+              />
             </div>
           )}
         </div>

@@ -399,7 +399,7 @@ const StudentAvailabilityLists = ({ activeTab: propActiveTab,
               totalPages={totalPages}
               totalItems={currentFilteredList.length}
               itemsPerPage={itemsPerPage}
-              onPageChange={(page) => setCurrentPage(page)}
+              paginate={(page) => setCurrentPage(page)}
             />
           </div>
         )}

@@ -3,6 +3,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import { FaCalendarAlt, FaUserCheck, FaUserTimes, FaSearch, FaSave, FaClock } from 'react-icons/fa';
 import PageHeader from '../common/PageHeader';
 import { addNewAttendanceRecord, fetchAttendanceByDateAndClass } from '../../store/attendanceSlice';
+import Pagination from '../common/Pagination';
 
 const AttendanceManagement = () => {
   const dispatch = useDispatch();
@@ -190,6 +191,26 @@ const AttendanceManagement = () => {
     }
     return 'inline-flex items-center px-3 py-1 border border-gray-300 text-gray-700 bg-white text-xs font-medium rounded-lg hover:bg-gray-50';
   };
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10); // Adjust as needed
+
+  // Calculate pagination values
+  const totalPages = Math.ceil(filteredStudents.length / itemsPerPage);
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentStudents = filteredStudents.slice(indexOfFirstItem, indexOfLastItem);
+
+  // Reset pagination when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filteredStudents.length, selectedClass, selectedSection, searchTerm]);
+
+  // Pagination functions
+  const paginate = (pageNumber) => setCurrentPage(pageNumber);
+  const nextPage = () => setCurrentPage(prev => Math.min(prev + 1, totalPages));
+  const prevPage = () => setCurrentPage(prev => Math.max(prev - 1, 1));
 
   return (
     <>
@@ -414,41 +435,27 @@ const AttendanceManagement = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {filteredStudents.map((student) => (
-                <tr key={student.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-4 py-3 whitespace-nowrap">
+              {currentStudents.map((student) => (
+                <tr key={student.id} className={`hover:bg-gray-50 ${selectedStudents.includes(student.id) ? 'bg-blue-50' : ''}`}>
+                  <td className="px-4 py-3 whitespace-nowrap text-sm">
                     <input
                       type="checkbox"
                       checked={selectedStudents.includes(student.id)}
                       onChange={() => toggleStudentSelection(student.id)}
-                      className="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                      className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                     />
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap">
                     <div className="flex items-center">
-                      {student.photo ? (
-                        <img 
-                          src={student.photo} 
-                          alt={`${student.firstName} ${student.lastName}`} 
-                          className="w-8 h-8 rounded-full object-cover border-2 border-gray-300"
-                          onError={(e) => {
-                            e.target.onerror = null;
-                            e.target.parentElement.innerHTML = `
-                              <div class="bg-gray-200 border-2 border-dashed rounded-xl w-8 h-8 flex items-center justify-center">
-                                <svg class="w-4 h-4 text-gray-500" fill="currentColor" viewBox="0 0 20 20">
-                                  <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
-                                </svg>
-                              </div>
-                            `;
-                          }}
-                        />
-                      ) : (
-                        <div className="bg-gray-200 border-2 border-dashed rounded-xl w-8 h-8 flex items-center justify-center">
-                          <svg className="w-4 h-4 text-gray-500" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
-                          </svg>
+                      <div className="flex-shrink-0 h-10 w-10">
+                        <div className="h-10 w-10 rounded-full bg-gradient-to-r from-green-400 to-blue-500 flex items-center justify-center text-white font-bold">
+                          {student.firstName.charAt(0)}{student.lastName.charAt(0)}
                         </div>
-                      )}
+                      </div>
+                      <div className="ml-4">
+                        <div className="text-sm font-medium text-gray-900">{student.firstName} {student.lastName}</div>
+                        <div className="text-sm text-gray-500">{student.email}</div>
+                      </div>
                     </div>
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap">
@@ -522,6 +529,21 @@ const AttendanceManagement = () => {
               <FaCalendarAlt className="mx-auto h-12 w-12 text-gray-400" />
               <h3 className="mt-2 text-sm font-medium text-gray-900">No students found</h3>
               <p className="mt-1 text-sm text-gray-500">Try adjusting your search or filter criteria</p>
+            </div>
+          )}
+          
+          {/* Pagination */}
+          {filteredStudents.length > itemsPerPage && (
+            <div className="mt-4">
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                itemsPerPage={itemsPerPage}
+                totalItems={filteredStudents.length}
+                paginate={paginate}
+                nextPage={nextPage}
+                prevPage={prevPage}
+              />
             </div>
           )}
         </div>

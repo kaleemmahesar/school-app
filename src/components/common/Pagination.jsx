@@ -1,151 +1,130 @@
 import React from 'react';
-import { FaChevronLeft, FaChevronRight, FaAngleDoubleLeft, FaAngleDoubleRight } from 'react-icons/fa';
+import { FaChevronLeft, FaChevronRight } from 'react-icons/fa';
 
 const Pagination = ({ 
   currentPage, 
   totalPages, 
-  onPageChange, 
-  itemsPerPage = 8,
-  totalItems,
-  className = '' 
+  itemsPerPage, 
+  totalItems, 
+  paginate, 
+  onPageChange,
+  nextPage, 
+  prevPage,
+  showItemsInfo = true
 }) => {
-  // Calculate start and end item indices
-  const startIndex = (currentPage - 1) * itemsPerPage + 1;
-  const endIndex = Math.min(currentPage * itemsPerPage, totalItems);
-  
-  // Generate page numbers to display
-  const getPageNumbers = () => {
-    const delta = 2; // Number of pages to show around current page
-    const range = [];
-    const rangeWithDots = [];
-    
-    // Always include first page
-    range.push(1);
-    
-    // Add dots if there's a gap between first page and current range
-    if (currentPage - delta > 2) {
-      range.push('left-dots');
-    }
-    
-    // Add pages around current page
-    for (let i = Math.max(2, currentPage - delta); i <= Math.min(totalPages - 1, currentPage + delta); i++) {
-      range.push(i);
-    }
-    
-    // Add dots if there's a gap between current range and last page
-    if (currentPage + delta < totalPages - 1) {
-      range.push('right-dots');
-    }
-    
-    // Always include last page if there's more than one page
-    if (totalPages > 1) {
-      range.push(totalPages);
-    }
-    
-    // Convert to range with dots
-    let lastPage = 0;
-    for (const page of range) {
-      if (page === 'left-dots' || page === 'right-dots') {
-        rangeWithDots.push(
-          <span key={page} className="px-2 py-1 text-gray-400">
-            ...
-          </span>
-        );
-      } else {
-        if (page - lastPage > 1) {
-          rangeWithDots.push(
-            <button
-              key={page}
-              onClick={() => onPageChange(page)}
-              className={`px-3 py-1 rounded-md ${
-                currentPage === page
-                  ? 'bg-blue-500 text-white'
-                  : 'text-gray-700 hover:bg-gray-100'
-              }`}
-            >
-              {page}
-            </button>
-          );
-        }
-        lastPage = page;
-      }
-    }
-    
-    return rangeWithDots;
-  };
-
+  // Support both paginate and onPageChange for backward compatibility
+  const handlePageChange = paginate || onPageChange;
   // Don't show pagination if there's only one page
-  if (totalPages <= 1) {
-    return (
-      <div className={`flex justify-center text-sm text-gray-500 ${className}`}>
-        Showing {totalItems} of {totalItems} results
-      </div>
-    );
-  }
+  if (totalPages <= 1) return null;
+
+  // Calculate the range of items being displayed
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage + 1;
+  const endItem = Math.min(indexOfLastItem, totalItems);
+  const startItem = Math.min(indexOfFirstItem, endItem);
 
   return (
-    <div className={`flex flex-col sm:flex-row items-center justify-between gap-4 ${className}`}>
-      <div className="text-sm text-gray-700">
-        Showing <span className="font-medium">{startIndex}</span> to <span className="font-medium">{endIndex}</span> of{' '}
-        <span className="font-medium">{totalItems}</span> results
-      </div>
-      
-      <div className="flex items-center space-x-1">
-        <button
-          onClick={() => onPageChange(1)}
-          disabled={currentPage === 1}
-          className={`p-2 rounded-md ${
-            currentPage === 1
-              ? 'text-gray-300 cursor-not-allowed'
-              : 'text-gray-700 hover:bg-gray-100'
-          }`}
-          aria-label="First page"
-        >
-          <FaAngleDoubleLeft />
-        </button>
-        
-        <button
-          onClick={() => onPageChange(currentPage - 1)}
-          disabled={currentPage === 1}
-          className={`p-2 rounded-md ${
-            currentPage === 1
-              ? 'text-gray-300 cursor-not-allowed'
-              : 'text-gray-700 hover:bg-gray-100'
-          }`}
-          aria-label="Previous page"
-        >
-          <FaChevronLeft />
-        </button>
-        
-        <div className="flex items-center space-x-1">
-          {getPageNumbers()}
+    <div className="flex items-center justify-between border-t border-gray-200 px-4 py-3 sm:px-6 mt-4">
+      {showItemsInfo && (
+        <div className="flex flex-1 justify-between sm:hidden">
+          <button
+            onClick={() => typeof prevPage === 'function' ? prevPage() : typeof handlePageChange === 'function' ? handlePageChange(currentPage - 1) : console.error('prevPage and handlePageChange are not functions')}
+            disabled={currentPage === 1}
+            className={`relative inline-flex items-center px-4 py-2 text-sm font-medium rounded-md ${
+              currentPage === 1
+                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+            }`}
+          >
+            Previous
+          </button>
+          <button
+            onClick={() => typeof nextPage === 'function' ? nextPage() : typeof handlePageChange === 'function' ? handlePageChange(currentPage + 1) : console.error('nextPage and handlePageChange are not functions')}
+            disabled={currentPage === totalPages}
+            className={`relative ml-3 inline-flex items-center px-4 py-2 text-sm font-medium rounded-md ${
+              currentPage === totalPages
+                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+            }`}
+          >
+            Next
+          </button>
         </div>
+      )}
+      
+      <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
+        {showItemsInfo && (
+          <div>
+            <p className="text-sm text-gray-700">
+              Showing <span className="font-medium">{startItem}</span> to{' '}
+              <span className="font-medium">{endItem}</span>{' '}
+              of <span className="font-medium">{totalItems}</span> results
+            </p>
+          </div>
+        )}
         
-        <button
-          onClick={() => onPageChange(currentPage + 1)}
-          disabled={currentPage === totalPages}
-          className={`p-2 rounded-md ${
-            currentPage === totalPages
-              ? 'text-gray-300 cursor-not-allowed'
-              : 'text-gray-700 hover:bg-gray-100'
-          }`}
-          aria-label="Next page"
-        >
-          <FaChevronRight />
-        </button>
-        
-        <button
-          onClick={() => onPageChange(totalPages)}
-          disabled={currentPage === totalPages}
-          className={`p-2 rounded-md ${
-            currentPage === totalPages
-              ? 'text-gray-300 cursor-not-allowed'
-              : 'text-gray-700 hover:bg-gray-100'
-          }`}
-          aria-label="Last page"
-        >
-          <FaAngleDoubleRight />
-        </button>
+        <div>
+          <nav className="isolate inline-flex -space-x-px rounded-md shadow-sm" aria-label="Pagination">
+            <button
+              onClick={() => typeof prevPage === 'function' ? prevPage() : typeof handlePageChange === 'function' ? handlePageChange(currentPage - 1) : console.error('prevPage and handlePageChange are not functions')}
+              disabled={currentPage === 1}
+              className={`relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 ${
+                currentPage === 1 ? 'cursor-not-allowed' : ''
+              }`}
+            >
+              <span className="sr-only">Previous</span>
+              <FaChevronLeft className="h-5 w-5" />
+            </button>
+            
+            {[...Array(totalPages)].map((_, index) => {
+              const pageNumber = index + 1;
+              // Only show first, last, current, and nearby pages
+              if (
+                pageNumber === 1 ||
+                pageNumber === totalPages ||
+                (pageNumber >= currentPage - 1 && pageNumber <= currentPage + 1)
+              ) {
+                return (
+                  <button
+                    key={pageNumber}
+                    onClick={() => typeof handlePageChange === 'function' ? handlePageChange(pageNumber) : console.error('handlePageChange is not a function')}
+                    className={`relative inline-flex items-center px-4 py-2 text-sm font-semibold ${
+                      currentPage === pageNumber
+                        ? 'z-10 bg-blue-600 text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600'
+                        : 'text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:outline-offset-0'
+                    }`}
+                  >
+                    {pageNumber}
+                  </button>
+                );
+              } else if (
+                pageNumber === currentPage - 2 ||
+                pageNumber === currentPage + 2
+              ) {
+                return (
+                  <span
+                    key={pageNumber}
+                    className="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-700 ring-1 ring-inset ring-gray-300 focus:outline-offset-0"
+                  >
+                    ...
+                  </span>
+                );
+              }
+              return null;
+            })}
+            
+            <button
+              onClick={() => typeof nextPage === 'function' ? nextPage() : typeof handlePageChange === 'function' ? handlePageChange(currentPage + 1) : console.error('nextPage and handlePageChange are not functions')}
+              disabled={currentPage === totalPages}
+              className={`relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 ${
+                currentPage === totalPages ? 'cursor-not-allowed' : ''
+              }`}
+            >
+              <span className="sr-only">Next</span>
+              <FaChevronRight className="h-5 w-5" />
+            </button>
+          </nav>
+        </div>
       </div>
     </div>
   );

@@ -1534,7 +1534,7 @@ const studentsSlice = createSlice({
       })
       .addCase(bulkGenerateChallans.fulfilled, (state, action) => {
         const { studentIds, challanTemplate } = action.payload;
-        const { month, amount, dueDate, description } = challanTemplate || {};
+        const { month, dueDate, description } = challanTemplate || {};
         
         // Convert month format from YYYY-MM to Month YYYY
         const monthNames = ["January", "February", "March", "April", "May", "June",
@@ -1546,6 +1546,9 @@ const studentsSlice = createSlice({
         const monthName = monthNames[parseInt(monthIndex) - 1] || 'Unknown';
         const formattedMonth = `${monthName} ${year}`;
         
+        // Array to store generated challans for return
+        const generatedChallans = [];
+        
         // Generate challans for each student
         studentIds.forEach(studentId => {
           const student = state.students.find(s => s.id === studentId);
@@ -1553,7 +1556,7 @@ const studentsSlice = createSlice({
             const newChallan = {
               id: `challan-${studentId}-${Date.now()}`,
               month: formattedMonth,
-              amount: student.monthlyFees || amount || 0,
+              amount: student.monthlyFees || 0,
               dueDate: dueDate || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // Default to 7 days from now
               description: description || '',
               paid: false,
@@ -1565,8 +1568,17 @@ const studentsSlice = createSlice({
               student.feesHistory = [];
             }
             student.feesHistory.push(newChallan);
+            
+            // Add to generated challans array
+            generatedChallans.push({
+              ...newChallan,
+              studentId: student.id
+            });
           }
         });
+        
+        // Add generated challans to the action payload for use in components
+        action.payload.generatedChallans = generatedChallans;
       })
       .addCase(bulkUpdateChallanStatuses.fulfilled, (state, action) => {
         const { challanUpdates } = action.payload;

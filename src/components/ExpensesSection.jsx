@@ -4,6 +4,7 @@ import { fetchExpenses, addExpense, updateExpense, deleteExpense, addCategory } 
 import { FaPlus, FaEdit, FaTrash, FaSearch, FaMoneyBillWave, FaTag, FaChartBar, FaDownload, FaPrint } from 'react-icons/fa';
 import ExpenseFormModal from './ExpenseFormModal';
 import CategoryFormModal from './CategoryFormModal';
+import Pagination from './common/Pagination';
 
 const ExpensesSection = () => {
   const dispatch = useDispatch();
@@ -13,6 +14,10 @@ const ExpensesSection = () => {
   const [showExpenseModal, setShowExpenseModal] = useState(false);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [currentExpense, setCurrentExpense] = useState(null);
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10);
 
   useEffect(() => {
     dispatch(fetchExpenses());
@@ -83,6 +88,22 @@ const ExpensesSection = () => {
     
     return matchesSearch && matchesCategory;
   });
+  
+  // Pagination functions
+  const paginate = (pageNumber) => setCurrentPage(pageNumber);
+  const nextPage = () => setCurrentPage(prev => Math.min(prev + 1, Math.ceil(filteredExpenses.length / itemsPerPage)));
+  const prevPage = () => setCurrentPage(prev => Math.max(prev - 1, 1));
+  
+  // Calculate pagination variables
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentExpenses = filteredExpenses.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(filteredExpenses.length / itemsPerPage);
+  
+  // Reset pagination when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filteredExpenses]);
 
   // Calculate total expenses based on filtered results (excluding salary expenses)
   const totalFilteredExpenses = filteredExpenses
@@ -262,7 +283,7 @@ const ExpensesSection = () => {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {filteredExpenses.map((expense) => (
+                {currentExpenses.map((expense) => (
                   <tr key={expense.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">{expense.description}</div>
@@ -312,6 +333,17 @@ const ExpensesSection = () => {
                 </p>
               </div>
             )}
+            
+            {/* Pagination */}
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              itemsPerPage={itemsPerPage}
+              totalItems={filteredExpenses.length}
+              paginate={paginate}
+              nextPage={nextPage}
+              prevPage={prevPage}
+            />
           </div>
         </div>
       </div>

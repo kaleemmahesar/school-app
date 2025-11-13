@@ -491,7 +491,7 @@ const StaffSection = () => {
               totalPages={totalPages}
               totalItems={filteredStaff.length}
               itemsPerPage={itemsPerPage}
-              onPageChange={(page) => setCurrentPage(page)}
+              paginate={(page) => setCurrentPage(page)}
             />
           </div>
         )}

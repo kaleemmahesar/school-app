@@ -204,7 +204,7 @@ const Layout = ({ children }) => {
               <div className="rounded-xl">
                 <img src={Logo} alt="Logo" className="h-14 w-auto" />
               </div>
-              <h1 className="ml-3 text-2xl font-bold text-gray-900">SEF High School Larkana</h1>
+              <h1 className="ml-3 text-2xl font-bold text-gray-900">ABC High School</h1>
             </div>
             <div className="flex items-center space-x-4">
               {currentUser ? (

@@ -11,6 +11,9 @@ import FamilyFeesView from './FamilyFeesView';
 import ChallanModals from './ChallanModals';
 import ChallanPrintView from '../ChallanPrintView';
 import BulkChallanPrintView from '../BulkChallanPrintView';
+import BulkGeneratedChallansPrintView from './BulkGeneratedChallansPrintView';
+import SingleChallanPrintView from './SingleChallanPrintView';
+import Pagination from '../common/Pagination';
 import { printChallanAsPDF } from '../../utils/challanPrinter';
 import { useSchoolFunding } from '../../hooks/useSchoolFunding';
 import NGOFundingInfo from '../common/NGOFundingInfo';
@@ -37,6 +40,8 @@ const FeesSection = () => {
   const [printStudent, setPrintStudent] = useState(null);
   const [showBulkPrintView, setShowBulkPrintView] = useState(false);
   const [bulkPrintChallans, setBulkPrintChallans] = useState([]);
+  const [showGeneratedChallansView, setShowGeneratedChallansView] = useState(false);
+  const [generatedChallans, setGeneratedChallans] = useState([]);
   const [showBulkGenerateModal, setShowBulkGenerateModal] = useState(false);
   const [showBulkUpdateModal, setShowBulkUpdateModal] = useState(false);
   const [bulkSelectedChallans, setBulkSelectedChallans] = useState([]);
@@ -54,6 +59,10 @@ const FeesSection = () => {
   const [selectedClass, setSelectedClass] = useState('');
   const [selectedSection, setSelectedSection] = useState('');
   const [viewMode, setViewMode] = useState('student');
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10);
 
   useEffect(() => {
     dispatch(fetchStudents());
@@ -164,6 +173,22 @@ const FeesSection = () => {
     
     return matchesSearch && matchesStatus && matchesClass && matchesSection;
   }), [studentStats, searchTerm, filterStatus, selectedClass, selectedSection]);
+  
+  // Pagination functions
+  const paginate = (pageNumber) => setCurrentPage(pageNumber);
+  const nextPage = () => setCurrentPage(prev => Math.min(prev + 1, Math.ceil(filteredStudents.length / itemsPerPage)));
+  const prevPage = () => setCurrentPage(prev => Math.max(prev - 1, 1));
+  
+  // Calculate pagination variables
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentStudents = filteredStudents.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(filteredStudents.length / itemsPerPage);
+  
+  // Reset pagination when filters change
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [filteredStudents]);
 
   const getFamilyChallans = () => {
     const familyMap = {};
@@ -282,6 +307,31 @@ const FeesSection = () => {
     }
     
     try {
+      // Get the student before generating the challan
+      const student = students.find(s => s.id === challanData.studentId);
+      
+      // Generate the challan object that will be created
+      const monthNames = ["January", "February", "March", "April", "May", "June",
+        "July", "August", "September", "October", "November", "December"];
+      
+      // Convert month format from YYYY-MM to Month YYYY
+      const [year, monthIndex] = challanData.month.split('-');
+      const monthName = monthNames[parseInt(monthIndex) - 1] || 'Unknown';
+      const formattedMonth = `${monthName} ${year}`;
+      
+      // Create the challan object that will be generated
+      const newChallan = {
+        id: `challan-${challanData.studentId}-${Date.now()}`,
+        month: formattedMonth,
+        amount: parseFloat(challanData.amount) || 0,
+        dueDate: challanData.dueDate || new Date().toISOString().split('T')[0],
+        description: challanData.description || '',
+        paid: false,
+        date: null,
+        status: 'pending',
+        type: 'monthly'
+      };
+      
       await dispatch(generateChallan({
         studentId: challanData.studentId,
         challanData: {
@@ -291,6 +341,11 @@ const FeesSection = () => {
           description: challanData.description || ''
         }
       })).unwrap(); // Use unwrap to catch errors properly
+      
+      // Set the print view data and show print view
+      setPrintChallan(newChallan);
+      setPrintStudent(student);
+      setShowPrintView(true);
       
       // Reset form and close modal on success
       setShowGenerateModal(false);
@@ -306,6 +361,31 @@ const FeesSection = () => {
       alert('Failed to generate challan. Please try again.');
       // Don't redirect, just show error
     }
+  };
+
+  // Get class-based fees for bulk generation
+  const getClassBasedFees = (className) => {
+    // This would typically come from a class configuration or fee structure
+    // For now, we'll use a simple mapping based on common class fee structures
+    const classFeeMap = {
+      'Nursery': 1500,
+      'Prep': 1800,
+      '1st': 2000,
+      '2nd': 2200,
+      '3rd': 2400,
+      '4th': 2600,
+      '5th': 2800,
+      '6th': 3000,
+      '7th': 3200,
+      '8th': 3400,
+      '9th': 3600,
+      '10th': 3800,
+      'Class 8': 3000,
+      'Class 9': 3500,
+      'Class 10': 4000
+    };
+    
+    return classFeeMap[className] || 2000; // Default to 2000 if class not found
   };
 
   const submitBulkGenerate = (data) => {
@@ -330,15 +410,50 @@ const FeesSection = () => {
     }
     
     if (studentIds.length > 0) {
+      // Generate the challan objects that will be created
+      const monthNames = ["January", "February", "March", "April", "May", "June",
+        "July", "August", "September", "October", "November", "December"];
+      
+      // Default to current month if not provided
+      const monthToUse = data.month || new Date().toISOString().slice(0, 7);
+      const [year, monthIndex] = monthToUse.split('-');
+      const monthName = monthNames[parseInt(monthIndex) - 1] || 'Unknown';
+      const formattedMonth = `${monthName} ${year}`;
+      
+      // Create the challan objects that will be generated
+      const generatedChallans = studentIds.map(studentId => {
+        const student = students.find(s => s.id === studentId);
+        if (student) {
+          return {
+            id: `challan-${studentId}-${Date.now()}`,
+            month: formattedMonth,
+            amount: student.monthlyFees || 0,
+            dueDate: data.dueDate || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+            description: data.description || '',
+            paid: false,
+            date: null,
+            status: 'pending',
+            type: 'monthly',
+            studentId: student.id
+          };
+        }
+        return null;
+      }).filter(challan => challan !== null);
+      
+      // Dispatch the bulk generation action
       dispatch(bulkGenerateChallans({ 
         studentIds, 
         challanTemplate: {
           month: data.month,
-          amount: data.amount,
           dueDate: data.dueDate,
           description: data.description
         }
       }));
+      
+      // Set the generated challans and show the print view
+      setGeneratedChallans(generatedChallans);
+      setShowGeneratedChallansView(true);
+      
       setShowBulkGenerateModal(false);
       setBulkGenerateOptions({
         generateFor: 'all',
@@ -525,154 +640,9 @@ const FeesSection = () => {
   };
 
   const handlePrintAction = async () => {
-    if (printChallan && printStudent) {
-      try {
-        const printContent = `
-          <div style="width: 80mm; font-family: Arial, Helvetica, sans-serif; font-size: 12px; padding: 10px;">
-            <div style="text-align: center; border-bottom: 1px solid #ccc; padding-bottom: 10px; margin-bottom: 10px;">
-              <h1 style="font-size: 16px; font-weight: bold; margin: 0 0 5px 0;">School Management System</h1>
-              <p style="font-size: 10px; margin: 0 0 2px 0;">123 Education Street, Learning City</p>
-              <p style="font-size: 10px; margin: 0;">Phone: +1 (555) 123-4567</p>
-            </div>
-
-            <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
-              <div>
-                <h2 style="font-size: 14px; font-weight: bold; margin: 0 0 3px 0;">Fee Challan</h2>
-                <p style="font-size: 10px; margin: 0;">ID: ${printChallan.id}</p>
-              </div>
-              <div style="background: ${printChallan.status === 'paid' ? '#d1fae5' : '#fef3c7'}; 
-                          color: ${printChallan.status === 'paid' ? '#065f46' : '#92400e'}; 
-                          padding: 4px 8px; border-radius: 4px; font-size: 10px; font-weight: bold;">
-                ${printChallan.status === 'paid' ? 'PAID' : 'PENDING'}
-              </div>
-            </div>
-
-            <div style="margin-bottom: 10px;">
-              <h3 style="font-size: 12px; font-weight: bold; margin: 0 0 5px 0;">Student Information</h3>
-              <div style="background: #f9fafb; padding: 8px; border-radius: 4px;">
-                <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 2px; font-size: 10px;">
-                  <span style="font-weight: bold;">Name:</span>
-                  <span>${printStudent.firstName} ${printStudent.lastName}</span>
-                  
-                  <span style="font-weight: bold;">Class:</span>
-                  <span>${printStudent.class} - Section ${printStudent.section}</span>
-                  
-                  <span style="font-weight: bold;">Month:</span>
-                  <span>${printChallan.month}</span>
-                </div>
-              </div>
-            </div>
-
-            <div style="margin-bottom: 10px;">
-              <h3 style="font-size: 12px; font-weight: bold; margin: 0 0 5px 0;">Fee Details</h3>
-              <div style="width: 100%; border-collapse: collapse; margin-bottom: 5px;">
-                <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 2px; padding: 4px; background: #f9fafb; border-bottom: 1px solid #ccc; font-size: 10px; font-weight: bold;">
-                  <span>Description</span>
-                  <span style="text-align: right;">Amount</span>
-                </div>
-                <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 2px; padding: 4px; font-size: 10px;">
-                  <span>Monthly Tuition Fee</span>
-                  <span style="text-align: right;">Rs ${Math.round(printChallan.amount)}</span>
-                </div>
-                ${printChallan.description ? `
-                <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 2px; padding: 4px; font-size: 10px;">
-                  <span>${printChallan.description}</span>
-                  <span style="text-align: right;">Rs 0</span>
-                </div>
-                ` : ''}
-                <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 2px; padding: 4px; font-size: 10px; font-weight: bold; border-top: 1px solid #ccc;">
-                  <span>Total Amount</span>
-                  <span style="text-align: right;">Rs ${Math.round(printChallan.amount)}</span>
-                </div>
-              </div>
-            </div>
-
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-bottom: 10px;">
-              <div>
-                <h4 style="font-size: 10px; font-weight: bold; margin: 0 0 3px 0;">Issue Date</h4>
-                <div style="background: #f9fafb; padding: 6px; border-radius: 4px; border: 1px solid #ccc; font-size: 10px;">
-                  ${new Date(printChallan.date || new Date()).toLocaleDateString('en-US', {
-                    year: 'numeric',
-                    month: 'short',
-                    day: 'numeric'
-                  })}
-                </div>
-              </div>
-              <div>
-                <h4 style="font-size: 10px; font-weight: bold; margin: 0 0 3px 0;">Due Date</h4>
-                <div style="background: #f9fafb; padding: 6px; border-radius: 4px; border: 1px solid #ccc; font-size: 10px;">
-                  ${new Date(printChallan.dueDate).toLocaleDateString('en-US', {
-                    year: 'numeric',
-                    month: 'short',
-                    day: 'numeric'
-                  })}
-                </div>
-              </div>
-            </div>
-
-            ${printChallan.status === 'paid' && printChallan.paymentMethod ? `
-            <div style="margin-bottom: 10px;">
-              <h3 style="font-size: 12px; font-weight: bold; margin: 0 0 5px 0;">Payment Information</h3>
-              <div style="background: #d1fae5; padding: 8px; border-radius: 4px; border: 1px solid #10b981; font-size: 10px;">
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2px; margin-bottom: 2px;">
-                  <div style="font-weight: bold;">Payment Method:</div>
-                  <div style="text-transform: capitalize;">${printChallan.paymentMethod}</div>
-                </div>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2px;">
-                  <div style="font-weight: bold;">Payment Date:</div>
-                  <div>${new Date(printChallan.date).toLocaleDateString('en-US', {
-                    year: 'numeric',
-                    month: 'short',
-                    day: 'numeric'
-                  })}</div>
-                </div>
-              </div>
-            </div>
-            ` : ''}
-
-            <div style="text-align: center; font-size: 10px; color: #6b7280; padding-top: 8px; border-top: 1px solid #ccc;">
-              ${printChallan.status === 'paid' ? 
-                '<p>Thank you for your payment.</p>' : 
-                '<p>Please pay by the due date.</p>'}
-              <p style="margin-top: 3px;">Generated on ${new Date().toLocaleDateString()}</p>
-            </div>
-          </div>
-        `;
-
-        const printWindow = window.open('', '_blank');
-        printWindow.document.write(`
-          <html>
-            <head>
-              <title>Challan Print</title>
-              <style>
-                @media print {
-                  @page {
-                    size: 80mm auto;
-                    margin: 0;
-                  }
-                  body {
-                    margin: 0;
-                    padding: 0;
-                    font-family: Arial, Helvetica, sans-serif;
-                    font-size: 12px;
-                    width: 80mm;
-                  }
-                }
-              </style>
-            </head>
-            <body>
-              ${printContent}
-            </body>
-          </html>
-        `);
-        printWindow.document.close();
-        printWindow.focus();
-        printWindow.print();
-        printWindow.close();
-      } catch (error) {
-        console.error('Error printing challan:', error);
-      }
-    }
+    // Simply trigger the browser's print functionality
+    // The SingleChallanPrintView component already has all the proper styling
+    window.print();
   };
 
   const handleDownloadAction = async () => {
@@ -734,37 +704,18 @@ const FeesSection = () => {
   return (
     <>
       {showPrintView && printChallan && printStudent && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-screen overflow-y-auto">
-            <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center">
-              <h3 className="text-lg font-semibold text-gray-900">Challan Preview</h3>
-              <button 
-                onClick={handleClosePrintView}
-                className="text-gray-500 hover:text-gray-700"
-              >
-                <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-            <div className="py-4 px-6">
-              <div className="mb-4 flex justify-center">
-                <ChallanPrintView 
-                  challan={printChallan} 
-                  student={printStudent} 
-                  schoolInfo={{
-                    name: "School Management System",
-                    address: "123 Education Street, Learning City",
-                    phone: "+1 (555) 123-4567",
-                    email: "info@schoolmanagement.com"
-                  }} 
-                  onPrint={handlePrintAction}
-                  onDownload={handleDownloadAction}
-                />
-              </div>
-            </div>
-          </div>
-        </div>
+        <SingleChallanPrintView
+          challan={printChallan}
+          student={printStudent}
+          schoolInfo={{
+            name: "School Management System",
+            address: "123 Education Street, Learning City",
+            phone: "+1 (555) 123-4567",
+            bankAccount: "0123456789"
+          }}
+          onPrint={handlePrintAction}
+          onBack={handleClosePrintView}
+        />
       )}
 
       {showBulkPrintView && bulkPrintChallans.length > 0 && (
@@ -799,6 +750,24 @@ const FeesSection = () => {
           </div>
         </div>
       )}
+      
+      {showGeneratedChallansView && generatedChallans.length > 0 && (
+        <BulkGeneratedChallansPrintView
+          challans={generatedChallans}
+          students={students}
+          schoolInfo={{
+            name: "School Management System",
+            address: "123 Education Street, Learning City",
+            phone: "+1 (555) 123-4567",
+            bankAccount: "0123456789"
+          }}
+          onPrint={() => window.print()}
+          onBack={() => {
+            setShowGeneratedChallansView(false);
+            setGeneratedChallans([]);
+          }}
+        />
+      )}
 
       <ChallanModals
         showGenerateModal={showGenerateModal}
@@ -832,10 +801,10 @@ const FeesSection = () => {
         
         <FeesStats filteredStudents={filteredStudents} />
         
-        <ViewTabs 
+        {/* <ViewTabs 
           viewMode={viewMode}
           setViewMode={setViewMode}
-        />
+        /> */}
         
         {!showStudentDetails ? (
           <div className="bg-white rounded-2xl shadow-lg p-6">
@@ -893,8 +862,10 @@ const FeesSection = () => {
                 </thead>
                 {viewMode === 'student' ? (
                   <StudentFeesView 
-                    filteredStudents={filteredStudents}
+                    filteredStudents={currentStudents}
                     onViewDetails={handleViewDetails}
+                    currentPage={currentPage}
+                    itemsPerPage={itemsPerPage}
                   />
                 ) : (
                   <FamilyFeesView 
@@ -911,6 +882,19 @@ const FeesSection = () => {
                   <h3 className="mt-2 text-sm font-medium text-gray-900">No {viewMode === 'student' ? 'students' : 'challans'} found</h3>
                   <p className="mt-1 text-sm text-gray-500">Try adjusting your search or filter criteria</p>
                 </div>
+              )}
+              
+              {/* Pagination */}
+              {viewMode === 'student' && (
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  itemsPerPage={itemsPerPage}
+                  totalItems={filteredStudents.length}
+                  paginate={paginate}
+                  nextPage={nextPage}
+                  prevPage={prevPage}
+                />
               )}
             </div>
           </div>

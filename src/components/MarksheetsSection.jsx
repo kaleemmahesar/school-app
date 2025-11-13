@@ -8,6 +8,7 @@ import { jsPDF } from 'jspdf';
 import ClassExamMarksheetForm from './marksheets/ClassExamMarksheetForm';
 import StudentMarksheetForm from './marksheets/StudentMarksheetForm';
 import IndividualMarksheetPrintView from './marksheets/IndividualMarksheetPrintView';
+import Pagination from './common/Pagination';
 
 const MarksheetsSection = () => {
   const dispatch = useDispatch();
@@ -23,6 +24,10 @@ const MarksheetsSection = () => {
   const [bulkMode, setBulkMode] = useState(false);
   const [view, setView] = useState('list'); // 'list', 'detail', or 'marksheet'
   const [selectedStudentData, setSelectedStudentData] = useState(null);
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10); // Adjust as needed
   
   const [formData, setFormData] = useState({
     studentId: '',
@@ -53,178 +58,34 @@ const MarksheetsSection = () => {
     };
   });
 
-  const handleEdit = (marksData) => {
-    setCurrentMarks(marksData);
-    setFormData(marksData);
-    setBulkMode(false);
-    setShowForm(true);
-  };
+  // Filter students based on search and filters
+  const filteredStudents = studentsWithMarks.filter(student => {
+    const matchesSearch = 
+      student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      student.class.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      student.section.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesClass = !selectedClass || student.class === selectedClass;
+    const matchesSection = !selectedSection || student.section === selectedSection;
+    
+    return matchesSearch && matchesClass && matchesSection;
+  });
 
-  const handleDelete = (id) => {
-    if (window.confirm('Are you sure you want to delete this marksheet?')) {
-      dispatch(deleteMarks(id));
-    }
-  };
+  // Calculate pagination values
+  const totalPages = Math.ceil(filteredStudents.length / itemsPerPage);
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentStudents = filteredStudents.slice(indexOfFirstItem, indexOfLastItem);
 
-  // Function to handle saving marks (for both single and bulk entry)
-  const handleSaveMarks = (marksData) => {
-    if (Array.isArray(marksData)) {
-      // Handle bulk marksheets data
-      marksData.forEach(mark => {
-        if (mark.id && marks.find(m => m.id === mark.id)) {
-          dispatch(updateMarks(mark));
-        } else {
-          dispatch(addMarks(mark));
-        }
-      });
-    } else {
-      // Handle single marksheet data
-      if (currentMarks) {
-        dispatch(updateMarks(marksData));
-      } else {
-        dispatch(addMarks(marksData));
-      }
-    }
-  };
+  // Reset pagination when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, selectedClass, selectedSection]);
 
-  const resetForm = () => {
-    setFormData({
-      studentId: '',
-      studentName: '',
-      class: '',
-      section: '',
-      examType: '',
-      year: new Date().getFullYear().toString(),
-      marks: []
-    });
-    setCurrentMarks(null);
-    setShowForm(false);
-    setBulkMode(false);
-  };
-
-  const handleViewDetails = (student) => {
-    setSelectedStudentData(student);
-    setView('detail');
-  };
-
-  // Function to view individual marksheet with ranking
-  const handleViewMarksheet = (marksheet) => {
-    // Find all marksheets for the same class, section, exam type, and year
-    const relatedMarksheets = marks.filter(m => 
-      m.class === marksheet.class && 
-      m.section === marksheet.section && 
-      m.examType === marksheet.examType && 
-      m.year === marksheet.year
-    );
-    
-    // Sort by percentage to determine rankings
-    const sortedMarksheets = [...relatedMarksheets].sort((a, b) => 
-      parseFloat(b.percentage) - parseFloat(a.percentage)
-    );
-    
-    // Find position of current marksheet
-    const position = sortedMarksheets.findIndex(m => m.id === marksheet.id) + 1;
-    
-    // Set marksheet data with position information
-    const marksheetWithPosition = {
-      ...marksheet,
-      position: position,
-      totalStudents: relatedMarksheets.length
-    };
-    
-    setCurrentMarks(marksheetWithPosition);
-    setView('marksheet');
-  };
-
-  const handleBackToList = () => {
-    setView('list');
-    setSelectedStudentData(null);
-    setCurrentMarks(null);
-  };
-
-  // Function to download marksheet as PDF
-  const downloadMarksheet = () => {
-    // In a real implementation, this would generate and download a PDF
-    // For now, we'll create a simple PDF with marksheet data
-    const doc = new jsPDF();
-    
-    // Add school header
-    doc.setFontSize(16);
-    doc.text('School Management System', 105, 20, null, null, 'center');
-    doc.setFontSize(12);
-    doc.text('Student Marksheet', 105, 30, null, null, 'center');
-    
-    // Add student information
-    const student = students.find(s => s.id === currentMarks.studentId);
-    const studentName = student ? `${student.firstName} ${student.lastName}` : currentMarks.studentName;
-    
-    doc.setFontSize(11);
-    doc.text(`Student Name: ${studentName}`, 20, 45);
-    doc.text(`Student ID: ${currentMarks.studentId}`, 20, 55);
-    doc.text(`Class: ${currentMarks.class} - Section ${currentMarks.section}`, 20, 65);
-    doc.text(`Exam: ${currentMarks.examType} ${currentMarks.year}`, 20, 75);
-    
-    // Add marks table
-    const startY = 85;
-    doc.setFontSize(10);
-    
-    // Table headers
-    doc.setFillColor(240, 240, 240);
-    doc.rect(20, startY, 170, 10, 'F');
-    doc.text('Subject', 25, startY + 7);
-    doc.text('Obtained', 85, startY + 7);
-    doc.text('Total', 115, startY + 7);
-    doc.text('Grade', 145, startY + 7);
-    
-    // Table rows
-    let yPosition = startY + 10;
-    currentMarks.marks.forEach((subject, index) => {
-      doc.text(subject.subjectName, 25, yPosition + 7);
-      doc.text(subject.marksObtained.toString(), 85, yPosition + 7);
-      doc.text(subject.totalMarks.toString(), 115, yPosition + 7);
-      doc.text(subject.grade, 145, yPosition + 7);
-      yPosition += 10;
-    });
-    
-    // Add summary
-    yPosition += 10;
-    doc.text(`Total Obtained: ${currentMarks.totalObtained}`, 20, yPosition);
-    doc.text(`Total Marks: ${currentMarks.totalMarks}`, 80, yPosition);
-    doc.text(`Percentage: ${currentMarks.percentage}%`, 140, yPosition);
-    
-    yPosition += 10;
-    doc.text(`Overall Grade: ${currentMarks.overallGrade}`, 20, yPosition);
-    
-    // Add position if available
-    if (currentMarks.position && currentMarks.position <= 3) {
-      yPosition += 10;
-      let positionText = '';
-      switch (currentMarks.position) {
-        case 1: positionText = '1st Position'; break;
-        case 2: positionText = '2nd Position'; break;
-        case 3: positionText = '3rd Position'; break;
-        default: positionText = `${currentMarks.position}th Position`;
-      }
-      doc.text(`Position: ${positionText}`, 20, yPosition);
-    }
-    
-    // Save the PDF
-    const fileName = `${studentName.replace(/\s+/g, '_')}_${currentMarks.examType}_${currentMarks.year}_Marksheet.pdf`;
-    doc.save(fileName);
-  };
-  if (loading) return <div className="flex justify-center items-center h-64"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div></div>;
-  if (error) return <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded">
-    <div className="flex">
-      <div className="flex-shrink-0">
-        <svg className="h-5 w-5 text-red-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-        </svg>
-      </div>
-      <div className="ml-3">
-        <p className="text-sm text-red-700">Error: {error}</p>
-      </div>
-    </div>
-  </div>;
+  // Pagination functions
+  const paginate = (pageNumber) => setCurrentPage(pageNumber);
+  const nextPage = () => setCurrentPage(prev => Math.min(prev + 1, totalPages));
+  const prevPage = () => setCurrentPage(prev => Math.max(prev - 1, 1));
 
   return (
     <div className="">
@@ -503,18 +364,7 @@ const MarksheetsSection = () => {
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {studentsWithMarks
-                      .filter(student => {
-                        const matchesSearch = 
-                          student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          student.class.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          student.section.toLowerCase().includes(searchTerm.toLowerCase());
-                        
-                        const matchesClass = !selectedClass || student.class === selectedClass;
-                        const matchesSection = !selectedSection || student.section === selectedSection;
-                        
-                        return matchesSearch && matchesClass && matchesSection;
-                      })
+                    {currentStudents
                       .map((student) => (
                         <tr key={student.id} className="hover:bg-gray-50">
                           <td className="px-6 py-4 whitespace-nowrap">
@@ -547,21 +397,26 @@ const MarksheetsSection = () => {
                       ))}
                   </tbody>
                 </table>
-                {studentsWithMarks.filter(student => {
-                  const matchesSearch = 
-                    student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                    student.class.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                    student.section.toLowerCase().includes(searchTerm.toLowerCase());
-                  
-                  const matchesClass = !selectedClass || student.class === selectedClass;
-                  const matchesSection = !selectedSection || student.section === selectedSection;
-                  
-                  return matchesSearch && matchesClass && matchesSection;
-                }).length === 0 && (
+                {filteredStudents.length === 0 && (
                   <div className="text-center py-12">
                     <FaGraduationCap className="mx-auto h-12 w-12 text-gray-400" />
                     <h3 className="mt-2 text-sm font-medium text-gray-900">No students found</h3>
                     <p className="mt-1 text-sm text-gray-500">Try adjusting your search or filter criteria</p>
+                  </div>
+                )}
+                
+                {/* Pagination */}
+                {filteredStudents.length > itemsPerPage && (
+                  <div className="mt-4">
+                    <Pagination
+                      currentPage={currentPage}
+                      totalPages={totalPages}
+                      itemsPerPage={itemsPerPage}
+                      totalItems={filteredStudents.length}
+                      paginate={paginate}
+                      nextPage={nextPage}
+                      prevPage={prevPage}
+                    />
                   </div>
                 )}
               </div>

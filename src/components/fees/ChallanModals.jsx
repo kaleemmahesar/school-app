@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { FaUser, FaCalendar, FaDollarSign, FaReceipt, FaCheck } from 'react-icons/fa';
 import SearchableStudentDropdown from '../common/SearchableStudentDropdown';
 
@@ -39,6 +39,49 @@ const ChallanModals = ({
       studentId,
       amount: monthlyFees
     });
+  };
+
+  // Get class-based fees for bulk generation
+  const getClassBasedFees = (className) => {
+    // This would typically come from a class configuration or fee structure
+    // For now, we'll use a simple mapping based on common class fee structures
+    const classFeeMap = {
+      'Nursery': 1500,
+      'Prep': 1800,
+      '1st': 2000,
+      '2nd': 2200,
+      '3rd': 2400,
+      '4th': 2600,
+      '5th': 2800,
+      '6th': 3000,
+      '7th': 3200,
+      '8th': 3400,
+      '9th': 3600,
+      '10th': 3800
+    };
+    
+    return classFeeMap[className] || 2000; // Default to 2000 if class not found
+  };
+
+  // State for bulk generation form
+  const [bulkGenerateData, setBulkGenerateData] = useState({
+    month: new Date().toISOString().slice(0, 7),
+    dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    description: ''
+  });
+
+  // Handle bulk generate form changes
+  const handleBulkGenerateChange = (field, value) => {
+    setBulkGenerateData({
+      ...bulkGenerateData,
+      [field]: value
+    });
+  };
+
+  // Submit bulk generate with class-based fees
+  const submitBulkGenerateWithClassFees = (e) => {
+    e.preventDefault();
+    submitBulkGenerate(bulkGenerateData);
   };
 
   return (
@@ -214,34 +257,13 @@ const ChallanModals = ({
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md">
             <h3 className="text-xl font-semibold text-gray-900 mb-4">Bulk Generate Challans</h3>
-            <form onSubmit={(e) => {
-              e.preventDefault();
-              const formData = new FormData(e.target);
-              const data = {
-                month: formData.get('month'),
-                amount: formData.get('amount'),
-                dueDate: formData.get('dueDate'),
-                description: formData.get('description')
-              };
-              submitBulkGenerate(data);
-            }} className="space-y-4">
+            <form onSubmit={submitBulkGenerateWithClassFees} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Month</label>
                 <input
                   type="month"
-                  name="month"
-                  defaultValue={new Date().toISOString().slice(0, 7)}
-                  className="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
-                  required
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Amount</label>
-                <input
-                  type="number"
-                  name="amount"
-                  placeholder="Enter amount"
+                  value={bulkGenerateData.month}
+                  onChange={(e) => handleBulkGenerateChange('month', e.target.value)}
                   className="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
                   required
                 />
@@ -251,8 +273,8 @@ const ChallanModals = ({
                 <label className="block text-sm font-medium text-gray-700 mb-1">Due Date</label>
                 <input
                   type="date"
-                  name="dueDate"
-                  defaultValue={new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]}
+                  value={bulkGenerateData.dueDate}
+                  onChange={(e) => handleBulkGenerateChange('dueDate', e.target.value)}
                   className="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
                   required
                 />
@@ -262,10 +284,17 @@ const ChallanModals = ({
                 <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
                 <input
                   type="text"
-                  name="description"
-                  placeholder="Enter description (optional)"
+                  value={bulkGenerateData.description}
+                  onChange={(e) => handleBulkGenerateChange('description', e.target.value)}
                   className="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Enter description (optional)"
                 />
+              </div>
+              
+              <div className="bg-blue-50 p-3 rounded-lg border border-blue-100">
+                <p className="text-sm text-blue-700">
+                  <strong>Note:</strong> Amounts will be automatically calculated based on each student's class fees structure.
+                </p>
               </div>
               
               <div className="flex justify-end space-x-3 pt-4">

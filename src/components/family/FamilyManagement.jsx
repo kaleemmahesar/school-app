@@ -403,7 +403,7 @@ const FamilyManagement = () => {
                 totalPages={totalPages}
                 totalItems={totalFamilies}
                 itemsPerPage={itemsPerPage}
-                onPageChange={(page) => setCurrentPage(page)}
+                paginate={(page) => setCurrentPage(page)}
               />
             </div>
           )}
