@@ -757,11 +757,11 @@ const Dashboard = () => {
       />
 
       {/* NGO Funding Info Banner */}
-      {/* <FundingConditional showFor="ngo">
-        {/* <div className="mb-6">
+      <FundingConditional showFor="ngo">
+        <div className="mb-6">
           <NGOFundingInfo />
         </div> 
-      </FundingConditional> */}
+      </FundingConditional>
 
       {/* Stats Cards - Only show for Owner users */}
       {isOwner() && (

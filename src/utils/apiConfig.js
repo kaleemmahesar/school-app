@@ -3,8 +3,8 @@
  * Centralized configuration for API endpoints
  */
 
-// Get base URL from environment variable or use default with /sms path
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/sms/api';
+// Use local json-server for development
+export const API_BASE_URL = 'http://localhost:3001';
 
 /**
  * Helper function to construct full API URLs

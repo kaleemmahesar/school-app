@@ -1,52 +1,22 @@
-import { createSlice } from '@reduxjs/toolkit';
+import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+import { API_BASE_URL } from '../utils/apiConfig';
+
+// Async thunks for API calls
+export const fetchSubsidies = createAsyncThunk(
+  'subsidies/fetchSubsidies',
+  async () => {
+    const response = await fetch(`${API_BASE_URL}/subsidies`);
+    if (!response.ok) {
+      throw new Error('Failed to fetch subsidies');
+    }
+    return await response.json();
+  }
+);
 
 const initialState = {
-  subsidies: [
-    {
-      id: 1,
-      quarter: 'Q1',
-      year: 2025,
-      amount: 350000,
-      ngoName: 'Education for All Foundation',
-      receivedDate: '2024-01-15',
-      expectedDate: '',
-      status: 'received',
-      description: 'Quarterly education subsidy for operational costs'
-    },
-    {
-      id: 2,
-      quarter: 'Q2',
-      year: 2025,
-      amount: 350000,
-      ngoName: 'Education for All Foundation',
-      receivedDate: '2024-04-10',
-      expectedDate: '',
-      status: 'received',
-      description: 'Quarterly education subsidy for operational costs'
-    },
-    {
-      id: 3,
-      quarter: 'Q3',
-      year: 2025,
-      amount: 350000,
-      ngoName: 'Education for All Foundation',
-      receivedDate: '',
-      expectedDate: '2024-07-15',
-      status: 'expected',
-      description: 'Quarterly education subsidy for operational costs'
-    },
-    {
-      id: 4,
-      quarter: 'Q4',
-      year: 2025,
-      amount: 350000,
-      ngoName: 'Education for All Foundation',
-      receivedDate: '',
-      expectedDate: '2024-10-15',
-      status: 'expected',
-      description: 'Quarterly education subsidy for operational costs'
-    }
-  ]
+  subsidies: [],
+  loading: false,
+  error: null,
 };
 
 const subsidiesSlice = createSlice({
@@ -54,10 +24,11 @@ const subsidiesSlice = createSlice({
   initialState,
   reducers: {
     addSubsidy: (state, action) => {
-      state.subsidies.push({
+      const newSubsidy = {
         ...action.payload,
         id: state.subsidies.length + 1
-      });
+      };
+      state.subsidies.push(newSubsidy);
     },
     updateSubsidy: (state, action) => {
       const index = state.subsidies.findIndex(s => s.id === action.payload.id);
@@ -65,6 +36,21 @@ const subsidiesSlice = createSlice({
         state.subsidies[index] = action.payload;
       }
     }
+  },
+  extraReducers: (builder) => {
+    builder
+      .addCase(fetchSubsidies.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchSubsidies.fulfilled, (state, action) => {
+        state.loading = false;
+        state.subsidies = action.payload;
+      })
+      .addCase(fetchSubsidies.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.error.message;
+      });
   }
 });
 

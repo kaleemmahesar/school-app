@@ -3,128 +3,22 @@ import { toast } from 'react-toastify';
 import { createAsyncThunkWithToast, createAddThunk, createUpdateThunk, createDeleteThunk } from '../utils/asyncThunkUtils';
 import { API_BASE_URL } from '../utils/apiConfig';
 
-// Mock data for expenses
-const mockExpenses = [
-  {
-    id: '1',
-    description: 'Stationery purchase',
-    amount: 500,
-    date: '2025-10-15',
-    category: 'Stationary',
-  },
-  {
-    id: '2',
-    description: 'Electricity bill',
-    amount: 1200,
-    date: '2025-10-20',
-    category: 'Utilities',
-  },
-  {
-    id: '3',
-    description: 'Staff salary',
-    amount: 15000,
-    date: '2025-10-25',
-    category: 'Salary',
-  },
-  {
-    id: '4',
-    description: 'Library books',
-    amount: 3000,
-    date: '2025-10-10',
-    category: 'Stationary',
-  },
-  {
-    id: '5',
-    description: 'Water bill',
-    amount: 800,
-    date: '2025-10-18',
-    category: 'Utilities',
-  },
-  {
-    id: '6',
-    description: 'Computer maintenance',
-    amount: 2500,
-    date: '2025-10-22',
-    category: 'Maintenance',
-  },
-  {
-    id: '7',
-    description: 'Sports equipment',
-    amount: 1500,
-    date: '2025-10-05',
-    category: 'Stationary',
-  },
-  {
-    id: '8',
-    description: 'Internet bill',
-    amount: 2000,
-    date: '2025-10-28',
-    category: 'Utilities',
-  },
-  {
-    id: '9',
-    description: 'Classroom furniture',
-    amount: 5000,
-    date: '2025-10-12',
-    category: 'Maintenance',
-  },
-  {
-    id: '10',
-    description: 'Science lab supplies',
-    amount: 4000,
-    date: '2025-10-30',
-    category: 'Stationary',
-  },
-  // November 2023 expenses
-  {
-    id: '11',
-    description: 'Monthly electricity bill',
-    amount: 1500,
-    date: '2025-11-05',
-    category: 'Utilities',
-  },
-  {
-    id: '12',
-    description: 'Internet and phone bills',
-    amount: 2200,
-    date: '2025-11-10',
-    category: 'Utilities',
-  },
-  {
-    id: '13',
-    description: 'Office supplies purchase',
-    amount: 800,
-    date: '2025-11-15',
-    category: 'Stationary',
-  },
-  {
-    id: '14',
-    description: 'Maintenance and repairs',
-    amount: 3500,
-    date: '2025-11-20',
-    category: 'Maintenance',
-  },
-  {
-    id: '15',
-    description: 'Canteen inventory',
-    amount: 2800,
-    date: '2025-11-25',
-    category: 'Stationary',
-  }
-];
-
 const initialState = {
-  expenses: mockExpenses,
+  expenses: [],
   categories: ['Stationary', 'Utilities', 'Salary', 'Maintenance'],
   loading: false,
   error: null,
 };
 
-// Async thunks for mock API calls
+// Async thunks for API calls
 export const fetchExpenses = createAsyncThunkWithToast(
   'expenses/fetchExpenses',
   async () => {
-    return mockExpenses;
+    const response = await fetch(`${API_BASE_URL}/expenses`);
+    if (!response.ok) {
+      throw new Error('Failed to fetch expenses');
+    }
+    return await response.json();
   },
   {
     delay: 500
@@ -138,7 +32,20 @@ export const addExpense = createAddThunk(
       id: Date.now().toString(),
       ...expenseData,
     };
-    return newExpense;
+    
+    const response = await fetch(`${API_BASE_URL}/expenses`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(newExpense),
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to add expense');
+    }
+    
+    return await response.json();
   },
   {
     successMessage: 'Expense added successfully',
@@ -150,7 +57,19 @@ export const addExpense = createAddThunk(
 export const updateExpense = createUpdateThunk(
   'expenses/updateExpense',
   async (expenseData) => {
-    return expenseData;
+    const response = await fetch(`${API_BASE_URL}/expenses/${expenseData.id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(expenseData),
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to update expense');
+    }
+    
+    return await response.json();
   },
   {
     successMessage: 'Expense updated successfully',
@@ -162,6 +81,14 @@ export const updateExpense = createUpdateThunk(
 export const deleteExpense = createDeleteThunk(
   'expenses/deleteExpense',
   async (expenseId) => {
+    const response = await fetch(`${API_BASE_URL}/expenses/${expenseId}`, {
+      method: 'DELETE',
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to delete expense');
+    }
+    
     return expenseId;
   },
   {

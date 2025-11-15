@@ -1,326 +1,9 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { addStaffAttendanceRecord, getStaffAttendanceByDate } from '../utils/staffAttendanceApi';
-
-// Mock data for staff with enhanced salary management
-// Set all staff to have joined last month (September/October 2025) for 1-2 months of work
-// All salaries capped at maximum 30,000
-const mockStaff = [
-  {
-    id: '1',
-    firstName: 'Ahmed',
-    lastName: 'Khan',
-    phone: '111-222-3333',
-    position: 'Math Teacher',
-    salary: 25000,
-    allowances: [
-      { name: 'Housing Allowance', amount: 3000 },
-      { name: 'Transport Allowance', amount: 1000 }
-    ],
-    dateOfJoining: '2025-09-15', // 1 month ago
-    attendance: [],
-    salaryHistory: [
-      {
-        id: 'sal-1-001',
-        month: 'September 2023',
-        baseSalary: 25000,
-        allowances: 4000,
-        deductions: 0,
-        netSalary: 29000,
-        status: 'paid',
-        paymentDate: '2023-09-30'
-      }
-    ]
-  },
-  {
-    id: '2',
-    firstName: 'Fatima',
-    lastName: 'Ahmed',
-    phone: '444-555-6666',
-    position: 'English Teacher',
-    salary: 24000,
-    allowances: [
-      { name: 'Housing Allowance', amount: 3000 },
-      { name: 'Transport Allowance', amount: 1000 }
-    ],
-    dateOfJoining: '2025-08-10', // 2 months ago
-    attendance: [],
-    salaryHistory: [
-      {
-        id: 'sal-2-001',
-        month: 'September 2023',
-        baseSalary: 24000,
-        allowances: 4000,
-        deductions: 0,
-        netSalary: 28000,
-        status: 'paid',
-        paymentDate: '2023-09-30'
-      }
-    ]
-  },
-  {
-    id: '3',
-    firstName: 'Bilal',
-    lastName: 'Malik',
-    phone: '777-888-9999',
-    position: 'Science Teacher',
-    salary: 26000,
-    allowances: [
-      { name: 'Housing Allowance', amount: 2500 },
-      { name: 'Transport Allowance', amount: 1000 }
-    ],
-    dateOfJoining: '2025-09-20', // 1 month ago
-    attendance: [],
-    salaryHistory: [
-      {
-        id: 'sal-3-001',
-        month: 'September 2023',
-        baseSalary: 26000,
-        allowances: 3500,
-        deductions: 0,
-        netSalary: 29500,
-        status: 'paid',
-        paymentDate: '2023-09-30'
-      }
-    ]
-  },
-  {
-    id: '4',
-    firstName: 'Ayesha',
-    lastName: 'Raza',
-    phone: '222-333-4444',
-    position: 'Accountant',
-    salary: 22000,
-    allowances: [
-      { name: 'Housing Allowance', amount: 2500 },
-      { name: 'Transport Allowance', amount: 800 }
-    ],
-    dateOfJoining: '2025-08-12', // 2 months ago
-    attendance: [],
-    salaryHistory: [
-      {
-        id: 'sal-4-001',
-        month: 'September 2023',
-        baseSalary: 22000,
-        allowances: 3300,
-        deductions: 0,
-        netSalary: 25300,
-        status: 'paid',
-        paymentDate: '2023-09-30'
-      }
-    ]
-  },
-  {
-    id: '5',
-    firstName: 'Omar',
-    lastName: 'Sheikh',
-    phone: '555-666-7777',
-    position: 'Librarian',
-    salary: 20000,
-    allowances: [
-      { name: 'Housing Allowance', amount: 2000 },
-      { name: 'Transport Allowance', amount: 500 }
-    ],
-    dateOfJoining: '2025-09-05', // 1 month ago
-    attendance: [],
-    salaryHistory: [
-      {
-        id: 'sal-5-001',
-        month: 'September 2023',
-        baseSalary: 20000,
-        allowances: 2500,
-        deductions: 0,
-        netSalary: 22500,
-        status: 'paid',
-        paymentDate: '2023-09-30'
-      }
-    ]
-  },
-  {
-    id: '6',
-    firstName: 'Zainab',
-    lastName: 'Hussain',
-    phone: '888-999-0000',
-    position: 'Counselor',
-    salary: 21000,
-    allowances: [
-      { name: 'Housing Allowance', amount: 2500 },
-      { name: 'Transport Allowance', amount: 600 }
-    ],
-    dateOfJoining: '2025-08-18', // 2 months ago
-    attendance: [],
-    salaryHistory: [
-      {
-        id: 'sal-6-001',
-        month: 'September 2023',
-        baseSalary: 21000,
-        allowances: 3100,
-        deductions: 0,
-        netSalary: 24100,
-        status: 'paid',
-        paymentDate: '2023-09-30'
-      }
-    ]
-  },
-  {
-    id: '7',
-    firstName: 'Hassan',
-    lastName: 'Qureshi',
-    phone: '333-444-5555',
-    position: 'Principal',
-    salary: 30000,
-    allowances: [
-      { name: 'Housing Allowance', amount: 3000 },
-      { name: 'Transport Allowance', amount: 1000 }
-    ],
-    dateOfJoining: '2025-09-22', // 1 month ago
-    attendance: [],
-    salaryHistory: [
-      {
-        id: 'sal-7-001',
-        month: 'September 2023',
-        baseSalary: 30000,
-        allowances: 4000,
-        deductions: 0,
-        netSalary: 34000,
-        status: 'paid',
-        paymentDate: '2023-09-30'
-      }
-    ]
-  },
-  {
-    id: '8',
-    firstName: 'Mariam',
-    lastName: 'Butt',
-    phone: '666-777-8888',
-    position: 'Lab Assistant',
-    salary: 18000,
-    allowances: [
-      { name: 'Housing Allowance', amount: 1500 },
-      { name: 'Transport Allowance', amount: 500 }
-    ],
-    dateOfJoining: '2025-08-10', // 2 months ago
-    attendance: [],
-    salaryHistory: [
-      {
-        id: 'sal-8-001',
-        month: 'September 2023',
-        baseSalary: 18000,
-        allowances: 2000,
-        deductions: 0,
-        netSalary: 20000,
-        status: 'paid',
-        paymentDate: '2023-09-30'
-      }
-    ]
-  },
-  {
-    id: '9',
-    firstName: 'Saad',
-    lastName: 'Mirza',
-    phone: '555-444-3333',
-    position: 'Security Guard',
-    salary: 15000,
-    allowances: [
-      { name: 'Housing Allowance', amount: 1000 },
-      { name: 'Transport Allowance', amount: 300 }
-    ],
-    dateOfJoining: '2025-09-15', // 1 month ago
-    attendance: [],
-    salaryHistory: [
-      {
-        id: 'sal-9-001',
-        month: 'September 2023',
-        baseSalary: 15000,
-        allowances: 1300,
-        deductions: 0,
-        netSalary: 16300,
-        status: 'paid',
-        paymentDate: '2023-09-30'
-      }
-    ]
-  },
-  {
-    id: '10',
-    firstName: 'Sana',
-    lastName: 'Javed',
-    phone: '666-555-4444',
-    position: 'Receptionist',
-    salary: 16000,
-    allowances: [
-      { name: 'Housing Allowance', amount: 1200 },
-      { name: 'Transport Allowance', amount: 300 }
-    ],
-    dateOfJoining: '2025-08-10', // 2 months ago
-    attendance: [],
-    salaryHistory: [
-      {
-        id: 'sal-10-001',
-        month: 'September 2023',
-        baseSalary: 16000,
-        allowances: 1500,
-        deductions: 0,
-        netSalary: 17500,
-        status: 'paid',
-        paymentDate: '2023-09-30'
-      }
-    ]
-  },
-  {
-    id: '11',
-    firstName: 'Ali',
-    lastName: 'Rizvi',
-    phone: '777-666-5555',
-    position: 'Maintenance Staff',
-    salary: 14000,
-    allowances: [
-      { name: 'Housing Allowance', amount: 800 },
-      { name: 'Transport Allowance', amount: 200 }
-    ],
-    dateOfJoining: '2025-09-20', // 1 month ago
-    attendance: [],
-    salaryHistory: [
-      {
-        id: 'sal-11-001',
-        month: 'September 2023',
-        baseSalary: 14000,
-        allowances: 1000,
-        deductions: 0,
-        netSalary: 15000,
-        status: 'paid',
-        paymentDate: '2023-09-30'
-      }
-    ]
-  },
-  {
-    id: '12',
-    firstName: 'Hina',
-    lastName: 'Abbasi',
-    phone: '888-777-6666',
-    position: 'Cleaner',
-    salary: 12000,
-    allowances: [
-      { name: 'Housing Allowance', amount: 500 },
-      { name: 'Transport Allowance', amount: 100 }
-    ],
-    dateOfJoining: '2025-08-08', // 2 months ago
-    attendance: [],
-    salaryHistory: [
-      {
-        id: 'sal-12-001',
-        month: 'September 2023',
-        baseSalary: 12000,
-        allowances: 600,
-        deductions: 0,
-        netSalary: 12600,
-        status: 'paid',
-        paymentDate: '2023-09-30'
-      }
-    ]
-  },
-];
+import { API_BASE_URL } from '../utils/apiConfig';
 
 const initialState = {
-  staff: mockStaff,
+  staff: [],
   attendanceRecords: [], // Add attendance records to state
   loading: false,
   error: null,
@@ -328,9 +11,11 @@ const initialState = {
 
 // Async thunks
 export const fetchStaff = createAsyncThunk('staff/fetchStaff', async () => {
-  // Simulate API call
-  await new Promise(resolve => setTimeout(resolve, 1000));
-  return mockStaff;
+  const response = await fetch(`${API_BASE_URL}/staff`);
+  if (!response.ok) {
+    throw new Error('Failed to fetch staff');
+  }
+  return await response.json();
 });
 
 // Fetch staff attendance by date
@@ -342,25 +27,53 @@ export const fetchStaffAttendanceByDate = createAsyncThunk('staff/fetchStaffAtte
 });
 
 export const addStaff = createAsyncThunk('staff/addStaff', async (newStaff) => {
-  // Simulate API call
-  await new Promise(resolve => setTimeout(resolve, 500));
-  return {
+  const staffWithDefaults = {
     ...newStaff,
     id: `${Date.now()}`, // Use timestamp for unique ID
     salaryHistory: [],
     attendance: []
   };
+  
+  const response = await fetch(`${API_BASE_URL}/staff`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(staffWithDefaults),
+  });
+  
+  if (!response.ok) {
+    throw new Error('Failed to add staff');
+  }
+  
+  return await response.json();
 });
 
 export const updateStaff = createAsyncThunk('staff/updateStaff', async (updatedStaff) => {
-  // Simulate API call
-  await new Promise(resolve => setTimeout(resolve, 500));
-  return updatedStaff;
+  const response = await fetch(`${API_BASE_URL}/staff/${updatedStaff.id}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(updatedStaff),
+  });
+  
+  if (!response.ok) {
+    throw new Error('Failed to update staff');
+  }
+  
+  return await response.json();
 });
 
 export const deleteStaff = createAsyncThunk('staff/deleteStaff', async (staffId) => {
-  // Simulate API call
-  await new Promise(resolve => setTimeout(resolve, 500));
+  const response = await fetch(`${API_BASE_URL}/staff/${staffId}`, {
+    method: 'DELETE',
+  });
+  
+  if (!response.ok) {
+    throw new Error('Failed to delete staff');
+  }
+  
   return staffId;
 });
 

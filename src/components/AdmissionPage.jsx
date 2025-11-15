@@ -18,6 +18,7 @@ const AdmissionPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { classes } = useSelector(state => state.classes);
+  const { students } = useSelector(state => state.students);
   const { isNGOSchool } = useSchoolFunding();
   const fileInputRef = useRef(null);
   

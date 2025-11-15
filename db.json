@@ -1,0 +1,212 @@
+{
+  "students": [
+    {
+      "id": "1",
+      "grNo": "1",
+      "firstName": "Ahmed",
+      "lastName": "Khan",
+      "class": "Class 10",
+      "section": "A",
+      "img": "https://t3.ftcdn.net/jpg/13/66/06/10/240_F_1366061052_aLuQrXzrN1YorMaybNFoNBPsVKcrgVE8.jpg"
+    },
+    {
+      "id": "2",
+      "firstName": "Fatima",
+      "grNo": "2",
+      "lastName": "Ahmed",
+      "class": "Class 9",
+      "section": "B",
+      "img": "https://t3.ftcdn.net/jpg/13/66/06/10/240_F_1366061052_aLuQrXzrN1YorMaybNFoNBPsVKcrgVE8.jpg"
+    },
+    {
+      "id": "1763233927095",
+      "photo": "",
+      "grNo": "3",
+      "firstName": "Jabbar Ahmad",
+      "lastName": "",
+      "fatherName": "Ahmad Ali",
+      "religion": "Islam",
+      "address": "Near Postal Life Insuarance",
+      "dateOfBirth": "1983-11-16",
+      "birthPlace": "Larkana",
+      "lastSchoolAttended": "Peshawar Model School",
+      "dateOfAdmission": "2025-11-15",
+      "class": "Class 10",
+      "section": "A",
+      "admissionFees": 5000,
+      "monthlyFees": 0,
+      "feesPaid": 5000,
+      "totalFees": 5000,
+      "isTransferStudent": false,
+      "dateOfLeaving": "",
+      "classInWhichLeft": "",
+      "reasonOfLeaving": "",
+      "remarks": "",
+      "familyId": "family-1763233927096",
+      "img": "https://t3.ftcdn.net/jpg/13/66/06/10/240_F_1366061052_aLuQrXzrN1YorMaybNFoNBPsVKcrgVE8.jpg",
+      "feesHistory": [
+        {
+          "id": "challan-1763233927096-0",
+          "month": "Admission Fees",
+          "amount": 5000,
+          "paid": true,
+          "date": "2025-11-15",
+          "dueDate": "2025-11-15",
+          "status": "paid",
+          "type": "admission"
+        }
+      ]
+    },
+    {
+      "id": "1763234240837",
+      "photo": "",
+      "grNo": "4",
+      "firstName": "Khan Muhammad",
+      "lastName": "",
+      "fatherName": "Ahmad Ali",
+      "religion": "Islam",
+      "address": "202 Elm Street, Peshawar, Sindh",
+      "dateOfBirth": "2001-11-16",
+      "birthPlace": "Larkana",
+      "lastSchoolAttended": "Karachi Grammar School",
+      "dateOfAdmission": "2025-11-15",
+      "class": "Class 10",
+      "section": "A",
+      "admissionFees": 5000,
+      "monthlyFees": 0,
+      "feesPaid": 5000,
+      "totalFees": 5000,
+      "isTransferStudent": true,
+      "dateOfLeaving": "2025-08-14",
+      "classInWhichLeft": "Six",
+      "reasonOfLeaving": "Not Good",
+      "remarks": "Bad Behaviour",
+      "familyId": "family-1763234240837",
+      "feesHistory": [
+        {
+          "id": "challan-1763234240837-0",
+          "month": "Admission Fees",
+          "amount": 5000,
+          "paid": true,
+          "date": "2025-11-15",
+          "dueDate": "2025-11-15",
+          "status": "paid",
+          "type": "admission"
+        }
+      ]
+    },
+    {
+      "id": "1763234343940",
+      "photo": "",
+      "grNo": "5",
+      "firstName": "Bilal",
+      "lastName": "",
+      "fatherName": "Farid Sheikh",
+      "religion": "Islam",
+      "address": "Larkana",
+      "dateOfBirth": "2017-11-15",
+      "birthPlace": "Larkana",
+      "lastSchoolAttended": "Peshawar Model School",
+      "dateOfAdmission": "2025-11-15",
+      "class": "Class 10",
+      "section": "A",
+      "admissionFees": 4000,
+      "monthlyFees": 0,
+      "feesPaid": 4000,
+      "totalFees": 4000,
+      "isTransferStudent": false,
+      "dateOfLeaving": "",
+      "classInWhichLeft": "",
+      "reasonOfLeaving": "",
+      "remarks": "Needs extra attention",
+      "familyId": "family-1763234343941",
+      "feesHistory": [
+        {
+          "id": "challan-1763234343941-0",
+          "month": "Admission Fees",
+          "amount": 4000,
+          "paid": true,
+          "date": "2025-11-15",
+          "dueDate": "2025-11-15",
+          "status": "paid",
+          "type": "admission"
+        }
+      ]
+    }
+  ],
+  "expenses": [
+    {
+      "id": "1",
+      "description": "Stationery purchase",
+      "amount": 500,
+      "date": "2025-11-15",
+      "category": "Stationary"
+    }
+  ],
+  "income": {
+    "canteenIncome": [
+      {
+        "id": "c1",
+        "date": "2025-11-05",
+        "amount": 1500,
+        "description": "Weekly canteen sales"
+      }
+    ],
+    "sponsorshipIncome": [
+      {
+        "id": "s1",
+        "date": "2025-11-10",
+        "amount": 5000,
+        "description": "Book sponsorship from local publisher",
+        "sponsor": "ABC Publishers"
+      }
+    ]
+  },
+  "staff": [
+    {
+      "id": "1",
+      "firstName": "Ali",
+      "lastName": "Raza",
+      "position": "Principal",
+      "salary": 30000
+    }
+  ],
+  "classes": [
+    {
+      "id": "1",
+      "name": "Class 10",
+      "monthlyFees": 4000,
+      "subjects": [
+        {
+          "id": "10math",
+          "name": "Mathematics",
+          "teacherId": "1",
+          "teacherName": "Ahmed Khan"
+        }
+      ],
+      "sections": [
+        {
+          "id": "10A",
+          "name": "A"
+        },
+        {
+          "id": "10B",
+          "name": "B"
+        }
+      ]
+    }
+  ],
+  "subsidies": [
+    {
+      "id": 1,
+      "quarter": "Q1",
+      "year": 2025,
+      "amount": 350000,
+      "ngoName": "Education for All Foundation",
+      "receivedDate": "2024-01-15",
+      "expectedDate": "",
+      "status": "received",
+      "description": "Quarterly education subsidy for operational costs"
+    }
+  ]
+}
