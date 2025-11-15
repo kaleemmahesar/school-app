@@ -757,19 +757,18 @@ const Dashboard = () => {
       />
 
       {/* NGO Funding Info Banner */}
-      <FundingConditional showFor="ngo">
+      {/* <FundingConditional showFor="ngo">
         {/* <div className="mb-6">
           <NGOFundingInfo />
-        </div> */}
-      </FundingConditional>
+        </div> 
+      </FundingConditional> */}
 
       {/* Stats Cards - Only show for Owner users */}
       {isOwner() && (
         <>
           {/* Stats Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
-            {/* Financial Stats */}
-            <div className="bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl shadow-lg p-6 text-white transform transition-all duration-300 hover:scale-[1.02]">
+            {/* <div className="bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl shadow-lg p-6 text-white transform transition-all duration-300 hover:scale-[1.02]">
               <div className="flex items-start justify-between mb-5">
                 <div>
                   <h3 className="text-white text-opacity-90 text-sm font-medium mb-1">Financial Overview</h3>
@@ -836,7 +835,6 @@ const Dashboard = () => {
               </div>
             </div>
             
-            {/* Student & Class Stats */}
             <div className="bg-gradient-to-br from-blue-500 to-cyan-600 rounded-2xl shadow-lg p-6 text-white transform transition-all duration-300 hover:scale-[1.02]">
               <div className="flex items-start justify-between mb-5">
                 <div>
@@ -880,7 +878,6 @@ const Dashboard = () => {
               </div>
             </div>
             
-            {/* Staff & Net Position Stats */}
             <div className="bg-gradient-to-br from-purple-500 to-fuchsia-600 rounded-2xl shadow-lg p-6 text-white transform transition-all duration-300 hover:scale-[1.02]">
               <div className="flex items-start justify-between mb-5">
                 <div>
@@ -930,7 +927,7 @@ const Dashboard = () => {
                   </div>
                 </div>
               </div>
-            </div>
+            </div> */}
           </div>
         </>
       )}

@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { FaUserCheck, FaUserTimes, FaSearch, FaFilter, FaEdit, FaDownload, FaPrint } from 'react-icons/fa';
 import Pagination from '../common/Pagination';
 import { markStudentAsLeft } from '../../store/studentsSlice';
+import * as XLSX from 'xlsx-js-style';
 
 const StudentAvailabilityLists = ({ activeTab: propActiveTab, 
                                   onFilterChange,
@@ -122,17 +123,26 @@ const StudentAvailabilityLists = ({ activeTab: propActiveTab,
   // Export to CSV function
   const exportToCSV = () => {
     const csvContent = [
-      ['GR No', 'Name', 'Father Name', 'Class', 'Section', 'Religion', 'Status', 'Total Fees', 'Fees Paid'],
+      ['GR No', 'First Name', 'Last Name', 'Father Name', 'Religion', 'Address', 'Date of Birth', 'Place of Birth', 'Last School Attended', 'Date of Admission', 'Class', 'Section', 'Status', 'Date of Leaving', 'Class in Which Left', 'Reason of Leaving', 'Remarks'],
       ...currentFilteredList.map(student => [
         student.grNo || '',
-        `"${student.firstName} ${student.lastName}"`,
+        student.firstName || '',
+        student.lastName || '',
         student.fatherName || '',
+        student.religion || '',
+        student.address || '',
+        student.dateOfBirth || '',
+        student.birthPlace || '',
+        student.lastSchoolAttended || '',
+        student.dateOfAdmission || '',
         student.class || '',
         student.section || '',
-        student.religion || '',
-        student.status || '',
-        student.totalFees || 0,
-        student.feesPaid || 0
+        // Excluding monthly fees, admission fees, total fees, fees paid
+        student.status && student.status !== 'studying' ? student.status : '', // Only show status if not 'studying'
+        student.dateOfLeaving || '',
+        student.classInWhichLeft || '',
+        student.reasonOfLeaving || '',
+        student.remarks || ''
       ])
     ].map(row => row.join(',')).join('\n');
     
@@ -145,6 +155,88 @@ const StudentAvailabilityLists = ({ activeTab: propActiveTab,
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
+  
+  // Export to XLSX function
+  const exportToXLSX = () => {
+    // Create worksheet data - excluding specified columns
+    const headers = ['GR No', 'First Name', 'Last Name', 'Father Name', 'Religion', 'Address', 'Date of Birth', 'Place of Birth', 'Last School Attended', 'Date of Admission', 'Class', 'Section', 'Status', 'Last School Leaving Date', 'Last School Class', 'Reason for Leaving Last School', 'Last School Remarks'];
+    
+    const wsData = [
+      headers,
+      ...currentFilteredList.map(student => [
+        student.grNo || '',
+        student.firstName || '',
+        student.lastName || '',
+        student.fatherName || '',
+        student.religion || '',
+        student.address || '',
+        student.dateOfBirth || '',
+        student.birthPlace || '',
+        student.lastSchoolAttended || '',
+        student.dateOfAdmission || '',
+        student.class || '',
+        student.section || '',
+        // Excluding monthly fees, admission fees, total fees, fees paid
+        student.status && student.status !== 'studying' ? student.status : '', // Only show status if not 'studying'
+        student.dateOfLeaving || '',
+        student.classInWhichLeft || '',
+        student.reasonOfLeaving || '',
+        student.remarks || ''
+      ])
+    ];
+    
+    // Create workbook and worksheet
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+    
+    // Style the header row
+    const range = XLSX.utils.decode_range(ws['!ref']);
+    
+    // Apply styling to header cells
+    for (let C = range.s.c; C <= range.e.c; C++) {
+      const headerCellRef = XLSX.utils.encode_cell({ r: 0, c: C });
+      if (ws[headerCellRef]) {
+        ws[headerCellRef].s = {
+          font: { bold: true, sz: 12, color: { rgb: "FFFFFF" } },
+          fill: { fgColor: { rgb: "3b82f6" } },
+          alignment: { horizontal: "center", vertical: "center" },
+          border: {
+            top: { style: "thin", color: { rgb: "000000" } },
+            bottom: { style: "thin", color: { rgb: "000000" } },
+            left: { style: "thin", color: { rgb: "000000" } },
+            right: { style: "thin", color: { rgb: "000000" } }
+          }
+        };
+      }
+    }
+    
+    // Set column widths - increased width for Address and Last School Attended
+    ws["!cols"] = [
+      { wch: 10 },  // GR No
+      { wch: 15 },  // First Name
+      { wch: 15 },  // Last Name
+      { wch: 20 },  // Father Name
+      { wch: 12 },  // Religion
+      { wch: 40 },  // Address (increased width)
+      { wch: 15 },  // Date of Birth
+      { wch: 20 },  // Place of Birth
+      { wch: 35 },  // Last School Attended (increased width)
+      { wch: 18 },  // Date of Admission
+      { wch: 10 },  // Class
+      { wch: 10 },  // Section
+      { wch: 12 },  // Status (excluding 'studying')
+      { wch: 25 },  // Date of Leaving
+      { wch: 20 },  // Class in Which Left
+      { wch: 30 },  // Reason of Leaving
+      { wch: 30 }   // Remarks
+    ];
+    
+    // Add worksheet to workbook
+    XLSX.utils.book_append_sheet(wb, ws, 'Students');
+    
+    // Export the workbook
+    XLSX.writeFile(wb, `students_${activeTab}_report.xlsx`);
   };
 
   // Print report function
@@ -260,12 +352,29 @@ const StudentAvailabilityLists = ({ activeTab: propActiveTab,
               </div>
               
               <div className="flex items-center space-x-2">
-                <button
-                  onClick={exportToCSV}
-                  className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-                >
-                  <FaDownload className="mr-1" /> Export CSV
-                </button>
+                <div className="relative group">
+                  <button
+                    className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+                  >
+                    <FaDownload className="mr-1" /> Export
+                  </button>
+                  <div className="absolute right-0 mt-1 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 hidden group-hover:block z-10">
+                    <div className="py-1">
+                      <button
+                        onClick={exportToCSV}
+                        className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      >
+                        Export as CSV
+                      </button>
+                      <button
+                        onClick={exportToXLSX}
+                        className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      >
+                        Export as Excel
+                      </button>
+                    </div>
+                  </div>
+                </div>
                 <button
                   onClick={printReport}
                   className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
