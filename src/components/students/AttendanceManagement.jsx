@@ -1,16 +1,36 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
+import DatePicker from 'react-datepicker';
 import { FaCalendarAlt, FaUserCheck, FaUserTimes, FaSearch, FaSave, FaClock } from 'react-icons/fa';
 import PageHeader from '../common/PageHeader';
 import { addNewAttendanceRecord, fetchAttendanceByDateAndClass } from '../../store/attendanceSlice';
 import Pagination from '../common/Pagination';
+import 'react-datepicker/dist/react-datepicker.css';
+
+// Pakistani National Holidays (2025)
+const PAKISTANI_HOLIDAYS = [
+  // New Year's Day
+  '2025-01-01',
+  // Kashmir Day
+  '2025-02-05',
+  // Pakistan Day
+  '2025-03-23',
+  // Labour Day
+  '2025-05-01',
+  // Independence Day
+  '2025-08-14',
+  // Iqbal Day
+  '2025-11-09',
+  // Quaid-e-Azam Day
+  '2025-12-25'
+];
 
 const AttendanceManagement = () => {
   const dispatch = useDispatch();
   const { students } = useSelector(state => state.students);
   const { attendanceRecords: storedAttendanceRecords, loading, error } = useSelector(state => state.attendance);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedClass, setSelectedClass] = useState('');
+  const [selectedClass, setSelectedClass] = useState('Class 10');
   const [selectedSection, setSelectedSection] = useState('');
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [attendanceRecords, setAttendanceRecords] = useState({});
@@ -288,13 +308,29 @@ console.log('selectedClass:', selectedClass);
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                 <FaCalendarAlt className="h-5 w-5 text-gray-400" />
               </div>
-              <input
-                type="date"
-                value={selectedDate}
-                onChange={(e) => setSelectedDate(e.target.value)}
+              <DatePicker
+                selected={selectedDate ? new Date(selectedDate) : new Date()}
+                onChange={(date) => {
+                  // Check if selected date is Sunday (0 = Sunday)
+                  if (date.getDay() !== 0) {
+                    setSelectedDate(date.toISOString().split('T')[0]);
+                  }
+                }}
+                filterDate={(date) => {
+                  // Disable Sundays
+                  if (date.getDay() === 0) return false;
+                  
+                  // Disable Pakistani national holidays
+                  const dateString = date.toISOString().split('T')[0];
+                  if (PAKISTANI_HOLIDAYS.includes(dateString)) return false;
+                  
+                  return true;
+                }}
                 className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                placeholderText="Select Date"
               />
             </div>
+            <p className="mt-1 text-xs text-gray-500">Note: Sundays and Pakistani national holidays are disabled as school is closed</p>
           </div>
           
           <div>
@@ -360,6 +396,48 @@ console.log('selectedClass:', selectedClass);
           >
             <FaUserTimes className="mr-1" /> Mark All Absent
           </button>
+        </div>
+      </div>
+
+      
+
+      {/* Attendance Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div className="bg-gradient-to-r from-green-500 to-green-600 rounded-xl shadow-lg p-4 text-white">
+          <div className="flex items-center">
+            <FaUserCheck className="h-8 w-8 mr-3" />
+            <div>
+              <p className="text-sm font-medium text-green-100">Present</p>
+              <p className="text-2xl font-bold">{presentCount}</p>
+            </div>
+          </div>
+        </div>
+        <div className="bg-gradient-to-r from-red-500 to-red-600 rounded-xl shadow-lg p-4 text-white">
+          <div className="flex items-center">
+            <FaUserTimes className="h-8 w-8 mr-3" />
+            <div>
+              <p className="text-sm font-medium text-red-100">Absent</p>
+              <p className="text-2xl font-bold">{absentCount}</p>
+            </div>
+          </div>
+        </div>
+        <div className="bg-gradient-to-r from-yellow-500 to-yellow-600 rounded-xl shadow-lg p-4 text-white">
+          <div className="flex items-center">
+            <FaClock className="h-8 w-8 mr-3" />
+            <div>
+              <p className="text-sm font-medium text-yellow-100">Late</p>
+              <p className="text-2xl font-bold">{lateCount}</p>
+            </div>
+          </div>
+        </div>
+        <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl shadow-lg p-4 text-white">
+          <div className="flex items-center">
+            <FaClock className="h-8 w-8 mr-3" />
+            <div>
+              <p className="text-sm font-medium text-blue-100">Leave</p>
+              <p className="text-2xl font-bold">{leaveCount}</p>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -523,26 +601,6 @@ console.log('selectedClass:', selectedClass);
                 </tr>
               ))}
             </tbody>
-            {/* Summary Row at Bottom */}
-            <tfoot className="bg-gray-50">
-              <tr>
-                <td colSpan="4" className="px-4 py-3 text-sm font-medium text-gray-900">
-                  Total Students: {filteredStudents.length}
-                </td>
-                <td className="px-4 py-3 text-sm text-green-700 font-medium">
-                  <FaUserCheck className="inline mr-1" /> Present: {presentCount}
-                </td>
-                <td className="px-4 py-3 text-sm text-red-700 font-medium">
-                  <FaUserTimes className="inline mr-1" /> Absent: {absentCount}
-                </td>
-                <td className="px-4 py-3 text-sm text-yellow-700 font-medium">
-                  <FaClock className="inline mr-1" /> Late: {lateCount}
-                </td>
-                <td className="px-4 py-3 text-sm text-blue-700 font-medium">
-                  <FaClock className="inline mr-1" /> Leave: {leaveCount}
-                </td>
-              </tr>
-            </tfoot>
           </table>
           {filteredStudents.length === 0 && (
             <div className="text-center py-12">

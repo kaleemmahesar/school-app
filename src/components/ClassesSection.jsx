@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { fetchClasses, addClass, updateClass, deleteClass, updateClassFees, addSubjectToClass, removeSubjectFromClass } from '../store/classesSlice';
+import { fetchClasses, addClass, updateClass, deleteClass, updateClassFees, addSubjectToClass, removeSubjectFromClass, updateSubjectInClass } from '../store/classesSlice';
 import { fetchStudents } from '../store/studentsSlice';
 import { fetchStaff } from '../store/staffSlice';
 import { FaPlus, FaEdit, FaTrash, FaSearch, FaBook, FaUsers, FaSchool, FaDollarSign, FaGraduationCap } from 'react-icons/fa';
@@ -21,6 +21,7 @@ const ClassesSection = () => {
   const [currentClass, setCurrentClass] = useState(null);
   const [feesAmount, setFeesAmount] = useState('');
   const [subjectData, setSubjectData] = useState({ name: '', teacherId: '', teacherName: '', maxMarks: 100 });
+  const [editingSubject, setEditingSubject] = useState(null);
 
   useEffect(() => {
     dispatch(fetchClasses());
@@ -79,12 +80,12 @@ const ClassesSection = () => {
 
   const handleAddSubject = (e) => {
     e.preventDefault();
-    if (selectedClass && subjectData.name && subjectData.teacherId) {
+    if (selectedClass && subjectData.name) { // Only require subject name, teacher is optional
       const newSubject = {
         id: `${selectedClass.id}-${Date.now()}`,
         name: subjectData.name,
-        teacherId: subjectData.teacherId,
-        teacherName: subjectData.teacherName,
+        teacherId: subjectData.teacherId || '', // Ensure teacherId is empty string if not selected
+        teacherName: subjectData.teacherName || '', // Ensure teacherName is empty string if not selected
         maxMarks: subjectData.maxMarks
       };
       dispatch(addSubjectToClass({ 
@@ -112,6 +113,38 @@ const ClassesSection = () => {
         classId: selectedClass.id, 
         subjectId 
       }));
+    }
+  };
+
+  const handleEditSubject = (subject) => {
+    setEditingSubject(subject);
+    setSubjectData({
+      name: subject.name,
+      teacherId: subject.teacherId || '',
+      teacherName: subject.teacherName || '',
+      maxMarks: subject.maxMarks || 100
+    });
+  };
+
+  const handleUpdateSubject = (e) => {
+    e.preventDefault();
+    if (selectedClass && editingSubject && subjectData.name) {
+      const updatedSubjectData = {
+        name: subjectData.name,
+        teacherId: subjectData.teacherId || '',
+        teacherName: subjectData.teacherName || '',
+        maxMarks: subjectData.maxMarks
+      };
+      
+      dispatch(updateSubjectInClass({ 
+        classId: selectedClass.id, 
+        subjectId: editingSubject.id,
+        updatedSubjectData
+      }));
+      
+      // Reset the form and editing state
+      setSubjectData({ name: '', teacherId: '', teacherName: '', maxMarks: 100 });
+      setEditingSubject(null);
     }
   };
 
@@ -441,10 +474,12 @@ const ClassesSection = () => {
             {/* Modal Content */}
             <div className="flex-1 overflow-y-auto p-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Add Subject Form */}
+                {/* Add/Edit Subject Form */}
                 <div>
-                  <h4 className="text-lg font-medium text-gray-900 mb-3">Add New Subject</h4>
-                  <form onSubmit={handleAddSubject} className="space-y-4">
+                  <h4 className="text-lg font-medium text-gray-900 mb-3">
+                    {editingSubject ? 'Edit Subject' : 'Add New Subject'}
+                  </h4>
+                  <form onSubmit={editingSubject ? handleUpdateSubject : handleAddSubject} className="space-y-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Subject Name</label>
                       <input
@@ -454,23 +489,23 @@ const ClassesSection = () => {
                         className="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
                         placeholder="Mathematics"
                         required
+                        readOnly={!!editingSubject} // Make subject name read-only when editing
                       />
                     </div>
                     
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Teacher</label>
                       <select
-                        value={subjectData.teacherId}
+                        value={subjectData.teacherId || ''}
                         onChange={(e) => {
-                          const selectedTeacher = teachers.find(teacher => teacher.id === e.target.value);
+                          const selectedTeacher = e.target.value ? teachers.find(teacher => teacher.id === e.target.value) : null;
                           setSubjectData({
                             ...subjectData, 
-                            teacherId: e.target.value,
+                            teacherId: e.target.value || '',
                             teacherName: selectedTeacher ? `${selectedTeacher.firstName} ${selectedTeacher.lastName}` : ''
                           });
                         }}
                         className="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
-                        required
                       >
                         <option value="">Select a teacher</option>
                         {teachers.map((teacher) => (
@@ -494,12 +529,26 @@ const ClassesSection = () => {
                       />
                     </div>
                     
-                    <button
-                      type="submit"
-                      className="w-full inline-flex items-center justify-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                    >
-                      Add Subject
-                    </button>
+                    <div className="flex space-x-2">
+                      <button
+                        type="submit"
+                        className="flex-1 inline-flex items-center justify-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                      >
+                        {editingSubject ? 'Update Subject' : 'Add Subject'}
+                      </button>
+                      {editingSubject && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditingSubject(null);
+                            setSubjectData({ name: '', teacherId: '', teacherName: '', maxMarks: 100 });
+                          }}
+                          className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                        >
+                          Cancel
+                        </button>
+                      )}
+                    </div>
                   </form>
                 </div>
                 
@@ -522,12 +571,20 @@ const ClassesSection = () => {
                                 Max Marks: {subject.maxMarks || 100}
                               </div>
                             </div>
-                            <button
-                              onClick={() => handleRemoveSubject(subject.id)}
-                              className="ml-2 inline-flex items-center px-2 py-1 border border-transparent text-xs font-medium rounded-lg text-white bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 flex-shrink-0"
-                            >
-                              <FaTrash size={12} />
-                            </button>
+                            <div className="ml-2 flex space-x-1">
+                              <button
+                                onClick={() => handleEditSubject(subject)}
+                                className="inline-flex items-center px-2 py-1 border border-transparent text-xs font-medium rounded-lg text-white bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 flex-shrink-0"
+                              >
+                                <FaEdit size={12} />
+                              </button>
+                              <button
+                                onClick={() => handleRemoveSubject(subject.id)}
+                                className="inline-flex items-center px-2 py-1 border border-transparent text-xs font-medium rounded-lg text-white bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 flex-shrink-0"
+                              >
+                                <FaTrash size={12} />
+                              </button>
+                            </div>
                           </div>
                         ))}
                       </div>

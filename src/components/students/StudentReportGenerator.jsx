@@ -388,6 +388,12 @@ const StudentReportGenerator = () => {
     const weeklyData = {};
     currentReport.attendanceDetails.forEach(record => {
       const date = new Date(record.date);
+      
+      // Skip Sundays (day 0)
+      if (date.getDay() === 0) {
+        return; // Skip this record if it's a Sunday
+      }
+      
       // Get week start (Sunday)
       const weekStart = new Date(date);
       weekStart.setDate(date.getDate() - date.getDay());

@@ -309,8 +309,8 @@ const StaffFormModal = ({ onClose, onSubmit, staffData, classes }) => {
                         required
                       >
                         <option value="">Select Subject</option>
-                        {allSubjects.map((subject, index) => (
-                          <option key={index} value={subject}>
+                        {allSubjects.map((subject) => (
+                          <option key={subject} value={subject}>
                             {subject}
                           </option>
                         ))}

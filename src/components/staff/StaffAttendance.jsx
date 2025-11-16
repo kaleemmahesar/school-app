@@ -1,9 +1,29 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
+import DatePicker from 'react-datepicker';
 import { FaCalendarAlt, FaUserCheck, FaUserTimes, FaSearch, FaSave, FaClock, FaDoorOpen } from 'react-icons/fa';
 import PageHeader from '../common/PageHeader';
 import { addStaffAttendance, fetchStaffAttendanceByDate } from '../../store/staffSlice';
 import Pagination from '../common/Pagination';
+import 'react-datepicker/dist/react-datepicker.css';
+
+// Pakistani National Holidays (2025)
+const PAKISTANI_HOLIDAYS = [
+  // New Year's Day
+  '2025-01-01',
+  // Kashmir Day
+  '2025-02-05',
+  // Pakistan Day
+  '2025-03-23',
+  // Labour Day
+  '2025-05-01',
+  // Independence Day
+  '2025-08-14',
+  // Iqbal Day
+  '2025-11-09',
+  // Quaid-e-Azam Day
+  '2025-12-25'
+];
 
 const StaffAttendance = () => {
   const dispatch = useDispatch();
@@ -266,13 +286,29 @@ const StaffAttendance = () => {
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                 <FaCalendarAlt className="h-5 w-5 text-gray-400" />
               </div>
-              <input
-                type="date"
-                value={attendanceDate}
-                onChange={(e) => setAttendanceDate(e.target.value)}
+              <DatePicker
+                selected={attendanceDate ? new Date(attendanceDate) : new Date()}
+                onChange={(date) => {
+                  // Check if selected date is Sunday (0 = Sunday)
+                  if (date.getDay() !== 0) {
+                    setAttendanceDate(date.toISOString().split('T')[0]);
+                  }
+                }}
+                filterDate={(date) => {
+                  // Disable Sundays
+                  if (date.getDay() === 0) return false;
+                  
+                  // Disable Pakistani national holidays
+                  const dateString = date.toISOString().split('T')[0];
+                  if (PAKISTANI_HOLIDAYS.includes(dateString)) return false;
+                  
+                  return true;
+                }}
                 className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                placeholderText="Select Date"
               />
             </div>
+            <p className="mt-1 text-xs text-gray-500">Note: Sundays and Pakistani national holidays are disabled as school is closed</p>
           </div>
           
           <div>

@@ -1,137 +1,43 @@
 {
   "students": [
     {
-      "id": "1",
+      "id": "1763300271479",
+      "photo": "https://randomuser.me/api/portraits/men/10.jpg",
       "grNo": "1",
-      "firstName": "Ahmed",
-      "lastName": "Khan",
-      "class": "Class 10",
-      "section": "A",
-      "img": "https://t3.ftcdn.net/jpg/13/66/06/10/240_F_1366061052_aLuQrXzrN1YorMaybNFoNBPsVKcrgVE8.jpg"
-    },
-    {
-      "id": "2",
-      "firstName": "Fatima",
-      "grNo": "2",
-      "lastName": "Ahmed",
-      "class": "Class 9",
-      "section": "B",
-      "img": "https://t3.ftcdn.net/jpg/13/66/06/10/240_F_1366061052_aLuQrXzrN1YorMaybNFoNBPsVKcrgVE8.jpg"
-    },
-    {
-      "id": "3",
-      "photo": "",
-      "grNo": "3",
-      "firstName": "Jabbar Ahmad",
+      "firstName": "Jane Doe",
       "lastName": "",
-      "fatherName": "Ahmad Ali",
+      "fatherName": "James",
       "religion": "Islam",
       "address": "Near Postal Life Insuarance",
-      "dateOfBirth": "1983-11-16",
+      "dateOfBirth": "2022-11-15",
       "birthPlace": "Larkana",
-      "lastSchoolAttended": "Peshawar Model School",
-      "dateOfAdmission": "2025-11-15",
+      "lastSchoolAttended": "",
+      "dateOfAdmission": "2025-11-16",
       "class": "Class 10",
       "section": "A",
-      "admissionFees": 5000,
+      "admissionFees": 10000,
       "monthlyFees": 0,
-      "feesPaid": 5000,
-      "totalFees": 5000,
+      "feesPaid": 10000,
+      "totalFees": 10000,
       "isTransferStudent": false,
       "dateOfLeaving": "",
       "classInWhichLeft": "",
       "reasonOfLeaving": "",
       "remarks": "",
-      "familyId": "family-1763233927096",
-      "img": "https://t3.ftcdn.net/jpg/13/66/06/10/240_F_1366061052_aLuQrXzrN1YorMaybNFoNBPsVKcrgVE8.jpg",
+      "familyId": "family-1763300271479",
       "feesHistory": [
         {
-          "id": "challan-1763233927096-0",
+          "id": "challan-1763300271479-0",
           "month": "Admission Fees",
-          "amount": 5000,
+          "amount": 10000,
           "paid": true,
-          "date": "2025-11-15",
-          "dueDate": "2025-11-15",
+          "date": "2025-11-16",
+          "dueDate": "2025-11-16",
           "status": "paid",
           "type": "admission"
         }
-      ]
-    },
-    {
-      "id": "4",
-      "photo": "",
-      "grNo": "4",
-      "firstName": "Khan Muhammad",
-      "lastName": "",
-      "fatherName": "Ahmad Ali",
-      "religion": "Islam",
-      "address": "202 Elm Street, Peshawar, Sindh",
-      "dateOfBirth": "2001-11-16",
-      "birthPlace": "Larkana",
-      "lastSchoolAttended": "Karachi Grammar School",
-      "dateOfAdmission": "2025-11-15",
-      "class": "Class 10",
-      "section": "A",
-      "admissionFees": 5000,
-      "monthlyFees": 0,
-      "feesPaid": 5000,
-      "totalFees": 5000,
-      "isTransferStudent": true,
-      "dateOfLeaving": "2025-08-14",
-      "classInWhichLeft": "Six",
-      "reasonOfLeaving": "Not Good",
-      "remarks": "Bad Behaviour",
-      "familyId": "family-1763234240837",
-      "feesHistory": [
-        {
-          "id": "challan-1763234240837-0",
-          "month": "Admission Fees",
-          "amount": 5000,
-          "paid": true,
-          "date": "2025-11-15",
-          "dueDate": "2025-11-15",
-          "status": "paid",
-          "type": "admission"
-        }
-      ]
-    },
-    {
-      "id": "5",
-      "photo": "",
-      "grNo": "5",
-      "firstName": "Bilal",
-      "lastName": "",
-      "fatherName": "Farid Sheikh",
-      "religion": "Islam",
-      "address": "Larkana",
-      "dateOfBirth": "2017-11-15",
-      "birthPlace": "Larkana",
-      "lastSchoolAttended": "Peshawar Model School",
-      "dateOfAdmission": "2025-11-15",
-      "class": "Class 10",
-      "section": "A",
-      "admissionFees": 4000,
-      "monthlyFees": 0,
-      "feesPaid": 4000,
-      "totalFees": 4000,
-      "isTransferStudent": false,
-      "dateOfLeaving": "",
-      "classInWhichLeft": "",
-      "reasonOfLeaving": "",
-      "remarks": "Needs extra attention",
-      "familyId": "family-1763234343941",
-      "feesHistory": [
-        {
-          "id": "challan-1763234343941-0",
-          "month": "Admission Fees",
-          "amount": 4000,
-          "paid": true,
-          "date": "2025-11-15",
-          "dueDate": "2025-11-15",
-          "status": "paid",
-          "type": "admission"
-        }
-      ]
+      ],
+      "status": "studying"
     }
   ],
   "expenses": [
@@ -164,36 +70,112 @@
   },
   "staff": [
     {
-      "id": "1",
-      "firstName": "Ali",
-      "lastName": "Raza",
-      "position": "Principal",
-      "salary": 30000
+      "id": "1763304824573",
+      "firstName": "Waqar",
+      "lastName": "Abro",
+      "phone": "03337227847",
+      "position": "Chemistry Teacher",
+      "salary": "25000",
+      "dateOfJoining": "2025-10-16",
+      "jobType": "Teaching",
+      "subject": "Chemistry",
+      "photo": null,
+      "salaryHistory": [
+        {
+          "id": "advance-1763304824573-1763305188916",
+          "month": "November 2025",
+          "baseSalary": 0,
+          "allowances": 0,
+          "deductions": 15000,
+          "netSalary": -15000,
+          "status": "advance",
+          "paymentDate": "2025-11-16",
+          "reason": "Need for Treatment"
+        },
+        {
+          "id": "sal-1763304824573-1763305205230",
+          "month": "2025-11",
+          "baseSalary": 25000,
+          "allowances": 0,
+          "deductions": 0,
+          "netSalary": 25000,
+          "status": "paid",
+          "paymentDate": "2025-11-16",
+          "paymentMethod": "cash"
+        }
+      ],
+      "attendance": []
     }
   ],
   "classes": [
     {
-      "id": "1",
-      "name": "Class 10",
-      "monthlyFees": 4000,
       "subjects": [
         {
-          "id": "10math",
-          "name": "Mathematics",
-          "teacherId": "1",
-          "teacherName": "Ahmed Khan"
+          "id": "1-1763301798606",
+          "name": "Sindhi",
+          "teacherId": "",
+          "teacherName": "",
+          "maxMarks": 100
+        },
+        {
+          "id": "1-1763301833863",
+          "name": "English",
+          "teacherId": "",
+          "teacherName": "",
+          "maxMarks": 100
+        },
+        {
+          "id": "1-1763301837237",
+          "name": "Urdu",
+          "teacherId": "",
+          "teacherName": "",
+          "maxMarks": 100
+        },
+        {
+          "id": "1-1763301841173",
+          "name": "Physics",
+          "teacherId": "",
+          "teacherName": "",
+          "maxMarks": 100
+        },
+        {
+          "id": "1-1763301847313",
+          "name": "Chemistry",
+          "teacherId": "1763301879795",
+          "teacherName": "Waqar Abro",
+          "maxMarks": 100
         }
       ],
+      "id": "1",
+      "name": "Class 10",
+      "monthlyFees": "9000",
       "sections": [
         {
           "id": "10A",
-          "name": "A"
+          "name": "A",
+          "studentCount": 4
         },
         {
           "id": "10B",
-          "name": "B"
+          "name": "B",
+          "studentCount": 0
         }
-      ]
+      ],
+      "totalStudents": 4
+    },
+    {
+      "id": "1763294782262",
+      "subjects": [],
+      "sections": [
+        {
+          "id": "1763294767215-A",
+          "name": "A",
+          "studentCount": 0
+        }
+      ],
+      "name": "Class 9",
+      "monthlyFees": "8000",
+      "totalStudents": 0
     }
   ],
   "subsidies": [
@@ -241,6 +223,75 @@
         {
           "studentId": "4",
           "status": "present"
+        },
+        {
+          "studentId": "5",
+          "status": "absent"
+        }
+      ]
+    },
+    {
+      "id": "c30c",
+      "date": "2025-11-14",
+      "classId": "Class 10",
+      "records": [
+        {
+          "studentId": "1",
+          "status": "absent"
+        },
+        {
+          "studentId": "3",
+          "status": "present"
+        },
+        {
+          "studentId": "4",
+          "status": "present"
+        },
+        {
+          "studentId": "5",
+          "status": "absent"
+        }
+      ]
+    },
+    {
+      "id": "396e",
+      "date": "2025-11-13",
+      "classId": "Class 10",
+      "records": [
+        {
+          "studentId": "1",
+          "status": "present"
+        },
+        {
+          "studentId": "3",
+          "status": "absent"
+        },
+        {
+          "studentId": "4",
+          "status": "late"
+        },
+        {
+          "studentId": "5",
+          "status": "leave"
+        }
+      ]
+    },
+    {
+      "id": "5a1e",
+      "date": "2025-11-12",
+      "classId": "Class 10",
+      "records": [
+        {
+          "studentId": "1",
+          "status": "absent"
+        },
+        {
+          "studentId": "3",
+          "status": "absent"
+        },
+        {
+          "studentId": "4",
+          "status": "absent"
         },
         {
           "studentId": "5",

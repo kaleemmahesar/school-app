@@ -49,12 +49,24 @@ const StaffDetails = () => {
     </div>;
   }
   
-  // Calculate months since joining
+  // Calculate months since joining (full months worked)
   const joiningDate = new Date(staffMember.dateOfJoining);
   const currentDate = new Date();
-  const monthsSinceJoining = 
+  
+  // Calculate total full months worked
+  let totalMonths = 
     (currentDate.getFullYear() - joiningDate.getFullYear()) * 12 + 
     (currentDate.getMonth() - joiningDate.getMonth());
+  
+  // If current day is before the joining day, we haven't completed this month yet
+  if (currentDate.getDate() < joiningDate.getDate()) {
+    totalMonths -= 1;
+  }
+  
+  // Ensure we don't have negative months
+  totalMonths = Math.max(0, totalMonths);
+  
+  const monthsSinceJoining = totalMonths;
   
   // Calculate total allowances for the member
   const totalAllowances = (staffMember.allowances || []).reduce((sum, allowance) => {
@@ -70,11 +82,21 @@ const StaffDetails = () => {
   }, 0);
   
   // Calculate paid salaries for this member (total paid so far)
+  // This includes both salary payments and advances given to staff
   const memberPaidSalaries = (staffMember.salaryHistory || []).reduce((sum, record) => {
-    return sum + (record.status === 'paid' ? Math.abs(parseFloat(record.netSalary || 0)) : 0);
+    if (record.status === 'paid') {
+      // Salary payments are positive amounts paid to staff
+      return sum + Math.abs(parseFloat(record.netSalary || 0));
+    } else if (record.status === 'advance') {
+      // Advances are negative amounts (money given to staff), so we add the absolute value
+      return sum + Math.abs(parseFloat(record.netSalary || 0));
+    }
+    return sum;
   }, 0);
   
   // Calculate pending amount for this member
+  // Advances are money already given to staff, so they count as payments
+  // memberPaidSalaries already includes advances, so we don't need to add them separately
   const memberPending = (monthsSinceJoining * monthlyTotal) - memberPaidSalaries;
   
   // Function to find classes taught by this teacher
@@ -137,6 +159,32 @@ const StaffDetails = () => {
       }
     });
   }
+  
+  // Calculate total expected salaries based on joining date (full months worked)
+  const totalExpectedSalaries = staff.reduce((sum, member) => {
+    // Calculate months since joining
+    const joiningDate = new Date(member.dateOfJoining);
+    const currentDate = new Date();
+    
+    // Calculate total months worked (including partial months)
+    let totalMonths = 
+      (currentDate.getFullYear() - joiningDate.getFullYear()) * 12 + 
+      (currentDate.getMonth() - joiningDate.getMonth());
+    
+    // If they've worked any days in the current month, count it as a full month
+    if (currentDate.getDate() >= joiningDate.getDate()) {
+      totalMonths += 1;
+    }
+    
+    // Calculate monthly total (salary + allowances)
+    const allowances = (member.allowances || []).reduce((allowanceSum, allowance) => {
+      return allowanceSum + parseFloat(allowance.amount || 0);
+    }, 0);
+    const monthlyTotal = parseFloat(member.salary || 0) + allowances;
+    
+    // Total expected = total months worked * monthly salary
+    return sum + (totalMonths * monthlyTotal);
+  }, 0);
   
   return (
     <>

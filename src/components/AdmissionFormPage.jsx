@@ -391,7 +391,7 @@ const AdmissionFormPage = () => {
                     <select
                       id="religion"
                       name="religion"
-                      value={formData.religion}
+                      value={formData.religion || "Islam"}
                       onChange={handleInputChange}
                       className="block w-full px-3 py-1.5 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-sm"
                       required

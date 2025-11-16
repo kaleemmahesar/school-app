@@ -3,23 +3,24 @@ import { useSelector } from 'react-redux';
 import { FaChalkboardTeacher, FaUser, FaPhone, FaCalendar, FaDollarSign, FaBriefcase, FaBook, FaTimes, FaCamera } from 'react-icons/fa';
 
 const StaffDetailsModal = ({ staffMember, onClose, classes }) => {
-  // Calculate months since joining with prorated first month
+  // Calculate months since joining (full months worked)
   const joiningDate = new Date(staffMember.dateOfJoining);
   const currentDate = new Date();
   
-  // Calculate full months worked
-  let monthsSinceJoining = 
+  // Calculate total full months worked
+  let totalMonths = 
     (currentDate.getFullYear() - joiningDate.getFullYear()) * 12 + 
     (currentDate.getMonth() - joiningDate.getMonth());
   
-  // Calculate prorated salary for the first month if joined mid-month
-  const daysInJoiningMonth = new Date(joiningDate.getFullYear(), joiningDate.getMonth() + 1, 0).getDate();
-  const daysWorkedInFirstMonth = daysInJoiningMonth - joiningDate.getDate() + 1;
-  const proratedFirstMonth = daysWorkedInFirstMonth / daysInJoiningMonth;
+  // If current day is before the joining day, we haven't completed this month yet
+  if (currentDate.getDate() < joiningDate.getDate()) {
+    totalMonths -= 1;
+  }
   
-  // Adjust months since joining to account for prorated first month
-  // If joined after the 1st, we count a partial month instead of a full month
-  const adjustedMonthsSinceJoining = monthsSinceJoining - 1 + proratedFirstMonth;
+  // Ensure we don't have negative months
+  totalMonths = Math.max(0, totalMonths);
+  
+  const adjustedMonthsSinceJoining = totalMonths;
   
   // Calculate total allowances for the member
   const totalAllowances = (staffMember.allowances || []).reduce((sum, allowance) => {
@@ -35,16 +36,51 @@ const StaffDetailsModal = ({ staffMember, onClose, classes }) => {
   }, 0);
   
   // Calculate paid salaries for this member (total paid so far)
+  // This includes both salary payments and advances given to staff
   const memberPaidSalaries = (staffMember.salaryHistory || []).reduce((sum, record) => {
-    return sum + (record.status === 'paid' ? Math.abs(parseFloat(record.netSalary || 0)) : 0);
+    if (record.status === 'paid') {
+      // Salary payments are positive amounts paid to staff
+      return sum + Math.abs(parseFloat(record.netSalary || 0));
+    } else if (record.status === 'advance') {
+      // Advances are negative amounts (money given to staff), so we add the absolute value
+      return sum + Math.abs(parseFloat(record.netSalary || 0));
+    }
+    return sum;
   }, 0);
   
-  // Calculate expected salaries based on joining date with prorated first month
-  const expectedSalaries = adjustedMonthsSinceJoining * monthlyTotal;
+  // Calculate expected salaries based on joining date (full months worked)
+  const expectedSalaries = (() => {
+    // Calculate months since joining
+    const joiningDate = new Date(staffMember.dateOfJoining);
+    const currentDate = new Date();
+    
+    // Calculate total full months worked
+    let totalMonths = 
+      (currentDate.getFullYear() - joiningDate.getFullYear()) * 12 + 
+      (currentDate.getMonth() - joiningDate.getMonth());
+    
+    // If current day is before the joining day, we haven't completed this month yet
+    if (currentDate.getDate() < joiningDate.getDate()) {
+      totalMonths -= 1;
+    }
+    
+    // Ensure we don't have negative months
+    totalMonths = Math.max(0, totalMonths);
+    
+    // Calculate monthly total (salary + allowances)
+    const allowances = (staffMember.allowances || []).reduce((allowanceSum, allowance) => {
+      return allowanceSum + parseFloat(allowance.amount || 0);
+    }, 0);
+    const monthlyTotal = parseFloat(staffMember.salary || 0) + allowances;
+    
+    // Total expected = total months worked * monthly salary
+    return totalMonths * monthlyTotal;
+  })();
   
-  // Calculate pending amount (expected - paid + advances)
-  // Advances are money the staff owes to the school, so we add them to the pending amount
-  const memberPending = expectedSalaries - memberPaidSalaries + memberAdvances;
+  // Calculate pending amount (expected - paid)
+  // Advances are money already given to staff, so they count as payments
+  // memberPaidSalaries already includes advances, so we don't need to add them separately
+  const memberPending = expectedSalaries - memberPaidSalaries;
   
   // Function to find classes taught by this teacher
   const getClassesForTeacher = (teacherName) => {
@@ -228,32 +264,18 @@ const StaffDetailsModal = ({ staffMember, onClose, classes }) => {
                 
                 {/* Worked Months vs Paid Salaries */}
                 <div className="mt-3 pt-3 border-t border-gray-200">
-                  <h4 className="text-xs font-semibold text-gray-900 mb-2">Payroll Details</h4>
-                  <div className="grid grid-cols-3 gap-2 text-xs">
-                    <div className="text-center">
-                      <p className="text-gray-600">Worked Months</p>
-                      <p className="font-bold text-gray-900">{adjustedMonthsSinceJoining.toFixed(1)}</p>
-                      <p className="text-gray-500 text-xs">({monthsSinceJoining} full months)</p>
+                  <h4 className="text-sm font-semibold text-gray-900 mb-3">Payroll Details</h4>
+                  <div className="grid grid-cols-1 gap-3">
+                    <div className="flex justify-between items-center bg-gray-50 p-3 rounded-lg">
+                      <div>
+                        <p className="text-gray-600 text-sm">Worked Months</p>
+                        <p className="font-bold text-gray-900 text-lg">{adjustedMonthsSinceJoining.toFixed(1)}</p>
+                      </div>
+                      <div>
+                        <p className="text-gray-600 text-sm">Expected Earnings</p>
+                        <p className="font-bold text-green-600 text-lg">Rs {Math.round(expectedSalaries)}</p>
+                      </div>
                     </div>
-                    <div className="text-center">
-                      <p className="text-gray-600">Paid Salaries</p>
-                      <p className="font-bold text-gray-900">
-                        {staffMember.salaryHistory ? staffMember.salaryHistory.filter(record => record.status === 'paid').length : 0}
-                      </p>
-                    </div>
-                    <div className="text-center">
-                      <p className="text-gray-600">Pending Payments</p>
-                      <p className={`font-bold ${adjustedMonthsSinceJoining > (staffMember.salaryHistory ? staffMember.salaryHistory.filter(record => record.status === 'paid').length : 0) ? 'text-red-600' : 'text-green-600'}`}>
-                        {(adjustedMonthsSinceJoining - (staffMember.salaryHistory ? staffMember.salaryHistory.filter(record => record.status === 'paid').length : 0)).toFixed(1)}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="mt-2 text-xs text-gray-500">
-                    <p>Expected earnings: Rs {Math.round(expectedSalaries)}</p>
-                    <p>Total paid: Rs {Math.round(memberPaidSalaries)}</p>
-                    <p className={memberPending > 0 ? 'text-red-600 font-medium' : memberPending < 0 ? 'text-yellow-600 font-medium' : 'text-green-600 font-medium'}>
-                      Balance: Rs {Math.round(Math.abs(memberPending))} {memberPending > 0 ? '(Due)' : memberPending < 0 ? '(Advance)' : '(Settled)'}
-                    </p>
                   </div>
                 </div>
               </div>

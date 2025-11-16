@@ -29,21 +29,14 @@ const StudentManagement = ({ onAddStudent }) => {
 
   // Get statistics for each category (unfiltered)
   const getUnfilteredStudentStats = () => {
-    // Available students (studying - all fees paid)
+    // Available students (all students who are not left or passed out)
     const available = students.filter(student => {
-      const totalFees = parseFloat(student.totalFees) || 0;
-      const feesPaid = parseFloat(student.feesPaid) || 0;
-      // Students who are available are studying and have paid all fees
-      return student.status !== 'left' && student.status !== 'passed_out' && feesPaid >= totalFees;
+      return student.status !== 'left' && student.status !== 'passed_out';
     });
 
-    // Unavailable students (passed out or studying with pending fees)
+    // Unavailable students (none, since we're changing the logic)
     const unavailable = students.filter(student => {
-      const totalFees = parseFloat(student.totalFees) || 0;
-      const feesPaid = parseFloat(student.feesPaid) || 0;
-      // Students who are unavailable are either passed out or studying with pending fees
-      return student.status === 'passed_out' || 
-             (student.status !== 'left' && feesPaid < totalFees);
+      return student.status === 'passed_out';
     });
 
     // Left students (left in middle)

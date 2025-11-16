@@ -42,12 +42,15 @@ export const addStudent = createAddThunk(
     let totalFees = parseFloat(studentData.totalFees) || 0;
     const monthlyFees = parseFloat(studentData.monthlyFees) || 0;
     const admissionFees = parseFloat(studentData.admissionFees) || 0;
-    const feesPaid = parseFloat(studentData.feesPaid) || 0;
+    let feesPaid = parseFloat(studentData.feesPaid) || 0;
     
     // If totalFees is not provided or is 0, calculate it from monthly and admission fees
     if (totalFees <= 0) {
       totalFees = monthlyFees + admissionFees;
     }
+    
+    // Add admission fees to feesPaid since they are paid at admission
+    feesPaid += admissionFees;
     
     // Create fees history with admission fees
     const feesHistory = [];
@@ -58,10 +61,10 @@ export const addStudent = createAddThunk(
         id: `challan-${Date.now()}-0`,
         month: 'Admission Fees',
         amount: admissionFees,
-        paid: feesPaid >= admissionFees,
+        paid: true,
         date: studentData.dateOfAdmission || new Date().toISOString().split('T')[0],
         dueDate: studentData.dateOfAdmission || new Date().toISOString().split('T')[0],
-        status: feesPaid >= admissionFees ? 'paid' : 'pending',
+        status: 'paid',
         type: 'admission'
       });
     }
@@ -78,6 +81,7 @@ export const addStudent = createAddThunk(
       totalFees,
       familyId,
       feesHistory,
+      status: 'studying'
     };
     
     // Send the new student to the API

@@ -350,7 +350,7 @@ const AdmissionPage = () => {
 
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="bg-white shadow rounded-lg p-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   {/* Photo Upload Section */}
                   <div className="md:col-span-3">
                     <div className="flex flex-col items-start space-y-4 mb-6">
@@ -463,41 +463,18 @@ const AdmissionPage = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Religion
                     </label>
-                    <div className="grid grid-cols-3 gap-3">
-                      <label className="inline-flex items-center justify-center px-4 py-2.5 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition">
-                        <input
-                          type="radio"
-                          name="religion"
-                          value="Islam"
-                          checked={formData.religion === 'Islam'}
-                          onChange={handleInputChange}
-                          className="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500 sr-only"
-                        />
-                        <span className={`text-sm ${formData.religion === 'Islam' ? 'text-blue-600 font-medium' : 'text-gray-700'}`}>Islam</span>
-                      </label>
-                      <label className="inline-flex items-center justify-center px-4 py-2.5 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition">
-                        <input
-                          type="radio"
-                          name="religion"
-                          value="Hindu"
-                          checked={formData.religion === 'Hindu'}
-                          onChange={handleInputChange}
-                          className="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500 sr-only"
-                        />
-                        <span className={`text-sm ${formData.religion === 'Hindu' ? 'text-blue-600 font-medium' : 'text-gray-700'}`}>Hindu</span>
-                      </label>
-                      <label className="inline-flex items-center justify-center px-4 py-2.5 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition">
-                        <input
-                          type="radio"
-                          name="religion"
-                          value="Christian"
-                          checked={formData.religion === 'Christian'}
-                          onChange={handleInputChange}
-                          className="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500 sr-only"
-                        />
-                        <span className={`text-sm ${formData.religion === 'Christian' ? 'text-blue-600 font-medium' : 'text-gray-700'}`}>Christian</span>
-                      </label>
-                    </div>
+                    <select
+                      name="religion"
+                      value={formData.religion}
+                      onChange={handleInputChange}
+                      className={`block w-full px-4 py-2.5 border ${errors.religion ? 'border-red-300' : 'border-gray-300'} rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 transition`}
+                    >
+                      <option value="">Select Religion</option>
+                      <option value="Islam">Islam</option>
+                      <option value="Hindu">Hindu</option>
+                      <option value="Christian">Christian</option>
+                      <option value="Others">Others</option>
+                    </select>
                     {/* Temporarily disabled validation error display */}
                     {/*
                     {errors.religion && (
@@ -507,7 +484,7 @@ const AdmissionPage = () => {
                   </div>
                   
                   {/* Address field spanning full width */}
-                  <div className="md:col-span-3">
+                  <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Address
                     </label>
@@ -573,25 +550,7 @@ const AdmissionPage = () => {
                     */}
                   </div>
                   
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Last Attended School
-                    </label>
-                    <input
-                      type="text"
-                      name="lastSchoolAttended"
-                      value={formData.lastSchoolAttended}
-                      onChange={handleInputChange}
-                      className={`block w-full px-4 py-2.5 border ${errors.lastSchoolAttended ? 'border-red-300' : 'border-gray-300'} rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 transition`}
-                      placeholder="Enter Last School Attended"
-                    />
-                    {/* Temporarily disabled validation error display */}
-                    {/*
-                    {errors.lastSchoolAttended && (
-                      <p className="mt-1 text-sm text-red-600">{errors.lastSchoolAttended}</p>
-                    )}
-                    */}
-                  </div>
+                  
                   
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -700,8 +659,27 @@ const AdmissionPage = () => {
                   {formData.isTransferStudent && (
                     <>
                       <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Last Attended School
+                    </label>
+                    <input
+                      type="text"
+                      name="lastSchoolAttended"
+                      value={formData.lastSchoolAttended}
+                      onChange={handleInputChange}
+                      className={`block w-full px-4 py-2.5 border ${errors.lastSchoolAttended ? 'border-red-300' : 'border-gray-300'} rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 transition`}
+                      placeholder="Enter Last School Attended"
+                    />
+                    {/* Temporarily disabled validation error display */}
+                    {/*
+                    {errors.lastSchoolAttended && (
+                      <p className="mt-1 text-sm text-red-600">{errors.lastSchoolAttended}</p>
+                    )}
+                    */}
+                  </div>
+                      <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Date of Removal <span className="text-red-500">*</span>
+                          Date of Removal Last School <span className="text-red-500">*</span>
                         </label>
                         <div className={`relative rounded-lg shadow-sm ${errors.dateOfLeaving ? 'border border-red-300 rounded-lg' : ''}`}>
                           <DatePicker
@@ -727,7 +705,7 @@ const AdmissionPage = () => {
                       
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Class at the time of removal <span className="text-red-500">*</span>
+                          Last Class in Previous School <span className="text-red-500">*</span>
                         </label>
                         <input
                           type="text"
@@ -747,7 +725,7 @@ const AdmissionPage = () => {
                       
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Reason for leaving <span className="text-red-500">*</span>
+                          Reason for leaving Last School <span className="text-red-500">*</span>
                         </label>
                         <input
                           type="text"
@@ -764,12 +742,10 @@ const AdmissionPage = () => {
                         )}
                         */}
                       </div>
-                    </>
-                  )}
-                  
-                  <div className="md:col-span-3">
+
+                      <div className="md:col-span-2">
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Remarks
+                      Last School Remarks
                     </label>
                     <input
                       type="text"
@@ -786,6 +762,10 @@ const AdmissionPage = () => {
                     )}
                     */}
                   </div>
+                    </>
+                  )}
+                  
+                  
                 </div>
               </div>
               
@@ -793,7 +773,7 @@ const AdmissionPage = () => {
               <FundingConditional showFor="traditional">
                 <div className="bg-white rounded-lg shadow-lg p-6">
                   <h2 className="text-lg font-semibold text-gray-900 mb-4 border-b border-gray-200 pb-2">Fee Information</h2>
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                  <div className="grid grid-cols-1 md:grid-cols-1 gap-6">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         Admission Fees
@@ -815,81 +795,6 @@ const AdmissionPage = () => {
                       {/*
                       {errors.admissionFees && (
                         <p className="mt-1 text-sm text-red-600">{errors.admissionFees}</p>
-                      )}
-                      */}
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Monthly Fees
-                      </label>
-                      <div className="relative">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                          <FaMoneyBillWave className="h-5 w-5 text-gray-400" />
-                        </div>
-                        <input
-                          type="number"
-                          name="monthlyFees"
-                          value={formData.monthlyFees}
-                          onChange={handleInputChange}
-                          className={`block w-full pl-10 pr-3 py-2.5 border ${errors.monthlyFees ? 'border-red-300' : 'border-gray-300'} rounded-lg focus:ring-blue-500 focus:border-blue-500 transition`}
-                          placeholder="Enter Monthly Fees"
-                        />
-                      </div>
-                      {/* Temporarily disabled validation error display */}
-                      {/*
-                      {errors.monthlyFees && (
-                        <p className="mt-1 text-sm text-red-600">{errors.monthlyFees}</p>
-                      )}
-                      */}
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Fees Paid
-                      </label>
-                      <div className="relative">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                          <FaMoneyBillWave className="h-5 w-5 text-gray-400" />
-                        </div>
-                        <input
-                          type="number"
-                          name="feesPaid"
-                          value={formData.feesPaid}
-                          onChange={handleInputChange}
-                          className={`block w-full pl-10 pr-3 py-2.5 border ${errors.feesPaid ? 'border-red-300' : 'border-gray-300'} rounded-lg focus:ring-blue-500 focus:border-blue-500 transition`}
-                          placeholder="Enter Paid Fees"
-                        />
-                      </div>
-                      {/* Temporarily disabled validation error display */}
-                      {/*
-                      {errors.feesPaid && (
-                        <p className="mt-1 text-sm text-red-600">{errors.feesPaid}</p>
-                      )}
-                      */}
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Total Fees
-                      </label>
-                      <div className="relative">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                          <FaMoneyBillWave className="h-5 w-5 text-gray-400" />
-                        </div>
-                        <input
-                          type="number"
-                          name="totalFees"
-                          value={formData.totalFees}
-                          onChange={handleInputChange}
-                          className={`block w-full pl-10 pr-3 py-2.5 border ${errors.totalFees ? 'border-red-300' : 'border-gray-300'} rounded-lg focus:ring-blue-500 focus:border-blue-500 transition`}
-                          placeholder="Enter Total Fees"
-                        />
-                      </div>
-                      {/* Temporarily disabled validation error display */}
-                      {/*
-                      {errors.totalFees && (
-                        <p className="mt-1 text-sm text-red-600">{errors.totalFees}</p>
                       )}
                       */}
                     </div>

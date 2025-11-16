@@ -17,13 +17,8 @@ export const useStudentFiltering = (students) => {
       };
     }
 
-    // Categorize students
+    // Categorize students based on status only
     const categorized = students.reduce((acc, student) => {
-      // Calculate if student is "available" (studying - all fees paid)
-      const totalFees = parseFloat(student.totalFees) || 0;
-      const feesPaid = parseFloat(student.feesPaid) || 0;
-      const isAvailable = feesPaid >= totalFees;
-      
       // Check if student is "left"
       const isLeft = student.status === 'left' || student.status === 'passed_out' || 
                     (student.class && student.class.includes('Passed')) || 
@@ -31,10 +26,9 @@ export const useStudentFiltering = (students) => {
       
       if (isLeft) {
         acc.left.push(student);
-      } else if (isAvailable) {
-        acc.available.push(student);
       } else {
-        acc.unavailable.push(student);
+        // All students who are not left/passed out are available
+        acc.available.push(student);
       }
       
       return acc;

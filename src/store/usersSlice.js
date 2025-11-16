@@ -135,31 +135,33 @@ export const selectHasPermission = (state, permission) => {
   if (user.role === 'Owner') return true;
   
   // Check if user has specific permission
-  return user.permissions.includes(permission) || user.permissions.includes('all');
+  return user.permissions?.includes(permission) || user.permissions?.includes('all') || false;
 };
 
 export const selectHasAnyPermission = (state, permissions) => {
+  if (!state.users.currentUser) return false;
   return permissions.some(permission => selectHasPermission(state, permission));
 };
 
 export const selectHasAllPermissions = (state, permissions) => {
+  if (!state.users.currentUser) return false;
   return permissions.every(permission => selectHasPermission(state, permission));
 };
 
 export const selectIsOwner = (state) => {
-  return state.users.currentUser?.role === 'Owner';
+  return state.users.currentUser?.role === 'Owner' || false;
 };
 
 export const selectIsAdmin = (state) => {
-  return state.users.currentUser?.role === 'Admin';
+  return state.users.currentUser?.role === 'Admin' || false;
 };
 
 export const selectIsTeacher = (state) => {
-  return state.users.currentUser?.role === 'Teacher';
+  return state.users.currentUser?.role === 'Teacher' || false;
 };
 
 export const selectIsStaff = (state) => {
-  return state.users.currentUser?.role === 'Staff';
+  return state.users.currentUser?.role === 'Staff' || false;
 };
 
 // Async thunks for mock API calls

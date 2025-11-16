@@ -142,39 +142,47 @@ const StaffSection = () => {
     const salaryHistory = member.salaryHistory || [];
     const advances = salaryHistory.reduce((advanceSum, record) => {
       // Advances are identified by 'advance' status
+      // Advances are negative values, so we negate to show as positive in UI
       return advanceSum + (record.status === 'advance' ? Math.abs(parseFloat(record.netSalary || 0)) : 0);
     }, 0);
     return sum + advances;
   }, 0);
 
   // Calculate total amount paid to all staff (historical total)
+  // This includes both salary payments and advances given to staff
   const totalPaidSalaries = staff.reduce((sum, member) => {
     const salaryHistory = member.salaryHistory || [];
     const paid = salaryHistory.reduce((paidSum, record) => {
-      // Sum all paid salaries
-      return paidSum + (record.status === 'paid' ? Math.abs(parseFloat(record.netSalary || 0)) : 0);
+      if (record.status === 'paid') {
+        // Salary payments are positive amounts paid to staff
+        return paidSum + Math.abs(parseFloat(record.netSalary || 0));
+      } else if (record.status === 'advance') {
+        // Advances are negative amounts (money given to staff), so we add the absolute value
+        return paidSum + Math.abs(parseFloat(record.netSalary || 0));
+      }
+      return paidSum;
     }, 0);
     return sum + paid;
   }, 0);
 
-  // Calculate total expected salaries based on joining date with prorated first month (true pending amount)
+  // Calculate total expected salaries based on joining date (full months worked)
   const totalExpectedSalaries = staff.reduce((sum, member) => {
     // Calculate months since joining
     const joiningDate = new Date(member.dateOfJoining);
     const currentDate = new Date();
     
-    // Calculate full months worked
-    let monthsSinceJoining = 
+    // Calculate total full months worked
+    let totalMonths = 
       (currentDate.getFullYear() - joiningDate.getFullYear()) * 12 + 
       (currentDate.getMonth() - joiningDate.getMonth());
     
-    // Calculate prorated salary for the first month if joined mid-month
-    const daysInJoiningMonth = new Date(joiningDate.getFullYear(), joiningDate.getMonth() + 1, 0).getDate();
-    const daysWorkedInFirstMonth = daysInJoiningMonth - joiningDate.getDate() + 1;
-    const proratedFirstMonth = daysWorkedInFirstMonth / daysInJoiningMonth;
+    // If current day is before the joining day, we haven't completed this month yet
+    if (currentDate.getDate() < joiningDate.getDate()) {
+      totalMonths -= 1;
+    }
     
-    // Adjust months since joining to account for prorated first month
-    const adjustedMonthsSinceJoining = monthsSinceJoining - 1 + proratedFirstMonth;
+    // Ensure we don't have negative months
+    totalMonths = Math.max(0, totalMonths);
     
     // Calculate monthly total (salary + allowances)
     const allowances = (member.allowances || []).reduce((allowanceSum, allowance) => {
@@ -182,8 +190,8 @@ const StaffSection = () => {
     }, 0);
     const monthlyTotal = parseFloat(member.salary || 0) + allowances;
     
-    // Total expected = adjusted months worked * monthly salary
-    return sum + (adjustedMonthsSinceJoining * monthlyTotal);
+    // Total expected = total months worked * monthly salary
+    return sum + (totalMonths * monthlyTotal);
   }, 0);
 
   // Calculate true pending amount (expected - paid)
@@ -387,38 +395,38 @@ const StaffSection = () => {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm text-gray-900">Rs {Math.round(monthlyTotal)}</div>
-                        {/* Worked months vs paid salaries summary with prorated calculation */}
+                        {/* Worked months vs paid salaries summary */}
                         <div className="text-xs text-gray-500 mt-1">
-                          {/* Calculate months since joining with prorated first month */}
+                          {/* Calculate months since joining (full months worked) */}
                           {(() => {
                             const joiningDate = new Date(member.dateOfJoining);
                             const currentDate = new Date();
                             
-                            // Calculate full months worked
-                            let monthsSinceJoining = 
+                            // Calculate total full months worked
+                            let totalMonths = 
                               (currentDate.getFullYear() - joiningDate.getFullYear()) * 12 + 
                               (currentDate.getMonth() - joiningDate.getMonth());
                             
-                            // Calculate prorated salary for the first month if joined mid-month
-                            const daysInJoiningMonth = new Date(joiningDate.getFullYear(), joiningDate.getMonth() + 1, 0).getDate();
-                            const daysWorkedInFirstMonth = daysInJoiningMonth - joiningDate.getDate() + 1;
-                            const proratedFirstMonth = daysWorkedInFirstMonth / daysInJoiningMonth;
+                            // If current day is before the joining day, we haven't completed this month yet
+                            if (currentDate.getDate() < joiningDate.getDate()) {
+                              totalMonths -= 1;
+                            }
                             
-                            // Adjust months since joining to account for prorated first month
-                            const adjustedMonthsSinceJoining = monthsSinceJoining - 1 + proratedFirstMonth;
+                            // Ensure we don't have negative months
+                            totalMonths = Math.max(0, totalMonths);
                             
-                            // Calculate paid salaries count
-                            const paidSalariesCount = member.salaryHistory ? 
-                              member.salaryHistory.filter(record => record.status === 'paid').length : 0;
+                            // Calculate paid salaries count (both salary payments and advances)
+                            const paidRecordsCount = member.salaryHistory ? 
+                              member.salaryHistory.filter(record => record.status === 'paid' || record.status === 'advance').length : 0;
                             
                             // Calculate pending payments
-                            const pendingPayments = adjustedMonthsSinceJoining - paidSalariesCount;
+                            const pendingPayments = totalMonths - paidRecordsCount;
                             
                             return (
                               <div className="flex items-center">
-                                <span>{adjustedMonthsSinceJoining.toFixed(1)} worked</span>
+                                <span>{totalMonths.toFixed(1)} worked</span>
                                 <span className="mx-1">•</span>
-                                <span>{paidSalariesCount} paid</span>
+                                <span>{paidRecordsCount} paid</span>
                                 {pendingPayments > 0 && (
                                   <>
                                     <span className="mx-1">•</span>

@@ -78,15 +78,121 @@ export const deleteStaff = createAsyncThunk('staff/deleteStaff', async (staffId)
 });
 
 export const addStaffAdvance = createAsyncThunk('staff/addStaffAdvance', async ({ staffId, advanceAmount, reason }) => {
-  // Simulate API call
-  await new Promise(resolve => setTimeout(resolve, 500));
-  return { staffId, advanceAmount, reason };
+  // First, fetch the current staff member data
+  const staffResponse = await fetch(`${API_BASE_URL}/staff/${staffId}`);
+  if (!staffResponse.ok) {
+    throw new Error('Failed to fetch staff member');
+  }
+  const staffMember = await staffResponse.json();
+  
+  // Create advance record
+  const newAdvance = {
+    id: `advance-${staffId}-${Date.now()}`,
+    month: new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
+    baseSalary: 0,
+    allowances: 0,
+    deductions: parseFloat(advanceAmount),
+    netSalary: -parseFloat(advanceAmount),
+    status: 'advance',
+    paymentDate: new Date().toISOString().split('T')[0],
+    reason: reason || 'Advance taken'
+  };
+  
+  // Add advance to salary history
+  const updatedStaff = {
+    ...staffMember,
+    salaryHistory: [...(staffMember.salaryHistory || []), newAdvance]
+  };
+  
+  // Update the staff member with the new advance
+  const response = await fetch(`${API_BASE_URL}/staff/${staffId}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(updatedStaff),
+  });
+  
+  if (!response.ok) {
+    throw new Error('Failed to add staff advance');
+  }
+  
+  return await response.json();
 });
 
 export const payStaffSalary = createAsyncThunk('staff/payStaffSalary', async ({ staffId, month, paymentMethod }) => {
-  // Simulate API call
-  await new Promise(resolve => setTimeout(resolve, 500));
-  return { staffId, month, paymentMethod };
+  // First, fetch the current staff member data
+  const staffResponse = await fetch(`${API_BASE_URL}/staff/${staffId}`);
+  if (!staffResponse.ok) {
+    throw new Error('Failed to fetch staff member');
+  }
+  const staffMember = await staffResponse.json();
+  
+  // Check if salary record for this month already exists
+  let salaryRecord = (staffMember.salaryHistory || []).find(record => 
+    record.month === month && record.status !== 'advance');
+  
+  if (salaryRecord) {
+    // Update existing record
+    salaryRecord = {
+      ...salaryRecord,
+      status: 'paid',
+      paymentDate: new Date().toISOString().split('T')[0],
+      paymentMethod: paymentMethod
+    };
+  } else {
+    // Create new salary record
+    const totalAllowances = (staffMember.allowances || []).reduce((sum, allowance) => sum + parseFloat(allowance.amount || 0), 0);
+    const baseSalary = parseFloat(staffMember.salary || 0);
+    const netSalary = baseSalary + totalAllowances;
+    
+    salaryRecord = {
+      id: `sal-${staffId}-${Date.now()}`,
+      month: month,
+      baseSalary: baseSalary,
+      allowances: totalAllowances,
+      deductions: 0,
+      netSalary: netSalary,
+      status: 'paid',
+      paymentDate: new Date().toISOString().split('T')[0],
+      paymentMethod: paymentMethod
+    };
+  }
+  
+  // Update the staff member with the salary payment
+  const updatedSalaryHistory = [...(staffMember.salaryHistory || [])];
+  
+  if (salaryRecord.id) {
+    // Find index of existing record or add new one
+    const existingIndex = updatedSalaryHistory.findIndex(record => record.id === salaryRecord.id);
+    if (existingIndex !== -1) {
+      updatedSalaryHistory[existingIndex] = salaryRecord;
+    } else {
+      updatedSalaryHistory.push(salaryRecord);
+    }
+  } else {
+    updatedSalaryHistory.push(salaryRecord);
+  }
+  
+  const updatedStaff = {
+    ...staffMember,
+    salaryHistory: updatedSalaryHistory
+  };
+  
+  // Update the staff member with the new salary payment
+  const response = await fetch(`${API_BASE_URL}/staff/${staffId}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(updatedStaff),
+  });
+  
+  if (!response.ok) {
+    throw new Error('Failed to pay staff salary');
+  }
+  
+  return await response.json();
 });
 
 export const addStaffAttendance = createAsyncThunk('staff/addStaffAttendance', async ({ date, records }) => {
@@ -134,64 +240,19 @@ const staffSlice = createSlice({
         state.staff = state.staff.filter(staff => staff.id !== action.payload);
       })
       .addCase(addStaffAdvance.fulfilled, (state, action) => {
-        const { staffId, advanceAmount, reason } = action.payload;
-        const staffMember = state.staff.find(staff => staff.id === staffId);
-        if (staffMember) {
-          // Add advance to salary history
-          const newAdvance = {
-            id: `advance-${staffId}-${Date.now()}`,
-            month: new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
-            baseSalary: 0,
-            allowances: 0,
-            deductions: parseFloat(advanceAmount),
-            netSalary: -parseFloat(advanceAmount),
-            status: 'advance',
-            paymentDate: new Date().toISOString().split('T')[0],
-            reason: reason || 'Advance taken'
-          };
-          
-          if (!staffMember.salaryHistory) {
-            staffMember.salaryHistory = [];
-          }
-          staffMember.salaryHistory.push(newAdvance);
+        // Replace the entire staff member with the updated one from the API
+        const updatedStaff = action.payload;
+        const index = state.staff.findIndex(staff => staff.id === updatedStaff.id);
+        if (index !== -1) {
+          state.staff[index] = updatedStaff;
         }
       })
       .addCase(payStaffSalary.fulfilled, (state, action) => {
-        const { staffId, month, paymentMethod } = action.payload;
-        const staffMember = state.staff.find(staff => staff.id === staffId);
-        if (staffMember) {
-          // Find existing salary record for this month or create a new one
-          let salaryRecord = staffMember.salaryHistory.find(record => 
-            record.month === month && record.status !== 'advance');
-          
-          if (salaryRecord) {
-            // Update existing record
-            salaryRecord.status = 'paid';
-            salaryRecord.paymentDate = new Date().toISOString().split('T')[0];
-            salaryRecord.paymentMethod = paymentMethod;
-          } else {
-            // Create new salary record
-            const totalAllowances = (staffMember.allowances || []).reduce((sum, allowance) => sum + parseFloat(allowance.amount || 0), 0);
-            const baseSalary = parseFloat(staffMember.salary || 0);
-            const netSalary = baseSalary + totalAllowances;
-            
-            const newSalaryRecord = {
-              id: `sal-${staffId}-${Date.now()}`,
-              month: month,
-              baseSalary: baseSalary,
-              allowances: totalAllowances,
-              deductions: 0,
-              netSalary: netSalary,
-              status: 'paid',
-              paymentDate: new Date().toISOString().split('T')[0],
-              paymentMethod: paymentMethod
-            };
-            
-            if (!staffMember.salaryHistory) {
-              staffMember.salaryHistory = [];
-            }
-            staffMember.salaryHistory.push(newSalaryRecord);
-          }
+        // Replace the entire staff member with the updated one from the API
+        const updatedStaff = action.payload;
+        const index = state.staff.findIndex(staff => staff.id === updatedStaff.id);
+        if (index !== -1) {
+          state.staff[index] = updatedStaff;
         }
       })
       .addCase(addStaffAttendance.fulfilled, (state, action) => {

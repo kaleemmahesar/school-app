@@ -60,16 +60,22 @@ export const generateStudentReport = createAsyncThunk(
           record.date <= endDate
         );
         
-        // Get detailed attendance records
-        attendanceDetails = attendanceData.flatMap(record => 
-          record.records
+        // Get detailed attendance records, excluding Sundays
+        attendanceDetails = attendanceData.flatMap(record => {
+          // Skip Sundays (day 0)
+          const recordDate = new Date(record.date);
+          if (recordDate.getDay() === 0) {
+            return []; // Skip this record if it's a Sunday
+          }
+          
+          return record.records
             .filter(r => r.studentId === studentId)
             .map(r => ({
               date: record.date,
               status: r.status,
               classId: record.classId
-            }))
-        );
+            }));
+        });
       }
       
       // Get marks data for student
@@ -140,6 +146,12 @@ const calculateAttendanceStats = (attendanceData, studentId) => {
   let leave = 0;
   
   attendanceData.forEach(record => {
+    // Skip Sundays (day 0)
+    const recordDate = new Date(record.date);
+    if (recordDate.getDay() === 0) {
+      return; // Skip this record if it's a Sunday
+    }
+    
     const studentRecord = record.records.find(r => r.studentId === studentId);
     if (studentRecord) {
       switch (studentRecord.status) {

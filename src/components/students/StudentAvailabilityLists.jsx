@@ -54,18 +54,10 @@ const StudentAvailabilityLists = ({ activeTab: propActiveTab,
       else if (student.status === 'left') {
         acc.left.push(student);
       }
-      // Available students (studying and all fees paid)
+      // Available students (studying - all students who are studying are available)
       else {
-        const totalFees = parseFloat(student.totalFees) || 0;
-        const feesPaid = parseFloat(student.feesPaid) || 0;
-        const isAvailable = feesPaid >= totalFees;
-        
-        if (isAvailable) {
-          acc.available.push(student);
-        } else {
-          // Students who are studying but have pending fees
-          acc.unavailable.push(student);
-        }
+        // All students with status 'studying' are available regardless of fees status
+        acc.available.push(student);
       }
       
       return acc;
@@ -428,8 +420,7 @@ const StudentAvailabilityLists = ({ activeTab: propActiveTab,
                 <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">GR No</th>
                 <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
                 <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Father's Name</th>
-                <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Class</th>
-                <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Section</th>
+                <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Class & Section</th>
                 <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Religion</th>
                 <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
               </tr>
@@ -440,7 +431,7 @@ const StudentAvailabilityLists = ({ activeTab: propActiveTab,
                   <td className="px-4 py-3 whitespace-nowrap">
                     <div className="flex items-center">
                       <div className="bg-gray-200 border-2 border-dashed rounded-xl w-8 h-8 flex items-center justify-center">
-                        <img src={student.img} alt={student.firstName} className="w-8 h-8 rounded-xl" />
+                        <img src={student.photo} alt={student.firstName} className="w-8 h-8 rounded-xl" />
                       </div>
                     </div>
                   </td>
@@ -456,10 +447,26 @@ const StudentAvailabilityLists = ({ activeTab: propActiveTab,
                     <div className="text-sm text-gray-900">{student.fatherName}</div>
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{student.class}</div>
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{student.section}</div>
+                    <div className="flex flex-col">
+                      <div className="text-sm text-gray-900">{student.class}</div>
+                      <div className="text-sm text-gray-500">Section {student.section}</div>
+                      {/* Show fees status for monthly fees only */}
+                      {parseFloat(student.totalFees || 0) > parseFloat(student.admissionFees || 0) && (
+                        <div className="mt-1">
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                            parseFloat(student.feesPaid || 0) >= parseFloat(student.totalFees || 0) 
+                              ? 'bg-green-100 text-green-800' 
+                              : 'bg-yellow-100 text-yellow-800'
+                          }`}>
+                            Monthly Fees: {
+                              parseFloat(student.feesPaid || 0) >= parseFloat(student.totalFees || 0) 
+                                ? 'Paid' 
+                                : 'Pending'
+                            }
+                          </span>
+                        </div>
+                      )}
+                    </div>
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap">
                     <div className="text-sm text-gray-900">{student.religion}</div>

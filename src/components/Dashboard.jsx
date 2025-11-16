@@ -499,8 +499,8 @@ const Dashboard = () => {
     // Add student admission activities
     students.forEach(student => {
       // For subsidy view, admission fees are 0
-      // For fees view, show actual admission fees
-      const admissionFeeAmount = viewMode === 'subsidies' ? 0 : (parseFloat(student.admissionFees) || 0);
+      // For fees view, admission fees are shown in fee collection entries to avoid duplication
+      const admissionFeeAmount = viewMode === 'subsidies' ? 0 : 0; // Always 0 to avoid duplication with fee collection entries
       
       activities.push({
         id: `student-${student.id}`,

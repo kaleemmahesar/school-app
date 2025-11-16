@@ -121,7 +121,33 @@ export const updateClassFees = createAsyncThunkWithToast(
 export const addSubjectToClass = createAsyncThunkWithToast(
   'classes/addSubjectToClass',
   async ({ classId, subject }) => {
-    return { classId, subject };
+    // First, fetch the current class data
+    const classResponse = await fetch(`${API_BASE_URL}/classes/${classId}`);
+    if (!classResponse.ok) {
+      throw new Error('Failed to fetch class');
+    }
+    const classData = await classResponse.json();
+    
+    // Add the new subject to the class
+    const updatedClass = {
+      ...classData,
+      subjects: [...(classData.subjects || []), subject]
+    };
+    
+    // Update the class with the new subject
+    const response = await fetch(`${API_BASE_URL}/classes/${classId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(updatedClass),
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to add subject to class');
+    }
+    
+    return await response.json();
   },
   {
     successMessage: 'Subject added successfully',
@@ -134,11 +160,78 @@ export const addSubjectToClass = createAsyncThunkWithToast(
 export const removeSubjectFromClass = createAsyncThunkWithToast(
   'classes/removeSubjectFromClass',
   async ({ classId, subjectId }) => {
-    return { classId, subjectId };
+    // First, fetch the current class data
+    const classResponse = await fetch(`${API_BASE_URL}/classes/${classId}`);
+    if (!classResponse.ok) {
+      throw new Error('Failed to fetch class');
+    }
+    const classData = await classResponse.json();
+    
+    // Remove the subject from the class
+    const updatedClass = {
+      ...classData,
+      subjects: (classData.subjects || []).filter(subject => subject.id !== subjectId)
+    };
+    
+    // Update the class with the removed subject
+    const response = await fetch(`${API_BASE_URL}/classes/${classId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(updatedClass),
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to remove subject from class');
+    }
+    
+    return await response.json();
   },
   {
     successMessage: 'Subject removed successfully',
     errorMessage: 'Failed to remove subject',
+    delay: 500
+  }
+);
+
+// New thunk for updating a subject in a class
+export const updateSubjectInClass = createAsyncThunkWithToast(
+  'classes/updateSubjectInClass',
+  async ({ classId, subjectId, updatedSubjectData }) => {
+    // First, fetch the current class data
+    const classResponse = await fetch(`${API_BASE_URL}/classes/${classId}`);
+    if (!classResponse.ok) {
+      throw new Error('Failed to fetch class');
+    }
+    const classData = await classResponse.json();
+    
+    // Update the subject in the class
+    const updatedClass = {
+      ...classData,
+      subjects: (classData.subjects || []).map(subject => 
+        subject.id === subjectId ? { ...subject, ...updatedSubjectData } : subject
+      )
+    };
+    
+    // Update the class with the updated subject
+    const response = await fetch(`${API_BASE_URL}/classes/${classId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(updatedClass),
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to update subject in class');
+    }
+    
+    return await response.json();
+  },
+  {
+    successMessage: 'Subject updated successfully',
+    errorMessage: 'Failed to update subject',
     delay: 500
   }
 );
@@ -181,20 +274,27 @@ const classesSlice = createSlice({
         }
       })
       .addCase(addSubjectToClass.fulfilled, (state, action) => {
-        const { classId, subject } = action.payload;
-        const classItem = state.classes.find(c => c.id === classId);
-        if (classItem) {
-          if (!classItem.subjects) {
-            classItem.subjects = [];
-          }
-          classItem.subjects.push(subject);
+        // Replace the entire class with the updated one from the API
+        const updatedClass = action.payload;
+        const index = state.classes.findIndex(c => c.id === updatedClass.id);
+        if (index !== -1) {
+          state.classes[index] = updatedClass;
         }
       })
       .addCase(removeSubjectFromClass.fulfilled, (state, action) => {
-        const { classId, subjectId } = action.payload;
-        const classItem = state.classes.find(c => c.id === classId);
-        if (classItem && classItem.subjects) {
-          classItem.subjects = classItem.subjects.filter(subject => subject.id !== subjectId);
+        // Replace the entire class with the updated one from the API
+        const updatedClass = action.payload;
+        const index = state.classes.findIndex(c => c.id === updatedClass.id);
+        if (index !== -1) {
+          state.classes[index] = updatedClass;
+        }
+      })
+      .addCase(updateSubjectInClass.fulfilled, (state, action) => {
+        // Replace the entire class with the updated one from the API
+        const updatedClass = action.payload;
+        const index = state.classes.findIndex(c => c.id === updatedClass.id);
+        if (index !== -1) {
+          state.classes[index] = updatedClass;
         }
       });
   },
