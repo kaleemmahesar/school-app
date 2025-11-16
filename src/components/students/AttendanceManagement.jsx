@@ -19,6 +19,8 @@ const AttendanceManagement = () => {
   // Get unique classes for dropdown
   const uniqueClasses = useMemo(() => [...new Set(students.map(student => student.class))], [students]);
 
+  
+  
   // Get sections for selected class
   const classSections = useMemo(() => selectedClass 
     ? [...new Set(students
@@ -41,38 +43,52 @@ const AttendanceManagement = () => {
   }), [students, searchTerm, selectedClass, selectedSection]);
 
   // Load existing attendance records for the selected date and class
-  useEffect(() => {
-    if (selectedClass && selectedDate) {
-      dispatch(fetchAttendanceByDateAndClass({ date: selectedDate, classId: selectedClass }));
-    }
-  }, [selectedClass, selectedDate, dispatch]);
+useEffect(() => {
+  if (selectedDate) {
+    // Fetch attendance for the selected date, with or without class filter
+    dispatch(fetchAttendanceByDateAndClass({ date: selectedDate, classId: selectedClass || '' }));
+  }
+}, [selectedClass, selectedDate, dispatch]);
 
   // Initialize attendance records with existing data or defaults
-  useEffect(() => {
-    const initialAttendance = {};
-    
-    // If we have stored attendance records for this date and class, use them
-    if (storedAttendanceRecords && storedAttendanceRecords.length > 0 && selectedClass) {
-      // storedAttendanceRecords is an array of attendance records for the date/class
-      // Each record has a records property which is an array of {studentId, status}
-      storedAttendanceRecords.forEach(record => {
-        if (record.date === selectedDate && record.classId === selectedClass) {
-          record.records.forEach(studentRecord => {
-            initialAttendance[studentRecord.studentId] = studentRecord.status;
-          });
-        }
-      });
-    }
-    
-    // For any students not in existing records, default to present
-    filteredStudents.forEach(student => {
-      if (!initialAttendance[student.id]) {
-        initialAttendance[student.id] = 'present';
+useEffect(() => {
+  const initialAttendance = {};
+  console.log('storedAttendanceRecords:', storedAttendanceRecords);
+console.log('selectedDate:', selectedDate);
+console.log('selectedClass:', selectedClass);
+  // If we have stored attendance records for this date and class, use them
+  console.log('Processing storedAttendanceRecords:', storedAttendanceRecords);
+  if (storedAttendanceRecords && storedAttendanceRecords.length > 0) {
+    // The API returns an array, and we need to check each record
+    storedAttendanceRecords.forEach(record => {
+      console.log('Checking record:', record);
+      // Check if record matches the selected date and class (if class is selected)
+      const dateMatches = record.date === selectedDate;
+      const classMatches = selectedClass ? record.classId === selectedClass : true;
+      
+      if (dateMatches && classMatches) {
+        console.log('Found matching record, processing records:', record.records);
+        record.records.forEach(studentRecord => {
+          initialAttendance[studentRecord.studentId] = studentRecord.status;
+          console.log(`Setting student ${studentRecord.studentId} to ${studentRecord.status}`);
+        });
       }
     });
-    
-    setAttendanceRecords(initialAttendance);
-  }, [storedAttendanceRecords, selectedDate, selectedClass, filteredStudents.length]);
+  }
+  
+  // For any students not in existing records, default to absent
+  console.log('Setting defaults for students without records:');
+  filteredStudents.forEach(student => {
+    if (!initialAttendance.hasOwnProperty(student.id)) {
+      initialAttendance[student.id] = 'absent';
+      console.log(`Setting student ${student.id} to absent (default)`);
+    } else {
+      console.log(`Student ${student.id} already has status: ${initialAttendance[student.id]}`);
+    }
+  });
+  
+  setAttendanceRecords(initialAttendance);
+}, [storedAttendanceRecords, selectedDate, selectedClass, filteredStudents]);
 
   // Handle attendance status change
   const handleAttendanceChange = (studentId, status) => {
@@ -159,6 +175,7 @@ const AttendanceManagement = () => {
     setAttendanceRecords(updatedAttendance);
     setSelectedStudents([]); // Clear selection after marking
   };
+  
 
   // Get attendance summary
   const getAttendanceSummary = () => {
@@ -174,7 +191,10 @@ const AttendanceManagement = () => {
 
   // Get button class based on status
   const getButtonClass = (studentId, status) => {
-    const currentStatus = attendanceRecords[studentId] || 'present';
+    // Check if we have a record for this student
+    const hasRecord = attendanceRecords.hasOwnProperty(studentId);
+    const currentStatus = hasRecord ? attendanceRecords[studentId] : 'absent';
+    
     if (currentStatus === status) {
       switch (status) {
         case 'present':

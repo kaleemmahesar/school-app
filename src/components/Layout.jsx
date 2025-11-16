@@ -4,6 +4,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { FaUsers, FaMoneyBillWave, FaChalkboardTeacher, FaBook, FaGraduationCap, FaChartLine, FaDollarSign, FaClipboardList, FaChevronDown, FaQrcode, FaUsersCog, FaFileInvoice, FaTasks, FaListOl, FaFileAlt, FaEdit, FaGraduationCap as FaGraduationCapIcon, FaCalendarAlt, FaCertificate, FaUser, FaSignOutAlt, FaCog, FaTable, FaSearch, FaHandHoldingUsd } from 'react-icons/fa';
 import Logo from '../img/logo.png';
 import { logout, setCurrentUser } from '../store/usersSlice';
+import { fetchStudents } from '../store/studentsSlice';
 import { useSchoolFunding } from '../hooks/useSchoolFunding';
 import { usePermissions } from '../hooks/usePermissions';
 
@@ -20,6 +21,11 @@ const Layout = ({ children }) => {
   const { hasPermission, isOwner, isAdmin, isTeacher, isStaff } = usePermissions();
   const [openDropdown, setOpenDropdown] = useState(null);
   const [showUserMenu, setShowUserMenu] = useState(false);
+
+  // Load students data on initial load
+  useEffect(() => {
+    dispatch(fetchStudents());
+  }, [dispatch]);
 
   // Check for user in localStorage on initial load
   useEffect(() => {

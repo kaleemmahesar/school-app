@@ -58,9 +58,12 @@ export const fetchAttendanceByDateAndClass = createAsyncThunk(
   'attendance/fetchAttendanceByDateAndClass',
   async ({ date, classId }, { rejectWithValue }) => {
     try {
+      console.log(`API Call: Fetching attendance for date=${date}, classId=${classId}`);
       const records = await getAttendanceByDateAndClass(date, classId);
+      console.log('API Response:', records);
       return records;
     } catch (error) {
+      console.error('API Error:', error);
       return rejectWithValue(error.message || 'Failed to fetch attendance records');
     }
   }
@@ -167,6 +170,7 @@ const attendanceSlice = createSlice({
       })
       .addCase(fetchAttendanceByDateAndClass.fulfilled, (state, action) => {
         state.loading = false;
+        console.log('API Response in Slice:', action.payload);
         state.attendanceRecords = action.payload;
       })
       .addCase(fetchAttendanceByDateAndClass.rejected, (state, action) => {

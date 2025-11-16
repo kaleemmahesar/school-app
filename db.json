@@ -19,7 +19,7 @@
       "img": "https://t3.ftcdn.net/jpg/13/66/06/10/240_F_1366061052_aLuQrXzrN1YorMaybNFoNBPsVKcrgVE8.jpg"
     },
     {
-      "id": "1763233927095",
+      "id": "3",
       "photo": "",
       "grNo": "3",
       "firstName": "Jabbar Ahmad",
@@ -58,7 +58,7 @@
       ]
     },
     {
-      "id": "1763234240837",
+      "id": "4",
       "photo": "",
       "grNo": "4",
       "firstName": "Khan Muhammad",
@@ -96,7 +96,7 @@
       ]
     },
     {
-      "id": "1763234343940",
+      "id": "5",
       "photo": "",
       "grNo": "5",
       "firstName": "Bilal",
@@ -198,7 +198,7 @@
   ],
   "subsidies": [
     {
-      "id": 1,
+      "id": "1",
       "quarter": "Q1",
       "year": 2025,
       "amount": 350000,
@@ -207,6 +207,63 @@
       "expectedDate": "",
       "status": "received",
       "description": "Quarterly education subsidy for operational costs"
+    }
+  ],
+  "studentsAttendance": [
+    {
+      "id": "1",
+      "date": "2025-11-15",
+      "classId": "Class 10",
+      "records": [
+        {
+          "studentId": "1",
+          "status": "present"
+        },
+        {
+          "studentId": "4",
+          "status": "present"
+        }
+      ]
+    },
+    {
+      "id": "b6c3",
+      "date": "2025-11-16",
+      "classId": "Class 10",
+      "records": [
+        {
+          "studentId": "1",
+          "status": "present"
+        },
+        {
+          "studentId": "3",
+          "status": "present"
+        },
+        {
+          "studentId": "4",
+          "status": "present"
+        },
+        {
+          "studentId": "5",
+          "status": "absent"
+        }
+      ]
+    }
+  ],
+  "staffAttendance": [
+    {
+      "id": "1",
+      "date": "2025-11-15",
+      "classId": "Class 10",
+      "records": [
+        {
+          "studentId": "1",
+          "status": "present"
+        },
+        {
+          "studentId": "4",
+          "status": "present"
+        }
+      ]
     }
   ]
 }
