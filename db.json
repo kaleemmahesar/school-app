@@ -1,55 +1,43 @@
 {
   "students": [
     {
-      "id": "1763300271479",
-      "photo": "https://randomuser.me/api/portraits/men/10.jpg",
+      "id": "1763374515285",
       "grNo": "1",
-      "firstName": "Jane Doe",
-      "lastName": "",
+      "firstName": "Jane Khan",
       "fatherName": "James",
-      "religion": "Islam",
       "address": "Near Postal Life Insuarance",
-      "dateOfBirth": "2022-11-15",
+      "dateOfBirth": "2003-11-14",
       "birthPlace": "Larkana",
-      "lastSchoolAttended": "",
-      "dateOfAdmission": "2025-11-16",
+      "dateOfAdmission": "2025-11-17",
       "class": "Class 10",
       "section": "A",
       "admissionFees": 10000,
-      "monthlyFees": 0,
-      "feesPaid": 100000,
-      "totalFees": 10000,
+      "lastSchoolAttended": "",
       "isTransferStudent": false,
       "dateOfLeaving": "",
       "classInWhichLeft": "",
       "reasonOfLeaving": "",
       "remarks": "",
-      "familyId": "family-1763300271479",
+      "religion": "Islam",
+      "parentContact": "033354279226",
+      "monthlyFees": 0,
+      "feesPaid": 19000,
+      "totalFees": 10000,
+      "familyId": "family-1763374515286",
       "feesHistory": [
         {
-          "id": "challan-1763300271479-0",
+          "id": "challan-1763374515286-0",
           "month": "Admission Fees",
           "amount": 10000,
           "paid": true,
-          "date": "2025-11-16",
-          "dueDate": "2025-11-16",
-          "status": "paid",
-          "type": "admission"
-        },
-        {
-          "id": "challan-1763300271479-1763364165386",
-          "month": "September 2025",
-          "amount": 9000,
-          "dueDate": "2025-11-27",
-          "description": "",
-          "paid": true,
           "date": "2025-11-17",
+          "dueDate": "2025-11-17",
           "status": "paid",
-          "type": "monthly",
-          "paymentMethod": "cash"
+          "type": "admission",
+          "paymentTimestamp": "2025-11-17T10:15:15.286Z"
         },
         {
-          "id": "challan-1763300271479-1763364459900",
+          "id": "challan-1763374515285-1763376511380",
           "month": "October 2025",
           "amount": 9000,
           "dueDate": "2025-11-27",
@@ -58,115 +46,87 @@
           "date": "2025-11-17",
           "status": "paid",
           "type": "monthly",
-          "paymentMethod": "cash"
+          "generationTimestamp": "2025-11-17T10:48:31.380Z",
+          "paymentMethod": "cash",
+          "paymentTimestamp": "2025-11-17T10:48:36.926Z"
         },
         {
-          "id": "challan-1763300271479-1763365938170",
+          "id": "challan-1763374515285-1763376544433",
+          "month": "September 2025",
+          "amount": 9000,
+          "dueDate": "2025-11-27",
+          "description": "",
+          "paid": false,
+          "date": null,
+          "status": "pending",
+          "type": "monthly",
+          "generationTimestamp": "2025-11-17T10:49:04.433Z"
+        },
+        {
+          "id": "challan-1763374515285-1763376553827",
           "month": "August 2025",
           "amount": 9000,
           "dueDate": "2025-11-27",
           "description": "",
-          "paid": true,
-          "date": "2025-11-17",
-          "status": "paid",
+          "paid": false,
+          "date": null,
+          "status": "pending",
           "type": "monthly",
-          "paymentMethod": "cash"
-        },
-        {
-          "id": "challan-1763300271479-1763365947476",
-          "month": "July 2025",
-          "amount": 9000,
-          "dueDate": "2025-11-27",
-          "description": "",
-          "paid": true,
-          "date": "2025-11-17",
-          "status": "paid",
-          "type": "monthly",
-          "paymentMethod": "cash"
-        },
-        {
-          "id": "challan-1763300271479-1763365957256",
-          "month": "June 2025",
-          "amount": 9000,
-          "dueDate": "2025-11-27",
-          "description": "",
-          "paid": true,
-          "date": "2025-11-17",
-          "status": "paid",
-          "type": "monthly",
-          "paymentMethod": "cash"
-        },
-        {
-          "id": "challan-1763300271479-1763366183923",
-          "month": "May 2025",
-          "amount": 9000,
-          "dueDate": "2025-11-27",
-          "description": "",
-          "paid": true,
-          "date": "2025-11-17",
-          "status": "paid",
-          "type": "monthly",
-          "paymentMethod": "cash"
-        },
-        {
-          "id": "challan-1763300271479-1763366193561",
-          "month": "April 2025",
-          "amount": 9000,
-          "dueDate": "2025-11-27",
-          "description": "",
-          "paid": true,
-          "date": "2025-11-17",
-          "status": "paid",
-          "type": "monthly",
-          "paymentMethod": "cash"
-        },
-        {
-          "id": "challan-1763300271479-1763366394440",
-          "month": "March 2025",
-          "amount": 9000,
-          "dueDate": "2025-11-27",
-          "description": "",
-          "paid": true,
-          "date": "2025-11-17",
-          "status": "paid",
-          "type": "monthly",
-          "paymentMethod": "cash"
-        },
-        {
-          "id": "challan-1763300271479-1763367251232",
-          "month": "February 2025",
-          "amount": 9000,
-          "dueDate": "2025-11-27",
-          "description": "",
-          "paid": true,
-          "date": "2025-11-17",
-          "status": "paid",
-          "type": "monthly",
-          "paymentMethod": "cash"
-        },
-        {
-          "id": "challan-1763300271479-1763367680813",
-          "month": "January 2025",
-          "amount": 9000,
-          "dueDate": "2025-11-27",
-          "description": "",
-          "paid": true,
-          "date": "2025-11-17",
-          "status": "paid",
-          "type": "monthly",
-          "paymentMethod": "cash"
+          "generationTimestamp": "2025-11-17T10:49:13.827Z"
         }
       ],
-      "status": "studying"
+      "status": "studying",
+      "admissionTimestamp": "2025-11-17T10:15:15.286Z"
+    },
+    {
+      "id": "1763375270345",
+      "grNo": "1",
+      "firstName": "Muhammad Tahir",
+      "fatherName": "Kaleemullah",
+      "address": "Near Postal Life Insuarance Larkana",
+      "dateOfBirth": "2019-11-29",
+      "birthPlace": "Larkana",
+      "dateOfAdmission": "2025-11-17",
+      "class": "Class 10",
+      "section": "A",
+      "admissionFees": 10000,
+      "lastSchoolAttended": "",
+      "isTransferStudent": false,
+      "dateOfLeaving": "",
+      "classInWhichLeft": "",
+      "reasonOfLeaving": "",
+      "remarks": "",
+      "religion": "Islam",
+      "parentContact": "033354279226",
+      "monthlyFees": 0,
+      "feesPaid": 10000,
+      "totalFees": 10000,
+      "familyId": "family-1763375270345",
+      "feesHistory": [
+        {
+          "id": "challan-1763375270345-0",
+          "month": "Admission Fees",
+          "amount": 10000,
+          "paid": true,
+          "date": "2025-11-17",
+          "dueDate": "2025-11-17",
+          "status": "paid",
+          "type": "admission",
+          "paymentTimestamp": "2025-11-17T10:27:50.345Z"
+        }
+      ],
+      "status": "studying",
+      "admissionTimestamp": "2025-11-17T10:27:50.345Z"
     }
   ],
   "expenses": [
     {
-      "id": "1",
-      "description": "Stationery purchase",
-      "amount": 500,
+      "id": "1763375317604",
+      "description": "Chairs",
+      "amount": "25000",
       "date": "2025-11-15",
-      "category": "Stationary"
+      "category": "Stationary",
+      "addedTimestamp": "2025-11-17T10:28:37.605Z"
     }
   ],
   "income": {
@@ -190,41 +150,44 @@
   },
   "staff": [
     {
-      "id": "1763304824573",
+      "id": "1763375356936",
       "firstName": "Waqar",
       "lastName": "Abro",
       "phone": "03337227847",
-      "position": "Chemistry Teacher",
-      "salary": "25000",
-      "dateOfJoining": "2025-10-16",
+      "position": "English Teacher",
+      "salary": "35000",
+      "dateOfJoining": "2025-09-25",
       "jobType": "Teaching",
-      "subject": "Chemistry",
+      "subject": "English",
       "photo": null,
       "salaryHistory": [
         {
-          "id": "advance-1763304824573-1763305188916",
+          "id": "advance-1763375356936-1763375766159",
           "month": "November 2025",
           "baseSalary": 0,
           "allowances": 0,
-          "deductions": 15000,
-          "netSalary": -15000,
+          "deductions": 25000,
+          "netSalary": -25000,
           "status": "advance",
-          "paymentDate": "2025-11-16",
-          "reason": "Need for Treatment"
+          "paymentDate": "2025-11-17",
+          "reason": "Need Money",
+          "paymentTimestamp": "2025-11-17T10:36:06.160Z"
         },
         {
-          "id": "sal-1763304824573-1763305205230",
+          "id": "sal-1763375356936-1763375789263",
           "month": "2025-11",
-          "baseSalary": 25000,
+          "baseSalary": 35000,
           "allowances": 0,
           "deductions": 0,
-          "netSalary": 25000,
+          "netSalary": 35000,
           "status": "paid",
-          "paymentDate": "2025-11-16",
-          "paymentMethod": "cash"
+          "paymentDate": "2025-11-17",
+          "paymentMethod": "cash",
+          "paymentTimestamp": "2025-11-17T10:36:29.263Z"
         }
       ],
-      "attendance": []
+      "attendance": [],
+      "addedTimestamp": "2025-11-17T10:29:16.936Z"
     }
   ],
   "classes": [

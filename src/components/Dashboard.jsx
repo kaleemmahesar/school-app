@@ -5,7 +5,7 @@ import {
   FaUsers, FaMoneyBillWave, FaChalkboardTeacher, FaBook, FaGraduationCap, 
   FaChartLine, FaPlus, FaSearch, FaDollarSign, FaChartPie, FaChartBar, 
   FaFilter, FaPrint, FaDownload, FaCalendarAlt, FaChevronLeft, FaChevronRight,
-  FaHandHoldingUsd, FaUserTie
+  FaHandHoldingUsd, FaUserTie, FaBalanceScale
 } from 'react-icons/fa';
 import PageHeader from './common/PageHeader';
 import ActivitiesPrintView from './dashboard/ActivitiesPrintView';
@@ -505,8 +505,8 @@ const Dashboard = () => {
       activities.push({
         id: `student-${student.id}`,
         type: 'Student Admission',
-        description: `${student.firstName} ${student.lastName} admitted to ${student.class}`,
-        date: student.admissionDate || new Date().toISOString(),
+        description: `${student.firstName} admitted to ${student.class}`,
+        date: student.admissionTimestamp || student.admissionDate || new Date().toISOString(),
         category: 'Students',
         amount: admissionFeeAmount
       });
@@ -531,13 +531,21 @@ const Dashboard = () => {
       filteredFees.forEach(student => {
         if (student.feesHistory) {
           student.feesHistory
-            .filter(fee => fee.status === 'paid' && fee.date)
+            .filter(fee => fee.status === 'paid' && (fee.paymentTimestamp || fee.date))
             .forEach(fee => {
+              // For admission fees, we need to handle the description differently
+              let description = '';
+              if (fee.type === 'admission') {
+                description = `Admission fees collected from ${student.firstName}`;
+              } else {
+                description = `Fee collected for ${fee.month} from ${student.firstName}`;
+              }
+              
               activities.push({
                 id: `fee-${student.id}-${fee.id}`,
                 type: 'Fee Collection',
-                description: `Fee collected for ${fee.month} from ${student.firstName} ${student.lastName}`,
-                date: fee.date,
+                description: description,
+                date: fee.paymentTimestamp || fee.date,
                 category: 'Fees',
                 amount: parseFloat(fee.amount)
               });
@@ -552,52 +560,67 @@ const Dashboard = () => {
         id: `expense-${expense.id}`,
         type: 'Expense',
         description: `${expense.description}`,
-        date: expense.date,
+        date: expense.addedTimestamp || expense.date || new Date().toISOString(),
         category: 'Expenses',
         amount: -parseFloat(expense.amount)  // Make expenses negative as they are outflows
       });
     });
     
-    // Add staff activities
+    // Add staff activities (salary payments and advances)
     filteredStaff.forEach(member => {
+      // Add salary payment activities
+      if (member.salaryHistory) {
+        member.salaryHistory
+          .filter(record => record.status === 'paid' && (record.paymentTimestamp || record.paymentDate))
+          .forEach(record => {
+            activities.push({
+              id: `salary-${member.id}-${record.id}`,
+              type: 'Salary Payment',
+              description: `Salary paid to ${member.firstName} ${member.lastName} for ${record.month}`,
+              date: record.paymentTimestamp || record.paymentDate,
+              category: 'Expenses',
+              amount: -parseFloat(record.netSalary || 0)  // Make expenses negative as they are outflows
+            });
+          });
+          
+        // Add advance payment activities
+        member.salaryHistory
+          .filter(record => record.status === 'advance' && (record.paymentTimestamp || record.paymentDate))
+          .forEach(record => {
+            activities.push({
+              id: `advance-${member.id}-${record.id}`,
+              type: 'Advance Payment',
+              description: `Advance paid to ${member.firstName} ${member.lastName} for ${record.reason || 'No reason provided'}`,
+              date: record.paymentTimestamp || record.paymentDate,
+              category: 'Expenses',
+              amount: -Math.abs(parseFloat(record.netSalary || 0))  // Make expenses negative as they are outflows
+            });
+          });
+      }
+      
+      // Add staff admission activity
       activities.push({
         id: `staff-${member.id}`,
         type: 'Staff',
         description: `${member.firstName} ${member.lastName} joined as ${member.position}`,
-        date: member.dateOfJoining || new Date().toISOString(),
+        date: member.addedTimestamp || member.dateOfJoining || new Date().toISOString(),
         category: 'Staff',
         amount: 0
       });
     });
     
     // Sort by date and time (newest first) - ensure proper date parsing and handle invalid dates
-    // For activities with the same date, add a small time offset based on their position to maintain order
-    return activities.map((activity, index) => {
-      // Add a pseudo timestamp to differentiate activities with the same date
-      // This helps maintain the order when dates don't include time information
-      return {
-        ...activity,
-        pseudoTimestamp: index
-      };
-    }).sort((a, b) => {
+    return activities.sort((a, b) => {
       const dateA = new Date(a.date);
       const dateB = new Date(b.date);
       
       // Handle invalid dates by putting them at the end
-      if (isNaN(dateA.getTime()) && isNaN(dateB.getTime())) {
-        // If both dates are invalid, sort by pseudo timestamp
-        return a.pseudoTimestamp - b.pseudoTimestamp;
-      }
+      if (isNaN(dateA.getTime()) && isNaN(dateB.getTime())) return 0;
       if (isNaN(dateA.getTime())) return 1;
       if (isNaN(dateB.getTime())) return -1;
       
-      // If dates are different, sort by date (newest first)
-      if (dateB.getTime() !== dateA.getTime()) {
-        return dateB - dateA;
-      }
-      
-      // If dates are the same, sort by pseudo timestamp to maintain original order
-      return a.pseudoTimestamp - b.pseudoTimestamp;
+      // Sort newest first (this will sort by both date and time if available)
+      return dateB - dateA;
     });
   }, [students, filteredData, selectedQuarter, selectedYear, viewMode]);
 
@@ -804,173 +827,8 @@ const Dashboard = () => {
         </div> 
       </FundingConditional>
 
-      {/* Stats Cards - Only show for Owner users */}
-      {isOwner() && (
-        <>
-          {/* Stats Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
-            {/* <div className="bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl shadow-lg p-6 text-white transform transition-all duration-300 hover:scale-[1.02]">
-              <div className="flex items-start justify-between mb-5">
-                <div>
-                  <h3 className="text-white text-opacity-90 text-sm font-medium mb-1">Financial Overview</h3>
-                  <p className="text-white text-opacity-70 text-xs">Income and expenses summary</p>
-                </div>
-                <div className="p-3 bg-white bg-opacity-20 rounded-lg">
-                  <FundingConditional showFor="traditional">
-                    <FaDollarSign className="text-white text-xl" />
-                  </FundingConditional>
-                  <FundingConditional showFor="ngo">
-                    <FaHandHoldingUsd className="text-white text-xl" />
-                  </FundingConditional>
-                </div>
-              </div>
-              
-              <div className="space-y-4">
-                <div className="flex items-center justify-between pb-3 border-b border-white border-opacity-20">
-                  <div>
-                    <p className="text-white text-opacity-90 text-sm font-medium">
-                      <FundingConditional showFor="traditional">Fees Collected</FundingConditional>
-                      <FundingConditional showFor="ngo">Subsidies Received</FundingConditional>
-                    </p>
-                    <p className="text-2xl font-bold mt-1">
-                      Rs <FundingConditional showFor="traditional">{stats.totalFeesCollected?.toLocaleString()}</FundingConditional>
-                      <FundingConditional showFor="ngo">{stats.totalSubsidiesReceived?.toLocaleString()}</FundingConditional>
-                    </p>
-                  </div>
-                  <div className="p-2 bg-white bg-opacity-20 rounded-lg">
-                    <FundingConditional showFor="traditional">
-                      <FaDollarSign className="text-white" />
-                    </FundingConditional>
-                    <FundingConditional showFor="ngo">
-                      <FaHandHoldingUsd className="text-white" />
-                    </FundingConditional>
-                  </div>
-                </div>
-                
-                <div className="flex items-center justify-between pb-3 border-b border-white border-opacity-20">
-                  <div>
-                    <p className="text-white text-opacity-90 text-sm font-medium">Total Expenses</p>
-                    <p className="text-2xl font-bold mt-1">Rs {stats.totalExpenses?.toLocaleString()}</p>
-                  </div>
-                  <div className="p-2 bg-white bg-opacity-20 rounded-lg">
-                    <FaChartPie className="text-white" />
-                  </div>
-                </div>
-                
-                <div className="space-y-3 pt-2">
-                  <div className="flex justify-between items-center">
-                    <div className="flex items-center">
-                      <div className="w-2 h-2 rounded-full bg-white bg-opacity-50 mr-2"></div>
-                      <span className="text-white text-opacity-80 text-sm">Staff Salaries</span>
-                    </div>
-                    <span className="font-medium text-sm">Rs {stats.totalStaffSalaries?.toLocaleString()}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <div className="flex items-center">
-                      <div className="w-2 h-2 rounded-full bg-white bg-opacity-50 mr-2"></div>
-                      <span className="text-white text-opacity-80 text-sm">Other Expenses</span>
-                    </div>
-                    <span className="font-medium text-sm">Rs {stats.otherExpenses?.toLocaleString()}</span>
-                  </div>
-                </div>
-              </div>
-            
-            <div className="bg-gradient-to-br from-blue-500 to-cyan-600 rounded-2xl shadow-lg p-6 text-white transform transition-all duration-300 hover:scale-[1.02]">
-              <div className="flex items-start justify-between mb-5">
-                <div>
-                  <h3 className="text-white text-opacity-90 text-sm font-medium mb-1">Academic Overview</h3>
-                  <p className="text-white text-opacity-70 text-xs">Students, classes and subjects</p>
-                </div>
-                <div className="p-3 bg-white bg-opacity-20 rounded-lg">
-                  <FaUsers className="text-white text-xl" />
-                </div>
-              </div>
-              
-              <div className="space-y-4">
-                <div className="flex items-center justify-between pb-3 border-b border-white border-opacity-20">
-                  <div>
-                    <p className="text-white text-opacity-90 text-sm font-medium">Total Students</p>
-                    <p className="text-2xl font-bold mt-1">{stats.totalStudents}</p>
-                  </div>
-                  <div className="p-2 bg-white bg-opacity-20 rounded-lg">
-                    <FaUsers className="text-white" />
-                  </div>
-                </div>
-                
-                <div className="grid grid-cols-2 gap-3 pt-2">
-                  <div className="bg-white bg-opacity-10 rounded-lg p-3">
-                    <p className="text-white text-opacity-80 text-xs mb-1">Classes</p>
-                    <p className="text-xl font-bold">{stats.totalClasses}</p>
-                  </div>
-                  <div className="bg-white bg-opacity-10 rounded-lg p-3">
-                    <p className="text-white text-opacity-80 text-xs mb-1">Sections</p>
-                    <p className="text-xl font-bold">{stats.totalSections}</p>
-                  </div>
-                  <div className="bg-white bg-opacity-10 rounded-lg p-3">
-                    <p className="text-white text-opacity-80 text-xs mb-1">Subjects</p>
-                    <p className="text-xl font-bold">{stats.totalSubjects}</p>
-                  </div>
-                  <div className="bg-white bg-opacity-10 rounded-lg p-3">
-                    <p className="text-white text-opacity-80 text-xs mb-1">Avg. per Class</p>
-                    <p className="text-xl font-bold">{stats.totalClasses > 0 ? Math.round(stats.totalStudents / stats.totalClasses) : 0}</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-            
-            <div className="bg-gradient-to-br from-purple-500 to-fuchsia-600 rounded-2xl shadow-lg p-6 text-white transform transition-all duration-300 hover:scale-[1.02]">
-              <div className="flex items-start justify-between mb-5">
-                <div>
-                  <h3 className="text-white text-opacity-90 text-sm font-medium mb-1">Staff & Finance</h3>
-                  <p className="text-white text-opacity-70 text-xs">Team size and financial position</p>
-                </div>
-                <div className="p-3 bg-white bg-opacity-20 rounded-lg">
-                  <FaUserTie className="text-white text-xl" />
-                </div>
-              </div>
-              
-              <div className="space-y-4">
-                <div className="flex items-center justify-between pb-3 border-b border-white border-opacity-20">
-                  <div>
-                    <p className="text-white text-opacity-90 text-sm font-medium">Total Staff</p>
-                    <p className="text-2xl font-bold mt-1">{stats.totalStaff}</p>
-                  </div>
-                  <div className="p-2 bg-white bg-opacity-20 rounded-lg">
-                    <FaUserTie className="text-white" />
-                  </div>
-                </div>
-                
-                <div className="flex items-center justify-between pb-3 border-b border-white border-opacity-20">
-                  <div>
-                    <p className="text-white text-opacity-90 text-sm font-medium">Net Position</p>
-                    <p className={`text-2xl font-bold mt-1 ${stats.netProfit >= 0 ? 'text-green-200' : 'text-red-200'}`}>
-                      Rs {Math.abs(stats.netProfit)?.toLocaleString()} {stats.netProfit < 0 ? '(Loss)' : ''}
-                    </p>
-                  </div>
-                  <div className="p-2 bg-white bg-opacity-20 rounded-lg">
-                    <FaChartBar className="text-white" />
-                  </div>
-                </div>
-                
-                <div className="pt-2">
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="text-white text-opacity-80 text-sm">Financial Health</span>
-                    <span className={`text-xs font-medium px-2 py-1 rounded-full ${stats.netProfit >= 0 ? 'bg-green-500 bg-opacity-30 text-green-100' : 'bg-red-500 bg-opacity-30 text-red-100'}`}>
-                      {stats.netProfit >= 0 ? 'Positive' : 'Negative'}
-                    </span>
-                  </div>
-                  <div className="w-full bg-white bg-opacity-20 rounded-full h-2">
-                    <div 
-                      className={`h-2 rounded-full ${stats.netProfit >= 0 ? 'bg-green-300' : 'bg-red-300'}`}
-                      style={{ width: `${Math.min(100, Math.abs(stats.netProfit) / (stats.totalExpenses || 1) * 100)}%` }}
-                    ></div>
-                  </div>
-                </div>
-              </div>
-            </div> */}
-          </div>
-        </>
-      )}
+      {/* Financial Summary for Owner */}
+      
 
       {/* Academic Stats for Admin users */}
       {isAdmin() && (
@@ -1030,7 +888,7 @@ const Dashboard = () => {
       )}
 
       {/* Recent Activities - Show for all users */}
-      <div className="bg-white rounded-2xl shadow-lg p-6">
+      <div className="bg-white shadow-lg p-6">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4 md:mb-0">Recent Activities</h3>
           
@@ -1173,7 +1031,23 @@ const Dashboard = () => {
                       )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-500">
-                      {activity.date ? new Date(activity.date).toLocaleDateString() : 'N/A'}
+                      {activity.date ? (
+                        activity.date.includes('T') ? 
+                        new Date(activity.date).toLocaleString('en-US', {
+                          year: 'numeric',
+                          month: '2-digit',
+                          day: '2-digit',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                          second: '2-digit',
+                          hour12: false
+                        }) : 
+                        new Date(activity.date).toLocaleDateString('en-US', {
+                          year: 'numeric',
+                          month: '2-digit',
+                          day: '2-digit'
+                        })
+                      ) : 'N/A'}
                     </td>
 
                   </tr>
@@ -1290,6 +1164,51 @@ const Dashboard = () => {
           </div>
         )}
       </div>
+
+      {isOwner() && (
+        <div className="bg-white shadow-lg p-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="bg-gradient-to-r from-red-500 to-red-600 rounded-xl shadow p-4 text-white">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-red-100 text-xs font-medium">Total Expenses</p>
+                  <p className="text-2xl font-bold mt-1">Rs {Math.abs(calculateTotals.expense).toLocaleString()}</p>
+                </div>
+                <div className="p-2 bg-red-400 bg-opacity-30 rounded-full">
+                  <FaMoneyBillWave size={20} />
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-gradient-to-r from-green-500 to-green-600 rounded-xl shadow p-4 text-white">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-green-100 text-xs font-medium">Total Income</p>
+                  <p className="text-2xl font-bold mt-1">Rs {calculateTotals.income.toLocaleString()}</p>
+                </div>
+                <div className="p-2 bg-green-400 bg-opacity-30 rounded-full">
+                  <FaChartLine size={20} />
+                </div>
+              </div>
+            </div>
+            
+            <div className={`bg-gradient-to-r ${calculateTotals.net >= 0 ? 'from-blue-500 to-blue-600' : 'from-orange-500 to-orange-600'} rounded-xl shadow p-4 text-white`}>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-blue-100 text-xs font-medium">Net Profit/Loss</p>
+                  <p className="text-2xl font-bold mt-1">
+                    Rs {Math.abs(calculateTotals.net).toLocaleString()}
+                    <span className="text-sm ml-1">{calculateTotals.net >= 0 ? ' (Profit)' : ' (Loss)'}</span>
+                  </p>
+                </div>
+                <div className="p-2 bg-blue-400 bg-opacity-30 rounded-full">
+                  <FaBalanceScale size={20} />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Print View */}
       {showPrintView && (

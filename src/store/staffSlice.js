@@ -31,7 +31,9 @@ export const addStaff = createAsyncThunk('staff/addStaff', async (newStaff) => {
     ...newStaff,
     id: `${Date.now()}`, // Use timestamp for unique ID
     salaryHistory: [],
-    attendance: []
+    attendance: [],
+    // Add timestamp for when staff member was added
+    addedTimestamp: new Date().toISOString()
   };
   
   const response = await fetch(`${API_BASE_URL}/staff`, {
@@ -95,7 +97,9 @@ export const addStaffAdvance = createAsyncThunk('staff/addStaffAdvance', async (
     netSalary: -parseFloat(advanceAmount),
     status: 'advance',
     paymentDate: new Date().toISOString().split('T')[0],
-    reason: reason || 'Advance taken'
+    reason: reason || 'Advance taken',
+    // Add timestamp for when advance was given
+    paymentTimestamp: new Date().toISOString()
   };
   
   // Add advance to salary history
@@ -138,7 +142,9 @@ export const payStaffSalary = createAsyncThunk('staff/payStaffSalary', async ({ 
       ...salaryRecord,
       status: 'paid',
       paymentDate: new Date().toISOString().split('T')[0],
-      paymentMethod: paymentMethod
+      paymentMethod: paymentMethod,
+      // Add timestamp for when salary was paid
+      paymentTimestamp: new Date().toISOString()
     };
   } else {
     // Create new salary record
@@ -155,7 +161,9 @@ export const payStaffSalary = createAsyncThunk('staff/payStaffSalary', async ({ 
       netSalary: netSalary,
       status: 'paid',
       paymentDate: new Date().toISOString().split('T')[0],
-      paymentMethod: paymentMethod
+      paymentMethod: paymentMethod,
+      // Add timestamp for when salary was paid
+      paymentTimestamp: new Date().toISOString()
     };
   }
   

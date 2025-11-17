@@ -31,6 +31,8 @@ export const addExpense = createAddThunk(
     const newExpense = {
       id: Date.now().toString(),
       ...expenseData,
+      // Add timestamp for when expense was added
+      addedTimestamp: new Date().toISOString()
     };
     
     const response = await fetch(`${API_BASE_URL}/expenses`, {

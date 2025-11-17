@@ -62,10 +62,12 @@ export const addStudent = createAddThunk(
         month: 'Admission Fees',
         amount: admissionFees,
         paid: true,
-        date: studentData.dateOfAdmission || new Date().toISOString().split('T')[0],
+        date: studentData.dateOfAdmission || new Date().toISOString(),
         dueDate: studentData.dateOfAdmission || new Date().toISOString().split('T')[0],
         status: 'paid',
-        type: 'admission'
+        type: 'admission',
+        // Add timestamp for when admission fee was processed
+        paymentTimestamp: new Date().toISOString()
       });
     }
     
@@ -81,7 +83,9 @@ export const addStudent = createAddThunk(
       totalFees,
       familyId,
       feesHistory,
-      status: 'studying'
+      status: 'studying',
+      // Add timestamp for when student was added
+      admissionTimestamp: new Date().toISOString()
     };
     
     // Send the new student to the API
@@ -201,8 +205,10 @@ export const payFees = createAsyncThunkWithToast(
     // Update the challan status
     targetChallan.paid = true;
     targetChallan.status = 'paid';
-    targetChallan.date = paymentDate || new Date().toISOString().split('T')[0];
+    targetChallan.date = paymentDate || new Date().toISOString();
     targetChallan.paymentMethod = paymentMethod || 'cash';
+    // Add timestamp for when payment was made
+    targetChallan.paymentTimestamp = new Date().toISOString();
     
     // Update total fees paid
     targetStudent.feesPaid = (parseFloat(targetStudent.feesPaid) || 0) + parseFloat(targetChallan.amount || 0);
@@ -280,7 +286,9 @@ export const generateChallan = createAsyncThunkWithToast(
       paid: false,
       date: null,
       status: 'pending',
-      type: 'monthly'
+      type: 'monthly',
+      // Add timestamp for when challan was generated
+      generationTimestamp: new Date().toISOString()
     };
     
     // Update student's feesHistory
@@ -362,7 +370,9 @@ export const bulkGenerateChallans = createAsyncThunkWithToast(
         paid: false,
         date: null,
         status: 'pending',
-        type: 'monthly'
+        type: 'monthly',
+        // Add timestamp for when challan was generated
+        generationTimestamp: new Date().toISOString()
       };
       
       // Update student's feesHistory

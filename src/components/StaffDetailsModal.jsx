@@ -7,15 +7,14 @@ const StaffDetailsModal = ({ staffMember, onClose, classes }) => {
   const joiningDate = new Date(staffMember.dateOfJoining);
   const currentDate = new Date();
   
-  // Calculate total full months worked
-  let totalMonths = 
-    (currentDate.getFullYear() - joiningDate.getFullYear()) * 12 + 
-    (currentDate.getMonth() - joiningDate.getMonth());
+  // Calculate total months worked with partial month calculation
+  // Get the difference in milliseconds and convert to months
+  const timeDiff = currentDate.getTime() - joiningDate.getTime();
+  const daysDiff = timeDiff / (1000 * 3600 * 24);
   
-  // If current day is before the joining day, we haven't completed this month yet
-  if (currentDate.getDate() < joiningDate.getDate()) {
-    totalMonths -= 1;
-  }
+  // Calculate months including partial months
+  // We consider a month as 30 days for simplicity
+  let totalMonths = daysDiff / 30;
   
   // Ensure we don't have negative months
   totalMonths = Math.max(0, totalMonths);
@@ -54,15 +53,14 @@ const StaffDetailsModal = ({ staffMember, onClose, classes }) => {
     const joiningDate = new Date(staffMember.dateOfJoining);
     const currentDate = new Date();
     
-    // Calculate total full months worked
-    let totalMonths = 
-      (currentDate.getFullYear() - joiningDate.getFullYear()) * 12 + 
-      (currentDate.getMonth() - joiningDate.getMonth());
+    // Calculate total months worked with partial month calculation
+    // Get the difference in milliseconds and convert to months
+    const timeDiff = currentDate.getTime() - joiningDate.getTime();
+    const daysDiff = timeDiff / (1000 * 3600 * 24);
     
-    // If current day is before the joining day, we haven't completed this month yet
-    if (currentDate.getDate() < joiningDate.getDate()) {
-      totalMonths -= 1;
-    }
+    // Calculate months including partial months
+    // We consider a month as 30 days for simplicity
+    let totalMonths = daysDiff / 30;
     
     // Ensure we don't have negative months
     totalMonths = Math.max(0, totalMonths);
