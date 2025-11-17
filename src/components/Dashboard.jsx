@@ -570,8 +570,35 @@ const Dashboard = () => {
       });
     });
     
-    // Sort by date (newest first)
-    return activities.sort((a, b) => new Date(b.date) - new Date(a.date));
+    // Sort by date and time (newest first) - ensure proper date parsing and handle invalid dates
+    // For activities with the same date, add a small time offset based on their position to maintain order
+    return activities.map((activity, index) => {
+      // Add a pseudo timestamp to differentiate activities with the same date
+      // This helps maintain the order when dates don't include time information
+      return {
+        ...activity,
+        pseudoTimestamp: index
+      };
+    }).sort((a, b) => {
+      const dateA = new Date(a.date);
+      const dateB = new Date(b.date);
+      
+      // Handle invalid dates by putting them at the end
+      if (isNaN(dateA.getTime()) && isNaN(dateB.getTime())) {
+        // If both dates are invalid, sort by pseudo timestamp
+        return a.pseudoTimestamp - b.pseudoTimestamp;
+      }
+      if (isNaN(dateA.getTime())) return 1;
+      if (isNaN(dateB.getTime())) return -1;
+      
+      // If dates are different, sort by date (newest first)
+      if (dateB.getTime() !== dateA.getTime()) {
+        return dateB - dateA;
+      }
+      
+      // If dates are the same, sort by pseudo timestamp to maintain original order
+      return a.pseudoTimestamp - b.pseudoTimestamp;
+    });
   }, [students, filteredData, selectedQuarter, selectedYear, viewMode]);
 
   // Filter activities based on selected criteria
@@ -713,8 +740,22 @@ const Dashboard = () => {
   // Calculate pagination variables
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  // Since filteredActivities is already sorted with newest first, we slice normally
+  // This will show the newest activities on page 1, older on subsequent pages
   const currentActivities = filteredActivities.slice(indexOfFirstItem, indexOfLastItem);
   const totalPages = Math.ceil(filteredActivities.length / itemsPerPage);
+  
+  // Debug information - remove in production
+  // console.log('Filtered Activities Count:', filteredActivities.length);
+  // console.log('Current Page:', currentPage);
+  // console.log('Items Per Page:', itemsPerPage);
+  // console.log('Index First Item:', indexOfFirstItem);
+  // console.log('Index Last Item:', indexOfLastItem);
+  // console.log('Current Activities Count:', currentActivities.length);
+  // if (currentActivities.length > 0) {
+  //   console.log('First Activity Date:', currentActivities[0]?.date);
+  //   console.log('Last Activity Date:', currentActivities[currentActivities.length - 1]?.date);
+  // }
 
   // Reset pagination when filters change
   React.useEffect(() => {
@@ -833,7 +874,6 @@ const Dashboard = () => {
                   </div>
                 </div>
               </div>
-            </div>
             
             <div className="bg-gradient-to-br from-blue-500 to-cyan-600 rounded-2xl shadow-lg p-6 text-white transform transition-all duration-300 hover:scale-[1.02]">
               <div className="flex items-start justify-between mb-5">
@@ -1133,8 +1173,9 @@ const Dashboard = () => {
                       )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-500">
-                      {activity.date ? new Date(activity.date).toISOString().split('T')[0] : 'N/A'}
+                      {activity.date ? new Date(activity.date).toLocaleDateString() : 'N/A'}
                     </td>
+
                   </tr>
                 ))
               ) : (

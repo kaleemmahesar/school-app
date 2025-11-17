@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import DatePicker from 'react-datepicker';
-import { FaCalendarAlt, FaUserCheck, FaUserTimes, FaSearch, FaSave, FaClock } from 'react-icons/fa';
+import { FaCalendarAlt, FaUserCheck, FaUserTimes, FaSearch, FaSave, FaClock, FaCalendarDay } from 'react-icons/fa';
 import PageHeader from '../common/PageHeader';
 import { addNewAttendanceRecord, fetchAttendanceByDateAndClass } from '../../store/attendanceSlice';
 import Pagination from '../common/Pagination';
@@ -305,7 +305,7 @@ console.log('selectedClass:', selectedClass);
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
             <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <div className="absolute z-10 inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                 <FaCalendarAlt className="h-5 w-5 text-gray-400" />
               </div>
               <DatePicker

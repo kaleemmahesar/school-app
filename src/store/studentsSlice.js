@@ -163,9 +163,7 @@ export const deleteStudent = createDeleteThunk(
 /**
  * Async thunk to pay student fees
  * @param {Object} paymentData - The payment data
- * @param {string} paymentData.studentId - The student ID
- * @param {number} paymentData.amount - The amount paid
- * @param {string} paymentData.month - The month for which fees are paid
+ * @param {string} paymentData.challanId - The challan ID
  * @param {string} paymentData.paymentMethod - The payment method
  * @param {string} paymentData.paymentDate - The payment date
  * @returns {Promise<Object>} Promise that resolves to the payment data
@@ -173,7 +171,56 @@ export const deleteStudent = createDeleteThunk(
 export const payFees = createAsyncThunkWithToast(
   'students/payFees',
   async ({ challanId, paymentMethod, paymentDate }) => {
-    return { challanId, paymentMethod, paymentDate };
+    // Find the student who has this challan
+    // First, we need to get all students to find the one with this challan
+    const studentsResponse = await fetch(`${API_BASE_URL}/students`);
+    if (!studentsResponse.ok) {
+      throw new Error('Failed to fetch students');
+    }
+    
+    const students = await studentsResponse.json();
+    let targetStudent = null;
+    let targetChallan = null;
+    
+    // Find the student and challan
+    for (const student of students) {
+      if (student.feesHistory) {
+        const challan = student.feesHistory.find(f => f.id === challanId);
+        if (challan) {
+          targetStudent = student;
+          targetChallan = challan;
+          break;
+        }
+      }
+    }
+    
+    if (!targetStudent || !targetChallan) {
+      throw new Error('Challan not found');
+    }
+    
+    // Update the challan status
+    targetChallan.paid = true;
+    targetChallan.status = 'paid';
+    targetChallan.date = paymentDate || new Date().toISOString().split('T')[0];
+    targetChallan.paymentMethod = paymentMethod || 'cash';
+    
+    // Update total fees paid
+    targetStudent.feesPaid = (parseFloat(targetStudent.feesPaid) || 0) + parseFloat(targetChallan.amount || 0);
+    
+    // Update student in database
+    const response = await fetch(`${API_BASE_URL}/students/${targetStudent.id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(targetStudent),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to update student fees');
+    }
+
+    return await response.json();
   },
   {
     successMessage: 'Fees paid successfully',
@@ -190,7 +237,72 @@ export const payFees = createAsyncThunkWithToast(
 export const generateChallan = createAsyncThunkWithToast(
   'students/generateChallan',
   async (challanData) => {
-    return challanData;
+    // First, get the current student data
+    const studentResponse = await fetch(`${API_BASE_URL}/students/${challanData.studentId}`);
+    if (!studentResponse.ok) {
+      throw new Error('Failed to fetch student');
+    }
+    
+    const student = await studentResponse.json();
+    
+    // Check if a challan already exists for this student and month
+    if (student.feesHistory) {
+      // Convert month format from YYYY-MM to Month YYYY for comparison
+      const monthNames = ["January", "February", "March", "April", "May", "June",
+        "July", "August", "September", "October", "November", "December"];
+      const [year, monthIndex] = (challanData.month || '2025-01').split('-');
+      const monthName = monthNames[parseInt(monthIndex) - 1] || 'Unknown';
+      const formattedMonth = `${monthName} ${year}`;
+      
+      const existingChallan = student.feesHistory.find(
+        challan => challan.month === formattedMonth && challan.type === 'monthly'
+      );
+      
+      if (existingChallan) {
+        throw new Error(`A challan for ${formattedMonth} already exists for this student`);
+      }
+    }
+    
+    // Convert month format from YYYY-MM to Month YYYY
+    const monthNames = ["January", "February", "March", "April", "May", "June",
+      "July", "August", "September", "October", "November", "December"];
+    const [year, monthIndex] = (challanData.month || '2025-01').split('-');
+    const monthName = monthNames[parseInt(monthIndex) - 1] || 'Unknown';
+    const formattedMonth = `${monthName} ${year}`;
+    
+    // Create new challan
+    const newChallan = {
+      id: `challan-${challanData.studentId}-${Date.now()}`,
+      month: formattedMonth,
+      amount: parseFloat(challanData.amount) || 0,
+      dueDate: challanData.dueDate || new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      description: challanData.description || '',
+      paid: false,
+      date: null,
+      status: 'pending',
+      type: 'monthly'
+    };
+    
+    // Update student's feesHistory
+    const updatedStudent = {
+      ...student,
+      feesHistory: [...(student.feesHistory || []), newChallan]
+    };
+    
+    // Update student in database
+    const response = await fetch(`${API_BASE_URL}/students/${challanData.studentId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(updatedStudent),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to generate challan');
+    }
+
+    return await response.json();
   },
   {
     successMessage: 'Challan generated successfully',
@@ -209,7 +321,73 @@ export const generateChallan = createAsyncThunkWithToast(
 export const bulkGenerateChallans = createAsyncThunkWithToast(
   'students/bulkGenerateChallans',
   async ({ studentIds, challanTemplate }) => {
-    return { studentIds, challanTemplate };
+    // For each student, make an API call to update their feesHistory
+    const updatedStudents = [];
+    
+    // Convert month format from YYYY-MM to Month YYYY for comparison
+    const monthNames = ["January", "February", "March", "April", "May", "June",
+      "July", "August", "September", "October", "November", "December"];
+    const monthToUse = challanTemplate.month || new Date().toISOString().slice(0, 7);
+    const [year, monthIndex] = monthToUse.split('-');
+    const monthName = monthNames[parseInt(monthIndex) - 1] || 'Unknown';
+    const formattedMonth = `${monthName} ${year}`;
+    
+    for (const studentId of studentIds) {
+      // Get the current student data
+      const studentResponse = await fetch(`${API_BASE_URL}/students/${studentId}`);
+      if (!studentResponse.ok) {
+        throw new Error(`Failed to fetch student ${studentId}`);
+      }
+      
+      const student = await studentResponse.json();
+      
+      // Check if a challan already exists for this student and month
+      if (student.feesHistory) {
+        const existingChallan = student.feesHistory.find(
+          challan => challan.month === formattedMonth && challan.type === 'monthly'
+        );
+        
+        if (existingChallan) {
+          throw new Error(`A challan for ${formattedMonth} already exists for student ${student.firstName} ${student.lastName}`);
+        }
+      }
+      
+      // Create new challan
+      const newChallan = {
+        id: `challan-${studentId}-${Date.now()}`,
+        month: formattedMonth,
+        amount: student.monthlyFees || 0,
+        dueDate: challanTemplate.dueDate || new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        description: challanTemplate.description || '',
+        paid: false,
+        date: null,
+        status: 'pending',
+        type: 'monthly'
+      };
+      
+      // Update student's feesHistory
+      const updatedStudent = {
+        ...student,
+        feesHistory: [...(student.feesHistory || []), newChallan]
+      };
+      
+      // Update student in database
+      const updateResponse = await fetch(`${API_BASE_URL}/students/${studentId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updatedStudent),
+      });
+      
+      if (!updateResponse.ok) {
+        throw new Error(`Failed to update student ${studentId}`);
+      }
+      
+      updatedStudents.push(await updateResponse.json());
+    }
+    
+    return { studentIds, challanTemplate, updatedStudents };
   },
   {
     successMessage: 'Challans generated successfully',
@@ -227,7 +405,81 @@ export const bulkGenerateChallans = createAsyncThunkWithToast(
 export const bulkUpdateChallanStatuses = createAsyncThunkWithToast(
   'students/bulkUpdateChallanStatuses',
   async ({ challanUpdates }) => {
-    return { challanUpdates };
+    // Group updates by studentId for efficient processing
+    const updatesByStudent = {};
+    
+    challanUpdates.forEach(update => {
+      const { studentId, challanId, paymentMethod, paymentDate } = update || {};
+      if (!studentId || !challanId) return;
+      
+      if (!updatesByStudent[studentId]) {
+        updatesByStudent[studentId] = [];
+      }
+      
+      updatesByStudent[studentId].push({
+        challanId,
+        paymentMethod: paymentMethod || 'cash',
+        paymentDate: paymentDate || new Date().toISOString().split('T')[0]
+      });
+    });
+    
+    // Process updates for each student
+    const updatedStudents = [];
+    
+    for (const [studentId, updates] of Object.entries(updatesByStudent)) {
+      // Get the current student data
+      const studentResponse = await fetch(`${API_BASE_URL}/students/${studentId}`);
+      if (!studentResponse.ok) {
+        throw new Error(`Failed to fetch student ${studentId}`);
+      }
+      
+      const student = await studentResponse.json();
+      
+      // Apply all updates to this student's feesHistory
+      let studentUpdated = false;
+      let totalAdditionalPaid = 0;
+      
+      updates.forEach(update => {
+        const { challanId, paymentMethod, paymentDate } = update;
+        
+        if (student.feesHistory) {
+          const feeRecord = student.feesHistory.find(f => f.id === challanId);
+          if (feeRecord && !feeRecord.paid) {
+            // Update the challan status
+            feeRecord.paid = true;
+            feeRecord.status = 'paid';
+            feeRecord.date = paymentDate;
+            feeRecord.paymentMethod = paymentMethod;
+            
+            // Add to total additional paid amount
+            totalAdditionalPaid += parseFloat(feeRecord.amount || 0);
+            studentUpdated = true;
+          }
+        }
+      });
+      
+      // Update total fees paid if any challans were updated
+      if (studentUpdated) {
+        student.feesPaid = (parseFloat(student.feesPaid) || 0) + totalAdditionalPaid;
+        
+        // Update student in database
+        const updateResponse = await fetch(`${API_BASE_URL}/students/${studentId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(student),
+        });
+        
+        if (!updateResponse.ok) {
+          throw new Error(`Failed to update student ${studentId}`);
+        }
+        
+        updatedStudents.push(await updateResponse.json());
+      }
+    }
+    
+    return { challanUpdates, updatedStudents };
   },
   {
     successMessage: 'Challan statuses updated successfully',
@@ -289,120 +541,37 @@ const studentsSlice = createSlice({
         state.students = state.students.filter(student => student.id !== action.payload);
       })
       .addCase(payFees.fulfilled, (state, action) => {
-        const { challanId, paymentMethod, paymentDate } = action.payload;
-        // Find the student who has this challan
-        const student = state.students.find(s => 
-          s.feesHistory && s.feesHistory.some(f => f.id === challanId)
-        );
-        if (student) {
-          const feeRecord = student.feesHistory.find(f => f.id === challanId);
-          if (feeRecord) {
-            feeRecord.paid = true;
-            feeRecord.status = 'paid';
-            feeRecord.date = paymentDate || new Date().toISOString().split('T')[0];
-            feeRecord.paymentMethod = paymentMethod || 'cash'; // Default to cash if not provided
-            
-            // Update total fees paid
-            student.feesPaid = (parseFloat(student.feesPaid) || 0) + parseFloat(feeRecord.amount || 0);
-          }
+        // Update the student in the state with the returned data from the API
+        const index = state.students.findIndex(student => student.id === action.payload.id);
+        if (index !== -1) {
+          state.students[index] = action.payload;
         }
       })
       .addCase(generateChallan.fulfilled, (state, action) => {
-        const { studentId, month, amount, dueDate, description } = action.payload;
-        const student = state.students.find(s => s.id === studentId);
-        if (student) {
-          // Convert month format from YYYY-MM to Month YYYY
-          const monthNames = ["January", "February", "March", "April", "May", "June",
-            "July", "August", "September", "October", "November", "December"];
-          const [year, monthIndex] = (month || '2025-01').split('-');
-          const monthName = monthNames[parseInt(monthIndex) - 1] || 'Unknown';
-          const formattedMonth = `${monthName} ${year}`;
-          
-          const newChallan = {
-            id: `challan-${studentId}-${Date.now()}`,
-            month: formattedMonth,
-            amount: amount || student.monthlyFees || 0,
-            dueDate: dueDate || new Date().toISOString().split('T')[0],
-            description: description || '',
-            paid: false,
-            date: null,
-            status: 'pending',
-            type: 'monthly'
-          };
-          if (!student.feesHistory) {
-            student.feesHistory = [];
-          }
-          student.feesHistory.push(newChallan);
+        // Update the student in the state with the returned data from the API
+        const index = state.students.findIndex(student => student.id === action.payload.id);
+        if (index !== -1) {
+          state.students[index] = action.payload;
         }
       })
       .addCase(bulkGenerateChallans.fulfilled, (state, action) => {
-        const { studentIds, challanTemplate } = action.payload;
-        const { month, dueDate, description } = challanTemplate || {};
-        
-        // Convert month format from YYYY-MM to Month YYYY
-        const monthNames = ["January", "February", "March", "April", "May", "June",
-          "July", "August", "September", "October", "November", "December"];
-        
-        // Default to current month if not provided
-        const monthToUse = month || new Date().toISOString().slice(0, 7);
-        const [year, monthIndex] = monthToUse.split('-');
-        const monthName = monthNames[parseInt(monthIndex) - 1] || 'Unknown';
-        const formattedMonth = `${monthName} ${year}`;
-        
-        // Array to store generated challans for return
-        const generatedChallans = [];
-        
-        // Generate challans for each student
-        studentIds.forEach(studentId => {
-          const student = state.students.find(s => s.id === studentId);
-          if (student) {
-            const newChallan = {
-              id: `challan-${studentId}-${Date.now()}`,
-              month: formattedMonth,
-              amount: student.monthlyFees || 0,
-              dueDate: dueDate || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // Default to 7 days from now
-              description: description || '',
-              paid: false,
-              date: null,
-              status: 'pending',
-              type: 'monthly'
-            };
-            if (!student.feesHistory) {
-              student.feesHistory = [];
-            }
-            student.feesHistory.push(newChallan);
-            
-            // Add to generated challans array
-            generatedChallans.push({
-              ...newChallan,
-              studentId: student.id
-            });
+        // Update all students in the state with the returned data from the API
+        const { updatedStudents } = action.payload;
+        updatedStudents.forEach(updatedStudent => {
+          const index = state.students.findIndex(student => student.id === updatedStudent.id);
+          if (index !== -1) {
+            state.students[index] = updatedStudent;
           }
         });
-        
-        // Add generated challans to the action payload for use in components
-        action.payload.generatedChallans = generatedChallans;
       })
       .addCase(bulkUpdateChallanStatuses.fulfilled, (state, action) => {
-        const { challanUpdates } = action.payload;
+        const { challanUpdates, updatedStudents } = action.payload;
         
-        // Update each challan status
-        challanUpdates.forEach(update => {
-          const { studentId, challanId, paymentMethod, paymentDate } = update || {};
-          if (!studentId || !challanId) return; // Skip if required data is missing
-          
-          const student = state.students.find(s => s.id === studentId);
-          if (student) {
-            const feeRecord = student.feesHistory.find(f => f.id === challanId);
-            if (feeRecord) {
-              feeRecord.paid = true;
-              feeRecord.status = 'paid';
-              feeRecord.date = paymentDate || new Date().toISOString().split('T')[0];
-              feeRecord.paymentMethod = paymentMethod || 'cash'; // Default to cash if not provided
-              
-              // Update total fees paid
-              student.feesPaid = (parseFloat(student.feesPaid) || 0) + parseFloat(feeRecord.amount || 0);
-            }
+        // Update each student in the state with the returned data from the API
+        updatedStudents.forEach(updatedStudent => {
+          const index = state.students.findIndex(student => student.id === updatedStudent.id);
+          if (index !== -1) {
+            state.students[index] = updatedStudent;
           }
         });
       })

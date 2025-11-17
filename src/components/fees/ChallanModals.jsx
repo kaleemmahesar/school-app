@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FaUser, FaCalendar, FaDollarSign, FaReceipt, FaCheck } from 'react-icons/fa';
 import SearchableStudentDropdown from '../common/SearchableStudentDropdown';
 
@@ -8,6 +8,7 @@ const ChallanModals = ({
   challanData,
   setChallanData,
   students,
+  classes,
   handleStudentChange,
   submitChallan,
   showBulkGenerateModal,
@@ -28,7 +29,16 @@ const ChallanModals = ({
   const getStudentMonthlyFees = (studentId) => {
     if (!studentId) return 0;
     const student = students.find(s => s.id === studentId);
-    return student ? student.monthlyFees || 0 : 0;
+    if (!student) return 0;
+    
+    // Find the class fees for this student's class
+    const studentClass = classes.find(c => c.name === student.class);
+    if (studentClass && studentClass.monthlyFees) {
+      return parseFloat(studentClass.monthlyFees) || 0;
+    }
+    
+    // Fallback to student's monthlyFees if class data not found
+    return student.monthlyFees ? parseFloat(student.monthlyFees) || 0 : 0;
   };
 
   // Update amount when student changes
@@ -43,30 +53,20 @@ const ChallanModals = ({
 
   // Get class-based fees for bulk generation
   const getClassBasedFees = (className) => {
-    // This would typically come from a class configuration or fee structure
-    // For now, we'll use a simple mapping based on common class fee structures
-    const classFeeMap = {
-      'Nursery': 1500,
-      'Prep': 1800,
-      '1st': 2000,
-      '2nd': 2200,
-      '3rd': 2400,
-      '4th': 2600,
-      '5th': 2800,
-      '6th': 3000,
-      '7th': 3200,
-      '8th': 3400,
-      '9th': 3600,
-      '10th': 3800
-    };
+    // Find the class fees for this student's class
+    const studentClass = classes.find(c => c.name === className);
+    if (studentClass && studentClass.monthlyFees) {
+      return parseFloat(studentClass.monthlyFees) || 0;
+    }
     
-    return classFeeMap[className] || 2000; // Default to 2000 if class not found
+    // If no class data found, return 0 as fallback
+    return 0;
   };
 
   // State for bulk generation form
   const [bulkGenerateData, setBulkGenerateData] = useState({
     month: new Date().toISOString().slice(0, 7),
-    dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    dueDate: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     description: ''
   });
 
@@ -77,6 +77,39 @@ const ChallanModals = ({
       [field]: value
     });
   };
+
+  // Set default values for challanData when modal opens
+  useEffect(() => {
+    if (showGenerateModal) {
+      // Set previous month as default
+      const today = new Date();
+      const year = today.getFullYear();
+      const month = today.getMonth(); // Current month (0-11)
+      
+      // Calculate previous month
+      let previousYear = year;
+      let previousMonth = month - 1;
+      
+      // Handle year transition (January -> December of previous year)
+      if (previousMonth < 0) {
+        previousMonth = 11;
+        previousYear = year - 1;
+      }
+      
+      // Format as YYYY-MM
+      const defaultMonth = previousYear + '-' + (previousMonth + 1).toString().padStart(2, '0');
+      
+      // Set due date to 10 days from today
+      const dueDate = new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+      
+      // Only set default values if they're not already set
+      setChallanData(prevData => ({
+        ...prevData,
+        month: prevData.month || defaultMonth,
+        dueDate: prevData.dueDate || dueDate
+      }));
+    }
+  }, [showGenerateModal, setChallanData]);
 
   // Submit bulk generate with class-based fees
   const submitBulkGenerateWithClassFees = (e) => {
@@ -198,10 +231,11 @@ const ChallanModals = ({
                     className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
                     placeholder="Enter amount"
                     required
+                    readOnly
                   />
                 </div>
                 <p className="mt-1 text-xs text-blue-600 bg-blue-50 p-2 rounded border border-blue-100">
-                  Auto-filled from student's class monthly fees: Rs {getStudentMonthlyFees(challanData.studentId)}. You can edit this amount if needed.
+                  Auto-filled from student's class monthly fees: Rs {getStudentMonthlyFees(challanData.studentId)}. This amount is fixed based on the student's class fees.
                 </p>
               </div>
               

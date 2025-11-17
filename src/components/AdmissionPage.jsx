@@ -27,30 +27,24 @@ const AdmissionPage = () => {
   const isEditMode = !!studentData;
 
   const [formData, setFormData] = useState({
-    photo: '',
     grNo: '',
     firstName: '',
-    lastName: '',
     fatherName: '',
-    religion: '',
     address: '',
     dateOfBirth: null,
     birthPlace: '',
-    lastSchoolAttended: '',
-    dateOfAdmission: new Date(), // Default to today
+    dateOfAdmission: new Date(),
     class: '',
-    section: '', // Add section field
-    // Fee-related fields for traditional schools
+    section: '',
     admissionFees: '',
-    monthlyFees: '',
-    feesPaid: '',
-    totalFees: '',
-    // Transfer student fields with isTransferStudent flag
+    lastSchoolAttended: '',
     isTransferStudent: false,
     dateOfLeaving: null,
     classInWhichLeft: '',
     reasonOfLeaving: '',
-    remarks: ''
+    remarks: '',
+    religion: 'Islam',
+    parentContact: '' // Add parent contact number field
   });
   const [photoPreview, setPhotoPreview] = useState(null);
   const [photoFile, setPhotoFile] = useState(null);
@@ -71,7 +65,11 @@ const AdmissionPage = () => {
         dateOfBirth: studentData.dateOfBirth ? new Date(studentData.dateOfBirth) : null,
         dateOfAdmission: studentData.dateOfAdmission ? new Date(studentData.dateOfAdmission) : new Date(),
         dateOfLeaving: studentData.dateOfLeaving ? new Date(studentData.dateOfLeaving) : null,
-        isTransferStudent
+        isTransferStudent,
+        // Set default religion if not present in studentData
+        religion: studentData.religion || 'Islam',
+        // Set parentContact if present in studentData
+        parentContact: studentData.parentContact || ''
       });
       // If student has a photo, set the preview
       if (studentData.photo) {
@@ -461,6 +459,26 @@ const AdmissionPage = () => {
                   
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Parent Contact Number
+                    </label>
+                    <input
+                      type="tel"
+                      name="parentContact"
+                      value={formData.parentContact}
+                      onChange={handleInputChange}
+                      className={`block w-full px-4 py-2.5 border ${errors.parentContact ? 'border-red-300' : 'border-gray-300'} rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 transition`}
+                      placeholder="Enter Parent Contact Number"
+                    />
+                    {/* Temporarily disabled validation error display */}
+                    {/*
+                    {errors.parentContact && (
+                      <p className="mt-1 text-sm text-red-600">{errors.parentContact}</p>
+                    )}
+                    */}
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
                       Religion
                     </label>
                     <select
@@ -482,9 +500,71 @@ const AdmissionPage = () => {
                     )}
                     */}
                   </div>
-                  
+                  {/* Class and Section Fields in a single column */}
+                  <div className="md:col-span-1">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {/* Class Field */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Class
+                        </label>
+                        <div className="relative">
+                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <FaSchool className="h-5 w-5 text-gray-400" />
+                          </div>
+                          <select
+                            name="class"
+                            value={formData.class}
+                            onChange={handleInputChange}
+                            className={`block w-full pl-10 pr-3 py-2 border ${errors.class ? 'border-red-300' : 'border-gray-300'} rounded-md focus:ring-blue-500 focus:border-blue-500`}
+                          >
+                            <option value="">Select Class</option>
+                            {uniqueClasses.map((cls) => (
+                              <option key={cls} value={cls}>{cls}</option>
+                            ))}
+                          </select>
+                        </div>
+                        {/* Temporarily disabled validation error display */}
+                        {/*
+                        {errors.class && (
+                          <p className="mt-1 text-sm text-red-600">{errors.class}</p>
+                        )}
+                        */}
+                      </div>
+
+                      {/* Section Field */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Section
+                        </label>
+                        <div className="relative">
+                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <FaSchool className="h-5 w-5 text-gray-400" />
+                          </div>
+                          <select
+                            name="section"
+                            value={formData.section}
+                            onChange={handleInputChange}
+                            disabled={!formData.class}
+                            className={`block w-full pl-10 pr-3 py-2 border ${errors.section ? 'border-red-300' : 'border-gray-300'} rounded-md focus:ring-blue-500 focus:border-blue-500 ${!formData.class ? 'bg-gray-100' : ''}`}
+                          >
+                            <option value="">Select Section</option>
+                            {classSections.map((section) => (
+                              <option key={section.id} value={section.name}>{section.name}</option>
+                            ))}
+                          </select>
+                        </div>
+                        {/* Temporarily disabled validation error display */}
+                        {/*
+                        {errors.section && (
+                          <p className="mt-1 text-sm text-red-600">{errors.section}</p>
+                        )}
+                        */}
+                      </div>
+                    </div>
+                  </div>
                   {/* Address field spanning full width */}
-                  <div>
+                  <div className="md:col-span-3">
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Address
                     </label>
@@ -578,65 +658,8 @@ const AdmissionPage = () => {
                     */}
                   </div>
                   
-                  {/* Class Field */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Class
-                    </label>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <FaSchool className="h-5 w-5 text-gray-400" />
-                      </div>
-                      <select
-                        name="class"
-                        value={formData.class}
-                        onChange={handleInputChange}
-                        className={`block w-full pl-10 pr-3 py-2 border ${errors.class ? 'border-red-300' : 'border-gray-300'} rounded-md focus:ring-blue-500 focus:border-blue-500`}
-                      >
-                        <option value="">Select Class</option>
-                        {uniqueClasses.map((cls) => (
-                          <option key={cls} value={cls}>{cls}</option>
-                        ))}
-                      </select>
-                    </div>
-                    {/* Temporarily disabled validation error display */}
-                    {/*
-                    {errors.class && (
-                      <p className="mt-1 text-sm text-red-600">{errors.class}</p>
-                    )}
-                    */}
-                  </div>
-
-                  {/* Section Field */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Section
-                    </label>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <FaSchool className="h-5 w-5 text-gray-400" />
-                      </div>
-                      <select
-                        name="section"
-                        value={formData.section}
-                        onChange={handleInputChange}
-                        disabled={!formData.class}
-                        className={`block w-full pl-10 pr-3 py-2 border ${errors.section ? 'border-red-300' : 'border-gray-300'} rounded-md focus:ring-blue-500 focus:border-blue-500 ${!formData.class ? 'bg-gray-100' : ''}`}
-                      >
-                        <option value="">Select Section</option>
-                        {classSections.map((section) => (
-                          <option key={section.id} value={section.name}>{section.name}</option>
-                        ))}
-                      </select>
-                    </div>
-                    {/* Temporarily disabled validation error display */}
-                    {/*
-                    {errors.section && (
-                      <p className="mt-1 text-sm text-red-600">{errors.section}</p>
-                    )}
-                    */}
-                  </div>
                   
+
                   {/* Transfer Student Information Toggle */}
                   <div className="md:col-span-3 bg-gray-50 rounded-lg p-4">
                     <div className="flex items-center">

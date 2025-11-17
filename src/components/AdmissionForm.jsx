@@ -36,6 +36,8 @@ const AdmissionForm = ({ onClose, studentData }) => {
     dateOfLeaving: '',
     classInWhichLeft: '',
     reasonOfLeaving: '',
+    // Religion field
+    religion: 'Islam' // Default to Islam as requested
   });
   const [photoPreview, setPhotoPreview] = useState(null);
   const [photoFile, setPhotoFile] = useState(null);
@@ -54,7 +56,9 @@ const AdmissionForm = ({ onClose, studentData }) => {
       
       setFormData({
         ...studentData,
-        isTransferStudent
+        isTransferStudent,
+        // Set default religion if not present in studentData
+        religion: studentData.religion || 'Islam'
       });
       // If student has a photo, set the preview
       if (studentData.photo) {
@@ -506,6 +510,30 @@ const AdmissionForm = ({ onClose, studentData }) => {
                       {classSections.map((section) => (
                         <option key={section.name} value={section.name}>{section.name}</option>
                       ))}
+                    </select>
+                  </div>
+                  
+                  {/* Religion Field */}
+                  <div>
+                    <label htmlFor="religion" className="block text-sm font-medium text-gray-700 mb-1">
+                      Religion <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      id="religion"
+                      name="religion"
+                      value={formData.religion}
+                      onChange={handleInputChange}
+                      className="block w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                      required
+                      aria-required="true"
+                    >
+                      <option value="Islam">Islam</option>
+                      <option value="Christianity">Christianity</option>
+                      <option value="Hinduism">Hinduism</option>
+                      <option value="Sikhism">Sikhism</option>
+                      <option value="Buddhism">Buddhism</option>
+                      <option value="Judaism">Judaism</option>
+                      <option value="Other">Other</option>
                     </select>
                   </div>
                 </div>
