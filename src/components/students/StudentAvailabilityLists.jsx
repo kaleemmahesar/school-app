@@ -430,8 +430,8 @@ const StudentAvailabilityLists = ({ activeTab: propActiveTab,
                 <tr key={student.id} className="hover:bg-gray-50">
                   <td className="px-4 py-3 whitespace-nowrap">
                     <div className="flex items-center">
-                      <div className="bg-gray-200 border-2 border-dashed rounded-xl w-8 h-8 flex items-center justify-center">
-                        <img src={student.photo} alt={student.firstName} className="w-8 h-8 rounded-xl" />
+                      <div className="bg-gray-200 border-2 border-dashed rounded-xl w-10 h-10 flex items-center justify-center">
+                        <img src={student.photo} alt={student.firstName} className="w-10 h-10 rounded-xl" />
                       </div>
                     </div>
                   </td>

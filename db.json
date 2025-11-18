@@ -1,17 +1,19 @@
 {
   "students": [
     {
-      "id": "1763374515285",
+      "id": "1763406843004",
       "grNo": "1",
-      "firstName": "Jane Khan",
+      "firstName": "Jane",
       "fatherName": "James",
+      "lastName": "Doe",
+      "photo": "https://i.pravatar.cc/300?img=221",
       "address": "Near Postal Life Insuarance",
-      "dateOfBirth": "2003-11-14",
+      "dateOfBirth": "2020-11-10",
       "birthPlace": "Larkana",
       "dateOfAdmission": "2025-11-17",
       "class": "Class 10",
       "section": "A",
-      "admissionFees": 10000,
+      "admissionFees": 5000,
       "lastSchoolAttended": "",
       "isTransferStudent": false,
       "dateOfLeaving": "",
@@ -21,112 +23,34 @@
       "religion": "Islam",
       "parentContact": "033354279226",
       "monthlyFees": 0,
-      "feesPaid": 19000,
-      "totalFees": 10000,
-      "familyId": "family-1763374515286",
+      "feesPaid": 5000,
+      "totalFees": 5000,
+      "familyId": "family-1763406843004",
       "feesHistory": [
         {
-          "id": "challan-1763374515286-0",
+          "id": "challan-1763406843004-0",
           "month": "Admission Fees",
-          "amount": 10000,
+          "amount": 5000,
           "paid": true,
           "date": "2025-11-17",
           "dueDate": "2025-11-17",
           "status": "paid",
           "type": "admission",
-          "paymentTimestamp": "2025-11-17T10:15:15.286Z"
-        },
-        {
-          "id": "challan-1763374515285-1763376511380",
-          "month": "October 2025",
-          "amount": 9000,
-          "dueDate": "2025-11-27",
-          "description": "",
-          "paid": true,
-          "date": "2025-11-17",
-          "status": "paid",
-          "type": "monthly",
-          "generationTimestamp": "2025-11-17T10:48:31.380Z",
-          "paymentMethod": "cash",
-          "paymentTimestamp": "2025-11-17T10:48:36.926Z"
-        },
-        {
-          "id": "challan-1763374515285-1763376544433",
-          "month": "September 2025",
-          "amount": 9000,
-          "dueDate": "2025-11-27",
-          "description": "",
-          "paid": false,
-          "date": null,
-          "status": "pending",
-          "type": "monthly",
-          "generationTimestamp": "2025-11-17T10:49:04.433Z"
-        },
-        {
-          "id": "challan-1763374515285-1763376553827",
-          "month": "August 2025",
-          "amount": 9000,
-          "dueDate": "2025-11-27",
-          "description": "",
-          "paid": false,
-          "date": null,
-          "status": "pending",
-          "type": "monthly",
-          "generationTimestamp": "2025-11-17T10:49:13.827Z"
+          "paymentTimestamp": "2025-11-17T19:14:03.004Z"
         }
       ],
       "status": "studying",
-      "admissionTimestamp": "2025-11-17T10:15:15.286Z"
-    },
-    {
-      "id": "1763375270345",
-      "grNo": "1",
-      "firstName": "Muhammad Tahir",
-      "fatherName": "Kaleemullah",
-      "address": "Near Postal Life Insuarance Larkana",
-      "dateOfBirth": "2019-11-29",
-      "birthPlace": "Larkana",
-      "dateOfAdmission": "2025-11-17",
-      "class": "Class 10",
-      "section": "A",
-      "admissionFees": 10000,
-      "lastSchoolAttended": "",
-      "isTransferStudent": false,
-      "dateOfLeaving": "",
-      "classInWhichLeft": "",
-      "reasonOfLeaving": "",
-      "remarks": "",
-      "religion": "Islam",
-      "parentContact": "033354279226",
-      "monthlyFees": 0,
-      "feesPaid": 10000,
-      "totalFees": 10000,
-      "familyId": "family-1763375270345",
-      "feesHistory": [
-        {
-          "id": "challan-1763375270345-0",
-          "month": "Admission Fees",
-          "amount": 10000,
-          "paid": true,
-          "date": "2025-11-17",
-          "dueDate": "2025-11-17",
-          "status": "paid",
-          "type": "admission",
-          "paymentTimestamp": "2025-11-17T10:27:50.345Z"
-        }
-      ],
-      "status": "studying",
-      "admissionTimestamp": "2025-11-17T10:27:50.345Z"
+      "admissionTimestamp": "2025-11-17T19:14:03.004Z"
     }
   ],
   "expenses": [
     {
-      "id": "1763375317604",
+      "id": "1763387137638",
       "description": "Chairs",
       "amount": "25000",
       "date": "2025-11-15",
-      "category": "Stationary",
-      "addedTimestamp": "2025-11-17T10:28:37.605Z"
+      "category": "Maintenance",
+      "addedTimestamp": "2025-11-17T13:45:37.639Z"
     }
   ],
   "income": {
@@ -162,19 +86,7 @@
       "photo": null,
       "salaryHistory": [
         {
-          "id": "advance-1763375356936-1763375766159",
-          "month": "November 2025",
-          "baseSalary": 0,
-          "allowances": 0,
-          "deductions": 25000,
-          "netSalary": -25000,
-          "status": "advance",
-          "paymentDate": "2025-11-17",
-          "reason": "Need Money",
-          "paymentTimestamp": "2025-11-17T10:36:06.160Z"
-        },
-        {
-          "id": "sal-1763375356936-1763375789263",
+          "id": "sal-1763375356936-1763387104619",
           "month": "2025-11",
           "baseSalary": 35000,
           "allowances": 0,
@@ -183,7 +95,7 @@
           "status": "paid",
           "paymentDate": "2025-11-17",
           "paymentMethod": "cash",
-          "paymentTimestamp": "2025-11-17T10:36:29.263Z"
+          "paymentTimestamp": "2025-11-17T13:45:04.619Z"
         }
       ],
       "attendance": [],

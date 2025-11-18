@@ -83,7 +83,7 @@ const FinancialReportPrintView = ({
                                     (!dateRange.end || !expenseDate || expenseDate <= new Date(dateRange.end));
               
               if (isInDateRange) {
-                acc[expense.category] += expense.amount || 0;
+                acc[expense.category] += typeof expense.amount === 'string' ? parseFloat(expense.amount) : expense.amount || 0;
               }
               return acc;
             }, {})

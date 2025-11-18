@@ -193,7 +193,7 @@ const FinancialReporting = () => {
     });
     
     // Calculate other expenses
-    const otherExpenses = filteredExpenses.reduce((total, expense) => total + (expense.amount || 0), 0);
+    const otherExpenses = filteredExpenses.reduce((total, expense) => total + (typeof expense.amount === 'string' ? parseFloat(expense.amount) : expense.amount || 0), 0);
     
     // Total expenses is the sum of staff salaries and other expenses
     const totalExpenses = totalStaffSalaries + otherExpenses;
@@ -293,12 +293,12 @@ const FinancialReporting = () => {
           expense.date ? new Date(expense.date).toLocaleDateString() : '',
           `"${expense.description || ''}"`,
           expense.category || '',
-          expense.amount || 0
+          typeof expense.amount === 'string' ? parseFloat(expense.amount) : expense.amount || 0
         ]);
       });
       
       // Add total for expenses
-      const totalExpensesAmount = filteredExpenses.reduce((sum, expense) => sum + (expense.amount || 0), 0);
+      const totalExpensesAmount = filteredExpenses.reduce((sum, expense) => sum + (typeof expense.amount === 'string' ? parseFloat(expense.amount) : expense.amount || 0), 0);
       csvContent.push([]); // Empty row
       csvContent.push(['', '', 'TOTAL', totalExpensesAmount]);
       
@@ -577,12 +577,12 @@ const FinancialReporting = () => {
           expense.date ? new Date(expense.date).toLocaleDateString() : "",
           expense.description || "",
           expense.category || "",
-          expense.amount || 0,
+          typeof expense.amount === 'string' ? parseFloat(expense.amount) : expense.amount || 0,
         ]);
       });
 
       // Add total row
-      const totalExpensesAmount = filteredExpenses.reduce((sum, expense) => sum + (expense.amount || 0), 0);
+      const totalExpensesAmount = filteredExpenses.reduce((sum, expense) => sum + (typeof expense.amount === 'string' ? parseFloat(expense.amount) : expense.amount || 0), 0);
       expenseData.push([]);
       expenseData.push(["", "", "TOTAL", totalExpensesAmount]);
 

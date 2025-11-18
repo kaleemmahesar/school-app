@@ -26,10 +26,21 @@ const AdmissionPage = () => {
   const studentData = location.state?.studentData;
   const isEditMode = !!studentData;
 
+  const getNextImageId = () => {
+    // Get the last used image ID from localStorage or start at 1
+    const lastId = localStorage.getItem('lastStudentImageId') || '0';
+    const nextId = parseInt(lastId) + 1;
+    // Save the new ID for next time
+    localStorage.setItem('lastStudentImageId', nextId.toString());
+    return nextId;
+  };
+
   const [formData, setFormData] = useState({
     grNo: '',
     firstName: '',
     fatherName: '',
+    lastName: '',
+    photo: `https://i.pravatar.cc/300?img=${getNextImageId()}`,
     address: '',
     dateOfBirth: null,
     birthPlace: '',
@@ -73,7 +84,7 @@ const AdmissionPage = () => {
       });
       // If student has a photo, set the preview
       if (studentData.photo) {
-        setPhotoPreview(studentData.photo);
+        // setPhotoPreview(studentData.photo);
       }
     }
   }, [studentData]);
@@ -436,6 +447,20 @@ const AdmissionPage = () => {
                     )}
                     */}
                   </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Last Name
+                    </label>
+                    <input
+                      type="text"
+                      name="lastName"
+                      value={formData.lastName}
+                      onChange={handleInputChange}
+                      className={`block w-full px-4 py-2.5 border ${errors.lastName ? 'border-red-300' : 'border-gray-300'} rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 transition`}
+                      placeholder="Enter Student Name"
+                    />
+                  </div>
                   
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -564,8 +589,8 @@ const AdmissionPage = () => {
                     </div>
                   </div>
                   {/* Address field spanning full width */}
-                  <div className="md:col-span-3">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
                       Address
                     </label>
                     <input
@@ -573,7 +598,7 @@ const AdmissionPage = () => {
                       name="address"
                       value={formData.address}
                       onChange={handleInputChange}
-                      className={`block w-full px-4 py-2.5 border ${errors.address ? 'border-red-300' : 'border-gray-300'} rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 transition`}
+                      className={`block w-full px-4 py-2 border ${errors.address ? 'border-red-300' : 'border-gray-300'} rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 transition`}
                       placeholder="Enter Full Address"
                     />
                     {/* Temporarily disabled validation error display */}
