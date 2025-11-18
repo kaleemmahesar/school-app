@@ -22,27 +22,30 @@ const SubsidySection = () => {
   });
 
   const handleAddSubsidy = (e) => {
-    e.preventDefault();
-    const newSubsidy = {
-      ...subsidyData,
-      id: ngoSubsidies.length + 1,
-      status: subsidyData.receivedDate ? 'received' : 'expected',
-      // Set expectedDate if not already set and status is expected
-      expectedDate: subsidyData.expectedDate || (!subsidyData.receivedDate ? getDefaultExpectedDate(subsidyData.quarter, subsidyData.year) : '')
-    };
-    dispatch(addSubsidy(newSubsidy));
-    setSubsidyData({
-      quarter: '',
-      year: new Date().getFullYear(),
-      amount: '',
-      ngoName: '',
-      description: '',
-      receivedDate: '',
-      expectedDate: '',
-      status: 'expected'
-    });
-    setShowAddModal(false);
+  e.preventDefault();
+  const newSubsidy = {
+    ...subsidyData,
+    status: subsidyData.receivedDate ? 'received' : 'expected',
+    // Set expectedDate if not already set and status is expected
+    expectedDate: subsidyData.expectedDate || (!subsidyData.receivedDate ? getDefaultExpectedDate(subsidyData.quarter, subsidyData.year) : '')
   };
+  
+  // Remove the manual ID setting since the server will generate it
+  delete newSubsidy.id;
+  
+  dispatch(addSubsidy(newSubsidy));
+  setSubsidyData({
+    quarter: '',
+    year: new Date().getFullYear(),
+    amount: '',
+    ngoName: '',
+    description: '',
+    receivedDate: '',
+    expectedDate: '',
+    status: 'expected'
+  });
+  setShowAddModal(false);
+};
 
   // Helper function to get default expected date based on quarter and year
   const getDefaultExpectedDate = (quarter, year) => {

@@ -5,7 +5,7 @@ export const SCHOOL_CONFIG = {
   "name": "SEF High School Larkana",
   "logo": null,
   "level": "high",
-  "fundingType": "traditional",
+  "fundingType": "ngo",
   "hasPG": true,
   "hasNursery": true,
   "hasKG": true,

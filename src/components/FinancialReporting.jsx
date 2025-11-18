@@ -25,7 +25,18 @@ const FinancialReporting = () => {
   const [canteenIncome, setCanteenIncome] = useState('');
   const [sponsorshipIncome, setSponsorshipIncome] = useState('');
   const [reportGenerated, setReportGenerated] = useState(false);
+  const [selectedQuarter, setSelectedQuarter] = useState(''); 
+  const [selectedReportYear, setSelectedReportYear] = useState('');
+
+  // Get unique quarters and years from subsidies data
+useEffect(() => {
+  const quarters = [...new Set(subsidies.map(s => s.quarter).filter(Boolean))].sort();
+  const years = [...new Set(subsidies.map(s => s.year).filter(Boolean))].sort().reverse();
   
+  // Set default values if available
+  if (quarters.length > 0 && !selectedQuarter) setSelectedQuarter(quarters[0]);
+  if (years.length > 0 && !selectedReportYear) setSelectedReportYear(years[0]);
+}, [subsidies]);
   // Set default date range based on selected period
   useEffect(() => {
     const today = new Date();
@@ -85,20 +96,119 @@ const FinancialReporting = () => {
   
   // Filter data based on date range
   const filterDataByDate = (data) => {
-    if (!dateRange.start && !dateRange.end) return data; // Overall report
-    
-    const startDate = dateRange.start ? new Date(dateRange.start) : null;
-    const endDate = dateRange.end ? new Date(dateRange.end) : null;
-    
+  // For NGO schools using quarter filtering
+  if (isNGOSchool && (selectedQuarter || selectedReportYear)) {
     return data.filter(item => {
-      if (!item.date) return true;
-      const itemDate = new Date(item.date);
-      return (!startDate || itemDate >= startDate) && (!endDate || itemDate <= endDate);
+      // If no quarter/year selected, show all
+      if (!selectedQuarter && !selectedReportYear) return true;
+      
+      // For subsidy data, filter by quarter and year fields
+      if (item.quarter !== undefined && item.year !== undefined) {
+        // Filter by selected quarter
+        if (selectedQuarter && item.quarter !== selectedQuarter) return false;
+        
+        // Filter by selected year
+        if (selectedReportYear && item.year !== parseInt(selectedReportYear)) return false;
+        
+        return true;
+      } 
+      // For expense data, filter by date within the quarter
+      else if (item.date) {
+        const itemDate = new Date(item.date);
+        
+        // Check if date is valid
+        if (isNaN(itemDate.getTime())) return false;
+        
+        // Filter by selected year
+        if (selectedReportYear && itemDate.getFullYear() !== parseInt(selectedReportYear)) return false;
+        
+        // Filter by selected quarter
+        if (selectedQuarter) {
+          const month = itemDate.getMonth() + 1; // getMonth() returns 0-11
+          const quarterMonths = {
+            'Q1': [1, 2, 3],
+            'Q2': [4, 5, 6],
+            'Q3': [7, 8, 9],
+            'Q4': [10, 11, 12]
+          };
+          
+          if (!quarterMonths[selectedQuarter].includes(month)) return false;
+        }
+        
+        return true;
+      }
+      // For staff data, we want to include the staff member if any of their salary payments
+      // fall within the selected quarter/year, but we need to filter the salaryHistory
+      else if (item.salaryHistory) {
+        // We need to check if any salary payment matches the criteria
+        let hasMatchingPayment = false;
+        
+        if (selectedReportYear || selectedQuarter) {
+          hasMatchingPayment = item.salaryHistory.some(salaryRecord => {
+            if (salaryRecord.status === 'paid' && salaryRecord.paymentDate) {
+              const paymentDate = new Date(salaryRecord.paymentDate);
+              
+              // Check if date is valid
+              if (isNaN(paymentDate.getTime())) return false;
+              
+              // Filter by selected year
+              if (selectedReportYear && paymentDate.getFullYear() !== parseInt(selectedReportYear)) return false;
+              
+              // Filter by selected quarter
+              if (selectedQuarter) {
+                const month = paymentDate.getMonth() + 1; // getMonth() returns 0-11
+                const quarterMonths = {
+                  'Q1': [1, 2, 3],
+                  'Q2': [4, 5, 6],
+                  'Q3': [7, 8, 9],
+                  'Q4': [10, 11, 12]
+                };
+                
+                if (!quarterMonths[selectedQuarter].includes(month)) return false;
+              }
+              
+              return true;
+            }
+            return false;
+          });
+        } else {
+          // If no quarter/year selected, show all staff
+          hasMatchingPayment = true;
+        }
+        
+        return hasMatchingPayment;
+      }
+      
+      // For other data types, show all when quarter filtering is active
+      return true;
     });
-  };
+  }
+  
+  // Existing date range filtering for traditional schools
+  if (!dateRange.start && !dateRange.end) return data;
+  
+  const startDate = dateRange.start ? new Date(dateRange.start) : null;
+  const endDate = dateRange.end ? new Date(dateRange.end) : null;
+  
+  return data.filter(item => {
+    if (!item.date) return true;
+    const itemDate = new Date(item.date);
+    return (!startDate || itemDate >= startDate) && (!endDate || itemDate <= endDate);
+  });
+};
   
   // Get period description for display
   const getPeriodDescription = () => {
+    if (isNGOSchool && (selectedQuarter || selectedReportYear)) {
+    if (selectedQuarter && selectedReportYear) {
+      return `${selectedQuarter} ${selectedReportYear}`;
+    } else if (selectedQuarter) {
+      return `${selectedQuarter}`;
+    } else if (selectedReportYear) {
+      return `Year ${selectedReportYear}`;
+    }
+    return '';
+  }
     switch (reportPeriod) {
       case 'daily':
         return dateRange.start ? `${new Date(dateRange.start).toLocaleDateString()}` : '';
@@ -118,69 +228,104 @@ const FinancialReporting = () => {
   };
   
   // Calculate financial summaries based on selected filters
-  const calculateFinancialSummary = () => {
-    // Filter data by date range
-    const filteredStudents = students;
-    const filteredSubsidies = filterDataByDate(subsidies);
-    const filteredExpenses = filterDataByDate(expenses);
-    const filteredCanteenIncome = filterDataByDate(canteenIncomeData);
-    const filteredSponsorshipIncome = filterDataByDate(sponsorshipIncomeData);
-    const filteredStaff = staff;
+  // Calculate financial summaries based on selected filters
+const calculateFinancialSummary = () => {
+  // Filter data by date range
+  const filteredStudents = students;
+  const filteredSubsidies = filterDataByDate(subsidies);
+  const filteredExpenses = filterDataByDate(expenses);
+  const filteredCanteenIncome = filterDataByDate(canteenIncomeData);
+  const filteredSponsorshipIncome = filterDataByDate(sponsorshipIncomeData);
+  const filteredStaff = filterDataByDate(staff);
+  
+  // Initialize income categories
+  let tuitionFees = 0;
+  let admissionFees = 0;
+  let otherFees = 0; // For fines and other miscellaneous fees
+  let totalSubsidiesReceived = 0;
+  
+  // Calculate fees collected (only for traditional schools)
+  if (!isNGOSchool) {
+    filteredStudents.forEach(student => {
+      (student.feesHistory || []).forEach(challan => {
+        if (challan.status === 'paid' && challan.amount) {
+          const challanDate = challan.date ? new Date(challan.date) : null;
+          const isInDateRange = (!dateRange.start || !challanDate || challanDate >= new Date(dateRange.start)) && 
+                                (!dateRange.end || !challanDate || challanDate <= new Date(dateRange.end));
+          
+          if (isInDateRange) {
+            if (challan.type === 'admission') {
+              admissionFees += challan.amount;
+            } else if (challan.type === 'monthly') {
+              tuitionFees += challan.amount;
+            } else {
+              // For other types like fines
+              otherFees += challan.amount;
+            }
+          }
+        }
+      });
+    });
+  }
+  
+  // Calculate subsidies received (only for NGO schools)
+  if (isNGOSchool) {
+    totalSubsidiesReceived = filteredSubsidies
+      .filter(subsidy => subsidy.status === 'received')
+      .reduce((total, subsidy) => total + (subsidy.amount || 0), 0);
+  }
+  
+  // Calculate existing canteen income for the period
+  const existingCanteenIncome = filteredCanteenIncome.reduce((total, income) => total + (income.amount || 0), 0);
+  
+  // Calculate existing sponsorship income for the period
+  const existingSponsorshipIncome = filteredSponsorshipIncome.reduce((total, income) => total + (income.amount || 0), 0);
+  
+  // Use input values if provided, otherwise use existing values
+  const totalCanteenIncome = canteenIncome !== '' ? parseFloat(canteenIncome) : existingCanteenIncome;
+  const totalSponsorshipIncome = sponsorshipIncome !== '' ? parseFloat(sponsorshipIncome) : existingSponsorshipIncome;
     
-    // Initialize income categories
-    let tuitionFees = 0;
-    let admissionFees = 0;
-    let otherFees = 0; // For fines and other miscellaneous fees
-    let totalSubsidiesReceived = 0;
-    
-    // Calculate fees collected (only for traditional schools)
-    if (!isNGOSchool) {
-      filteredStudents.forEach(student => {
-        (student.feesHistory || []).forEach(challan => {
-          if (challan.status === 'paid' && challan.amount) {
-            const challanDate = challan.date ? new Date(challan.date) : null;
-            const isInDateRange = (!dateRange.start || !challanDate || challanDate >= new Date(dateRange.start)) && 
-                                  (!dateRange.end || !challanDate || challanDate <= new Date(dateRange.end));
+  // Calculate total expenses including staff salaries
+  let totalStaffSalaries = 0;
+  
+  // Add staff salaries from salaryHistory
+  filteredStaff.forEach(staffMember => {
+    (staffMember.salaryHistory || []).forEach(salaryRecord => {
+      if (salaryRecord.status === 'paid') {
+        // For NGO schools with quarter filtering, we need to check if the payment date matches the quarter
+        if (isNGOSchool && (selectedQuarter || selectedReportYear)) {
+          if (salaryRecord.paymentDate) {
+            const paymentDate = new Date(salaryRecord.paymentDate);
             
-            if (isInDateRange) {
-              if (challan.type === 'admission') {
-                admissionFees += challan.amount;
-              } else if (challan.type === 'monthly') {
-                tuitionFees += challan.amount;
-              } else {
-                // For other types like fines
-                otherFees += challan.amount;
+            // Check if date is valid
+            if (!isNaN(paymentDate.getTime())) {
+              // Filter by selected year
+              let yearMatches = true;
+              if (selectedReportYear) {
+                yearMatches = paymentDate.getFullYear() === parseInt(selectedReportYear);
+              }
+              
+              // Filter by selected quarter
+              let quarterMatches = true;
+              if (selectedQuarter) {
+                const month = paymentDate.getMonth() + 1; // getMonth() returns 0-11
+                const quarterMonths = {
+                  'Q1': [1, 2, 3],
+                  'Q2': [4, 5, 6],
+                  'Q3': [7, 8, 9],
+                  'Q4': [10, 11, 12]
+                };
+                
+                quarterMatches = quarterMonths[selectedQuarter].includes(month);
+              }
+              
+              if (yearMatches && quarterMatches) {
+                totalStaffSalaries += salaryRecord.netSalary || 0;
               }
             }
           }
-        });
-      });
-    }
-    
-    // Calculate subsidies received (only for NGO schools)
-    if (isNGOSchool) {
-      totalSubsidiesReceived = filteredSubsidies
-        .filter(subsidy => subsidy.status === 'received')
-        .reduce((total, subsidy) => total + (subsidy.amount || 0), 0);
-    }
-    
-    // Calculate existing canteen income for the period
-    const existingCanteenIncome = filteredCanteenIncome.reduce((total, income) => total + (income.amount || 0), 0);
-    
-    // Calculate existing sponsorship income for the period
-    const existingSponsorshipIncome = filteredSponsorshipIncome.reduce((total, income) => total + (income.amount || 0), 0);
-    
-    // Use input values if provided, otherwise use existing values
-    const totalCanteenIncome = canteenIncome !== '' ? parseFloat(canteenIncome) : existingCanteenIncome;
-    const totalSponsorshipIncome = sponsorshipIncome !== '' ? parseFloat(sponsorshipIncome) : existingSponsorshipIncome;
-      
-    // Calculate total expenses including staff salaries
-    let totalStaffSalaries = 0;
-    
-    // Add staff salaries from salaryHistory
-    filteredStaff.forEach(staffMember => {
-      (staffMember.salaryHistory || []).forEach(salaryRecord => {
-        if (salaryRecord.status === 'paid') {
+        } else {
+          // Traditional filtering
           const salaryDate = salaryRecord.paymentDate ? new Date(salaryRecord.paymentDate) : null;
           const isInDateRange = (!dateRange.start || !salaryDate || salaryDate >= new Date(dateRange.start)) && 
                                 (!dateRange.end || !salaryDate || salaryDate <= new Date(dateRange.end));
@@ -189,33 +334,73 @@ const FinancialReporting = () => {
             totalStaffSalaries += salaryRecord.netSalary || 0;
           }
         }
-      });
+      }
     });
-    
-    // Calculate other expenses
-    const otherExpenses = filteredExpenses.reduce((total, expense) => total + (typeof expense.amount === 'string' ? parseFloat(expense.amount) : expense.amount || 0), 0);
-    
-    // Total expenses is the sum of staff salaries and other expenses
-    const totalExpenses = totalStaffSalaries + otherExpenses;
-    
-    // Calculate net balance
-    const totalIncome = tuitionFees + admissionFees + otherFees + totalSponsorshipIncome + totalCanteenIncome + totalSubsidiesReceived;
-    const netBalance = totalIncome - totalExpenses;
-    
-    return {
-      tuitionFees,
-      admissionFees,
-      otherFees,
-      totalSponsorshipIncome,
-      totalCanteenIncome,
-      totalSubsidiesReceived,
-      totalStaffSalaries,
-      otherExpenses,
-      totalIncome,
-      totalExpenses,
-      netBalance
-    };
+  });
+  
+  // Calculate other expenses
+  let otherExpenses = 0;
+  
+  // For NGO schools with quarter filtering, filter expenses by quarter
+  if (isNGOSchool && (selectedQuarter || selectedReportYear)) {
+    filteredExpenses.forEach(expense => {
+      if (expense.date) {
+        const expenseDate = new Date(expense.date);
+        
+        // Check if date is valid
+        if (!isNaN(expenseDate.getTime())) {
+          // Filter by selected year
+          let yearMatches = true;
+          if (selectedReportYear) {
+            yearMatches = expenseDate.getFullYear() === parseInt(selectedReportYear);
+          }
+          
+          // Filter by selected quarter
+          let quarterMatches = true;
+          if (selectedQuarter) {
+            const month = expenseDate.getMonth() + 1; // getMonth() returns 0-11
+            const quarterMonths = {
+              'Q1': [1, 2, 3],
+              'Q2': [4, 5, 6],
+              'Q3': [7, 8, 9],
+              'Q4': [10, 11, 12]
+            };
+            
+            quarterMatches = quarterMonths[selectedQuarter].includes(month);
+          }
+          
+          if (yearMatches && quarterMatches) {
+            otherExpenses += typeof expense.amount === 'string' ? parseFloat(expense.amount) : expense.amount || 0;
+          }
+        }
+      }
+    });
+  } else {
+    // Traditional filtering
+    otherExpenses = filteredExpenses.reduce((total, expense) => total + (typeof expense.amount === 'string' ? parseFloat(expense.amount) : expense.amount || 0), 0);
+  }
+  
+  // Total expenses is the sum of staff salaries and other expenses
+  const totalExpenses = totalStaffSalaries + otherExpenses;
+  
+  // Calculate net balance
+  const totalIncome = tuitionFees + admissionFees + otherFees + totalSponsorshipIncome + totalCanteenIncome + totalSubsidiesReceived;
+  const netBalance = totalIncome - totalExpenses;
+  
+  return {
+    tuitionFees,
+    admissionFees,
+    otherFees,
+    totalSponsorshipIncome,
+    totalCanteenIncome,
+    totalSubsidiesReceived,
+    totalStaffSalaries,
+    otherExpenses,
+    totalIncome,
+    totalExpenses,
+    netBalance
   };
+};
   
   const financialSummary = calculateFinancialSummary();
   
@@ -245,150 +430,7 @@ const FinancialReporting = () => {
     setReportGenerated(true);
   };
   
-  // Export to CSV function
-  const exportToCSV = () => {
-    try {
-      // Get filtered data
-      const filteredStudents = students;
-      const filteredSubsidies = filterDataByDate(subsidies);
-      const filteredExpenses = filterDataByDate(expenses);
-      const filteredCanteenIncome = filterDataByDate(canteenIncomeData);
-      const filteredSponsorshipIncome = filterDataByDate(sponsorshipIncomeData);
-      const filteredStaff = staff;
-      
-      // Create CSV content with headers
-      let csvContent = [
-        ['Financial Report', getPeriodDescription()],
-        ['Generated on', new Date().toLocaleString()],
-        [], // Empty row for spacing
-        ['INCOME SUMMARY'],
-        ['Category', 'Amount (PKR)'],
-        ['Tuition Fees', financialSummary.tuitionFees],
-        ['Admission Fees', financialSummary.admissionFees],
-        ['Other Fees', financialSummary.otherFees],
-        ['Canteen Income', financialSummary.totalCanteenIncome],
-        ['Sponsorship Income', financialSummary.totalSponsorshipIncome],
-        ...(isNGOSchool ? [['Subsidies Received', financialSummary.totalSubsidiesReceived]] : []),
-        [], // Empty row
-        ['Total Income', financialSummary.totalIncome],
-        [], // Empty row for spacing
-        ['EXPENSE SUMMARY'],
-        ['Category', 'Amount (PKR)'],
-        ['Staff Salaries', financialSummary.totalStaffSalaries],
-        ['Other Expenses', financialSummary.otherExpenses],
-        [], // Empty row
-        ['Total Expenses', financialSummary.totalExpenses],
-        [], // Empty row for spacing
-        ['NET BALANCE'],
-        ['Amount (PKR)', financialSummary.netBalance],
-        ['Status', financialSummary.netBalance >= 0 ? 'Profit' : 'Loss'],
-        [], // Empty row for spacing
-        ['DETAILED EXPENSE RECORDS'],
-        ['Date', 'Description', 'Category', 'Amount (PKR)']
-      ];
-      
-      // Add detailed expense records
-      filteredExpenses.forEach(expense => {
-        csvContent.push([
-          expense.date ? new Date(expense.date).toLocaleDateString() : '',
-          `"${expense.description || ''}"`,
-          expense.category || '',
-          typeof expense.amount === 'string' ? parseFloat(expense.amount) : expense.amount || 0
-        ]);
-      });
-      
-      // Add total for expenses
-      const totalExpensesAmount = filteredExpenses.reduce((sum, expense) => sum + (typeof expense.amount === 'string' ? parseFloat(expense.amount) : expense.amount || 0), 0);
-      csvContent.push([]); // Empty row
-      csvContent.push(['', '', 'TOTAL', totalExpensesAmount]);
-      
-      // Add detailed canteen income records
-      csvContent.push([], ['DETAILED CANTEEN INCOME RECORDS'], ['Date', 'Description', 'Amount (PKR)']);
-      filteredCanteenIncome.forEach(income => {
-        csvContent.push([
-          income.date ? new Date(income.date).toLocaleDateString() : '',
-          `"${income.description || ''}"`,
-          income.amount || 0
-        ]);
-      });
-      
-      // Add total for canteen income
-      const totalCanteenAmount = filteredCanteenIncome.reduce((sum, income) => sum + (income.amount || 0), 0);
-      csvContent.push([]); // Empty row
-      csvContent.push(['', 'TOTAL', totalCanteenAmount]);
-      
-      // Add detailed sponsorship income records
-      csvContent.push([], ['DETAILED SPONSORSHIP INCOME RECORDS'], ['Date', 'Description', 'Sponsor', 'Amount (PKR)']);
-      filteredSponsorshipIncome.forEach(income => {
-        csvContent.push([
-          income.date ? new Date(income.date).toLocaleDateString() : '',
-          `"${income.description || ''}"`,
-          income.sponsor || '',
-          income.amount || 0
-        ]);
-      });
-      
-      // Add total for sponsorship income
-      const totalSponsorshipAmount = filteredSponsorshipIncome.reduce((sum, income) => sum + (income.amount || 0), 0);
-      csvContent.push([]); // Empty row
-      csvContent.push(['', '', 'TOTAL', totalSponsorshipAmount]);
-      
-      // Add staff salary records if applicable
-      csvContent.push([], ['STAFF SALARY RECORDS'], ['Staff Name', 'Position', 'Net Salary (PKR)']);
-      filteredStaff.forEach(staffMember => {
-        (staffMember.salaryHistory || []).forEach(salaryRecord => {
-          const salaryDate = salaryRecord.paymentDate ? new Date(salaryRecord.paymentDate) : null;
-          const isInDateRange = (!dateRange.start || !salaryDate || salaryDate >= new Date(dateRange.start)) && 
-                                (!dateRange.end || !salaryDate || salaryDate <= new Date(dateRange.end));
-          
-          if (isInDateRange && salaryRecord.status === 'paid') {
-            csvContent.push([
-              `"${staffMember.firstName} ${staffMember.lastName}"`,
-              staffMember.position || '',
-              salaryRecord.netSalary || 0
-            ]);
-          }
-        });
-      });
-      
-      // Add total for staff salaries
-      const totalStaffSalariesAmount = csvContent.slice(csvContent.length - filteredStaff.length).reduce((sum, row) => {
-        // Skip header rows and empty rows
-        if (row.length >= 3 && typeof row[2] === 'number') {
-          return sum + row[2];
-        }
-        return sum;
-      }, 0);
-      
-      csvContent.push([]); // Empty row
-      csvContent.push(['', 'TOTAL', totalStaffSalariesAmount]);
-      
-      // Convert to CSV format
-      const csvString = csvContent.map(row => 
-        row.map(field => {
-          // Escape commas and quotes in fields
-          if (typeof field === 'string' && (field.includes(',') || field.includes('"'))) {
-            return `"${field.replace(/"/g, '""')}"`;
-          }
-          return field;
-        }).join(',')
-      ).join('\n');
-      
-      // Create blob and download
-      const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.setAttribute('href', url);
-      link.setAttribute('download', `financial_report_${new Date().toISOString().slice(0, 10)}.csv`);
-      link.style.visibility = 'hidden';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    } catch (error) {
-      console.error("Error exporting to CSV:", error);
-      alert("Error exporting to CSV. Please try again.");
-    }
-  };
+  
   
   // Export to XLSX function
   const exportToXLSX = () => {
@@ -946,30 +988,15 @@ const FinancialReporting = () => {
               <h1 className="text-2xl font-bold text-gray-900">Financial Report</h1>
               <p className="text-sm text-gray-600">{getPeriodDescription()}</p>
             </div>
-            <div className="flex flex-wrap gap-1">
-              <div className="relative group">
+            <div className="flex flex-wrap gap-2">
+              <div className="flex gap-2 group">
                 <button
+                  onClick={exportToXLSX}
                   className="inline-flex items-center px-2 py-1.5 border border-gray-300 rounded text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
                 >
                   <FaDownload className="mr-1" size="12" />
-                  Export
+                  Export Excel
                 </button>
-                <div className="absolute right-0 mt-1 w-32 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 hidden group-hover:block z-10">
-                  <div className="py-1">
-                    <button
-                      onClick={exportToCSV}
-                      className="block w-full text-left px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100"
-                    >
-                      CSV
-                    </button>
-                    <button
-                      onClick={exportToXLSX}
-                      className="block w-full text-left px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100"
-                    >
-                      Excel
-                    </button>
-                  </div>
-                </div>
               </div>
               <button
                 onClick={printReport}
@@ -988,70 +1015,104 @@ const FinancialReporting = () => {
           <div className="md:col-span-2 bg-white rounded shadow-sm">
             <div className="p-3">
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Period</label>
-                  <select
-                    className="block w-full border border-gray-300 rounded text-sm p-1.5 focus:ring-blue-500 focus:border-blue-500"
-                    value={reportPeriod}
-                    onChange={(e) => setReportPeriod(e.target.value)}
-                  >
-                    <option value="daily">Daily</option>
-                    <option value="monthly">Monthly</option>
-                    <option value="yearly">Yearly</option>
-                    <option value="overall">Overall</option>
-                    <option value="custom">Custom</option>
-                  </select>
-                </div>
                 
-                {reportPeriod === 'monthly' && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Month</label>
-                    <input
-                      type="month"
-                      className="block w-full border border-gray-300 rounded text-sm p-1.5 focus:ring-blue-500 focus:border-blue-500"
-                      value={selectedMonth}
-                      onChange={(e) => setSelectedMonth(e.target.value)}
-                    />
-                  </div>
-                )}
-                
-                {reportPeriod === 'yearly' && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Year</label>
-                    <input
-                      type="number"
-                      className="block w-full border border-gray-300 rounded text-sm p-1.5 focus:ring-blue-500 focus:border-blue-500"
-                      value={selectedYear}
-                      onChange={(e) => setSelectedYear(e.target.value)}
-                      min="2000"
-                      max="2030"
-                    />
-                  </div>
-                )}
-                
-                {reportPeriod === 'custom' && (
-                  <>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Start</label>
-                      <input
-                        type="date"
-                        className="block w-full border border-gray-300 rounded text-sm p-1.5 focus:ring-blue-500 focus:border-blue-500"
-                        value={dateRange.start}
-                        onChange={(e) => setDateRange({...dateRange, start: e.target.value})}
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">End</label>
-                      <input
-                        type="date"
-                        className="block w-full border border-gray-300 rounded text-sm p-1.5 focus:ring-blue-500 focus:border-blue-500"
-                        value={dateRange.end}
-                        onChange={(e) => setDateRange({...dateRange, end: e.target.value})}
-                      />
-                    </div>
-                  </>
-                )}
-                
+                <FundingConditional showFor="ngo">
+  <div className="grid grid-cols-2 gap-2">
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-1">Quarter</label>
+      <select
+        className="block w-full border border-gray-300 rounded text-sm p-1.5 focus:ring-blue-500 focus:border-blue-500"
+        value={selectedQuarter}
+        onChange={(e) => setSelectedQuarter(e.target.value)}
+      >
+        <option value="">All Quarters</option>
+        {[...new Set(subsidies.map(s => s.quarter).filter(Boolean))].sort().map(quarter => (
+          <option key={quarter} value={quarter}>{quarter}</option>
+        ))}
+      </select>
+    </div>
+    
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-1">Year</label>
+      <select
+        className="block w-full border border-gray-300 rounded text-sm p-1.5 focus:ring-blue-500 focus:border-blue-500"
+        value={selectedReportYear}
+        onChange={(e) => setSelectedReportYear(e.target.value)}
+      >
+        <option value="">All Years</option>
+        {[...new Set(subsidies.map(s => s.year).filter(Boolean))].sort((a, b) => b - a).map(year => (
+          <option key={year} value={year}>{year}</option>
+        ))}
+      </select>
+    </div>
+  </div>
+</FundingConditional>
+
+<FundingConditional showFor="traditional">
+  <div>
+    <label className="block text-sm font-medium text-gray-700 mb-1">Period</label>
+    <select
+      className="block w-full border border-gray-300 rounded text-sm p-1.5 focus:ring-blue-500 focus:border-blue-500"
+      value={reportPeriod}
+      onChange={(e) => setReportPeriod(e.target.value)}
+    >
+      <option value="daily">Daily</option>
+      <option value="monthly">Monthly</option>
+      <option value="yearly">Yearly</option>
+      <option value="overall">Overall</option>
+      <option value="custom">Custom</option>
+    </select>
+  </div>
+  
+  {reportPeriod === 'monthly' && (
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-1">Month</label>
+      <input
+        type="month"
+        className="block w-full border border-gray-300 rounded text-sm p-1.5 focus:ring-blue-500 focus:border-blue-500"
+        value={selectedMonth}
+        onChange={(e) => setSelectedMonth(e.target.value)}
+      />
+    </div>
+  )}
+  
+  {reportPeriod === 'yearly' && (
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-1">Year</label>
+      <input
+        type="number"
+        className="block w-full border border-gray-300 rounded text-sm p-1.5 focus:ring-blue-500 focus:border-blue-500"
+        value={selectedYear}
+        onChange={(e) => setSelectedYear(e.target.value)}
+        min="2000"
+        max="2030"
+      />
+    </div>
+  )}
+  
+  {reportPeriod === 'custom' && (
+    <>
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Start</label>
+        <input
+          type="date"
+          className="block w-full border border-gray-300 rounded text-sm p-1.5 focus:ring-blue-500 focus:border-blue-500"
+          value={dateRange.start}
+          onChange={(e) => setDateRange({...dateRange, start: e.target.value})}
+        />
+      </div>
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">End</label>
+        <input
+          type="date"
+          className="block w-full border border-gray-300 rounded text-sm p-1.5 focus:ring-blue-500 focus:border-blue-500"
+          value={dateRange.end}
+          onChange={(e) => setDateRange({...dateRange, end: e.target.value})}
+        />
+      </div>
+    </>
+  )}
+</FundingConditional>
                 <div className="flex items-end space-x-1">
                   <button
                     onClick={saveIncomeValues}

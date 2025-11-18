@@ -184,6 +184,39 @@
       "expectedDate": "",
       "status": "received",
       "description": "Quarterly education subsidy for operational costs"
+    },
+    {
+      "id": "3315",
+      "quarter": "Q2",
+      "year": 2025,
+      "amount": 40000,
+      "ngoName": "Sindh Education Foundation",
+      "description": "Paid via bank",
+      "receivedDate": "2025-11-15",
+      "expectedDate": "",
+      "status": "received"
+    },
+    {
+      "id": "ff21",
+      "quarter": "Q3",
+      "year": 2025,
+      "amount": 250000,
+      "ngoName": "Sindh Education Foundation",
+      "description": "",
+      "receivedDate": "2025-11-14",
+      "expectedDate": "",
+      "status": "received"
+    },
+    {
+      "id": "d9d6",
+      "quarter": "Q4",
+      "year": 2025,
+      "amount": 300000,
+      "ngoName": "Sindh Education Foundation",
+      "description": "paid via bank",
+      "receivedDate": "2025-11-05",
+      "expectedDate": "",
+      "status": "received"
     }
   ],
   "studentsAttendance": [
