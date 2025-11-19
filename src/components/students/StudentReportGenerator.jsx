@@ -28,7 +28,6 @@ const StudentReportGenerator = () => {
   
   const [comments, setComments] = useState('');
   const [behavior, setBehavior] = useState('');
-  const [activeTab, setActiveTab] = useState('summary'); // summary, attendance, academic, charts
 
   useEffect(() => {
     dispatch(fetchStudents());
@@ -381,6 +380,81 @@ const StudentReportGenerator = () => {
     }
   };
 
+  // New function to share report via WhatsApp
+  const handleShareViaWhatsApp = async () => {
+    if (!currentReport) {
+      alert('Please generate a report first');
+      return;
+    }
+    
+    // Find the student to get parent contact number
+    // First, try to get the latest student data from the API
+    try {
+      // Re-fetch students to ensure we have the latest data
+      await dispatch(fetchStudents());
+    } catch (error) {
+      console.log('Could not refresh student data, using cached data');
+    }
+    
+    // Get the student from the current state (either refreshed or cached)
+    const student = students.find(s => s.id === currentReport.studentId);
+    if (!student || !student.parentContact) {
+      alert('Parent contact number not found for this student');
+      return;
+    }
+    
+    // Format the phone number for WhatsApp app
+    // For WhatsApp app, we need to use the international format without the +
+    // Pakistani numbers in db.json are stored as 11-digit numbers starting with "0" (e.g., "03337227847")
+    // For WhatsApp app, we need to convert to format "923337227847" (without the + sign)
+    let phoneNumber = student.parentContact.replace(/\D/g, ''); // Remove all non-digit characters
+    
+    // Convert Pakistani format (03XXXXXXXXX) to international format (92XXXXXXXXXX) without +
+    if (phoneNumber.startsWith('0') && phoneNumber.length === 11) {
+      phoneNumber = '92' + phoneNumber.substring(1);
+    }
+    
+    // Create a message with report summary
+    // Safely access report data with fallback values
+    const studentName = currentReport.studentName || 'Unknown Student';
+    const className = currentReport.class || 'Unknown Class';
+    const sectionName = currentReport.section || 'Unknown Section';
+    const startDate = currentReport.period?.startDate || 'Unknown Date';
+    const endDate = currentReport.period?.endDate || 'Unknown Date';
+    const generatedDate = currentReport.generatedDate || new Date().toLocaleDateString();
+    
+    // Attendance data with fallback values
+    const attendance = currentReport.attendance || {};
+    const attendancePercentage = attendance.percentage !== undefined ? attendance.percentage : 'N/A';
+    const presentDays = attendance.present !== undefined ? attendance.present : 'N/A';
+    const totalDays = attendance.total !== undefined ? attendance.total : 
+                     (attendance.totalDays !== undefined ? attendance.totalDays : 'N/A');
+    
+    // Academic performance data with fallback values
+    const academicPerformance = currentReport.academicPerformance || {};
+    const overallPercentage = academicPerformance.overallPercentage !== undefined ? 
+                              academicPerformance.overallPercentage : 'N/A';
+    const overallGrade = academicPerformance.overallGrade || 'N/A';
+    
+    const message = `Student Progress Report for ${studentName}\n\n` +
+      `Class: ${className} - ${sectionName}\n` +
+      `Period: ${startDate} to ${endDate}\n` +
+      `Attendance: ${attendancePercentage}% (${presentDays}/${totalDays} days present)\n` +
+      `Academic Performance: ${overallPercentage}% (${overallGrade})\n\n` +
+      `Please find the detailed report attached.\n` +
+      `Generated on: ${generatedDate}`;
+    
+    // Encode the message for URL
+    const encodedMessage = encodeURIComponent(message);
+    
+    // Open WhatsApp with the number and message
+    // Note: For WhatsApp app, file attachment is not directly possible
+    // User will need to download the PDF separately and attach it manually
+    const whatsappUrl = `https://api.whatsapp.com/send?phone=${phoneNumber}&text=${encodedMessage}`;
+    window.open(whatsappUrl, '_blank');
+  };
+
+
   // Group attendance by week for weekly tracking
   const getWeeklyAttendanceData = () => {
     if (!currentReport || !currentReport.attendanceDetails) return [];
@@ -610,333 +684,162 @@ const StudentReportGenerator = () => {
                 <FaDownload className="mr-2" />
                 Download PDF
               </button>
+              <button 
+                onClick={handleShareViaWhatsApp}
+                className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+              >
+                <svg className="mr-2 h-4 w-4 text-green-500" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+                </svg>
+                Share via WhatsApp
+              </button>
             </div>
           </div>
           
-          {/* Report Tabs */}
-          <div className="border-b border-gray-200">
-            <nav className="-mb-px flex space-x-8 px-6">
-              <button
-                onClick={() => setActiveTab('summary')}
-                className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${
-                  activeTab === 'summary'
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                <FaChartBar className="inline mr-2" />
-                Summary
-              </button>
-              <button
-                onClick={() => setActiveTab('attendance')}
-                className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${
-                  activeTab === 'attendance'
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                <FaUser className="inline mr-2" />
-                Attendance
-              </button>
-              <button
-                onClick={() => setActiveTab('academic')}
-                className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${
-                  activeTab === 'academic'
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                <FaBook className="inline mr-2" />
-                Academic Performance
-              </button>
-              <button
-                onClick={() => setActiveTab('charts')}
-                className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${
-                  activeTab === 'charts'
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                <FaChartLine className="inline mr-2" />
-                Charts & Trends
-              </button>
-              <button
-                onClick={() => setActiveTab('history')}
-                className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${
-                  activeTab === 'history'
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                <FaGraduationCap className="inline mr-2" />
-                Academic History
-              </button>
-            </nav>
-          </div>
-          
           <div className="p-6">
-            {/* Summary Tab */}
-            {activeTab === 'summary' && (
-              <div>
-                {/* Report Header */}
-                <div className="mb-6">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <h3 className="text-xl font-bold text-gray-900">Student Progress Report</h3>
-                      <p className="text-gray-600">Period: {currentReport.period.startDate} to {currentReport.period.endDate}</p>
-                      <p className="text-gray-600">Generated on: {currentReport.generatedDate}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-gray-600">GR No: {currentReport.studentId}</p>
-                    </div>
-                  </div>
+            {/* Report Header */}
+            <div className="mb-6">
+              <div className="flex justify-between items-start">
+                <div>
+                  <h3 className="text-xl font-bold text-gray-900">Student Progress Report</h3>
+                  <p className="text-gray-600">Period: {currentReport.period.startDate} to {currentReport.period.endDate}</p>
+                  <p className="text-gray-600">Generated on: {currentReport.generatedDate}</p>
                 </div>
-                
-                {/* Attendance Summary */}
-                <div className="mb-6">
-                  <h4 className="text-lg font-semibold text-gray-900 mb-3">Attendance Summary</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-                    <div className="bg-blue-50 rounded-lg p-4">
-                      <div className="text-sm font-medium text-blue-800">Total Days</div>
-                      <div className="text-2xl font-semibold text-blue-900">{currentReport.attendance.totalDays}</div>
-                    </div>
-                    <div className="bg-green-50 rounded-lg p-4">
-                      <div className="text-sm font-medium text-green-800">Present</div>
-                      <div className="text-2xl font-semibold text-green-900">{currentReport.attendance.present}</div>
-                    </div>
-                    <div className="bg-red-50 rounded-lg p-4">
-                      <div className="text-sm font-medium text-red-800">Absent</div>
-                      <div className="text-2xl font-semibold text-red-900">{currentReport.attendance.absent}</div>
-                    </div>
-                    <div className="bg-yellow-50 rounded-lg p-4">
-                      <div className="text-sm font-medium text-yellow-800">Late</div>
-                      <div className="text-2xl font-semibold text-yellow-900">{currentReport.attendance.late}</div>
-                    </div>
-                    <div className="bg-blue-50 rounded-lg p-4">
-                      <div className="text-sm font-medium text-blue-800">Leave</div>
-                      <div className="text-2xl font-semibold text-blue-900">{currentReport.attendance.leave}</div>
-                    </div>
-                    <div className="bg-purple-50 rounded-lg p-4">
-                      <div className="text-sm font-medium text-purple-800">Attendance %</div>
-                      <div className="text-2xl font-semibold text-purple-900">{currentReport.attendance.percentage}%</div>
-                    </div>
-                  </div>
+                <div className="text-right">
+                  <p className="text-gray-600">GR No: {currentReport.studentId}</p>
                 </div>
-                
-                {/* Academic Performance */}
-                <div className="mb-6">
-                  <h4 className="text-lg font-semibold text-gray-900 mb-3">Academic Performance</h4>
-                  <div className="mb-4">
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="text-gray-700 font-medium">Overall Performance</span>
-                      <span className="text-lg font-bold text-gray-900">
-                        {currentReport.academicPerformance.overallPercentage}% ({currentReport.academicPerformance.overallGrade})
-                      </span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-4">
-                      <div 
-                        className="bg-blue-600 h-4 rounded-full" 
-                        style={{ width: `${currentReport.academicPerformance.overallPercentage}%` }}
-                      ></div>
-                    </div>
-                  </div>
-                  
-                  <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-200">
-                      <thead className="bg-gray-50">
-                        <tr>
-                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Subject</th>
-                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Average</th>
-                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Percentage</th>
-                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Grade</th>
+              </div>
+            </div>
+            
+            {/* Attendance Summary - Adjusted to one row with all 6 cards */}
+            <div className="mb-6">
+              <h4 className="text-lg font-semibold text-gray-900 mb-3">Attendance Summary</h4>
+              <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
+                <div className="bg-blue-50 rounded-lg p-4">
+                  <div className="text-sm font-medium text-blue-800">Total Days</div>
+                  <div className="text-2xl font-semibold text-blue-900">{currentReport.attendance.totalDays}</div>
+                </div>
+                <div className="bg-green-50 rounded-lg p-4">
+                  <div className="text-sm font-medium text-green-800">Present</div>
+                  <div className="text-2xl font-semibold text-green-900">{currentReport.attendance.present}</div>
+                </div>
+                <div className="bg-red-50 rounded-lg p-4">
+                  <div className="text-sm font-medium text-red-800">Absent</div>
+                  <div className="text-2xl font-semibold text-red-900">{currentReport.attendance.absent}</div>
+                </div>
+                <div className="bg-yellow-50 rounded-lg p-4">
+                  <div className="text-sm font-medium text-yellow-800">Late</div>
+                  <div className="text-2xl font-semibold text-yellow-900">{currentReport.attendance.late}</div>
+                </div>
+                <div className="bg-blue-50 rounded-lg p-4">
+                  <div className="text-sm font-medium text-blue-800">Leave</div>
+                  <div className="text-2xl font-semibold text-blue-900">{currentReport.attendance.leave}</div>
+                </div>
+                <div className="bg-purple-50 rounded-lg p-4">
+                  <div className="text-sm font-medium text-purple-800">Attendance %</div>
+                  <div className="text-2xl font-semibold text-purple-900">{currentReport.attendance.percentage}%</div>
+                </div>
+              </div>
+            </div>
+            
+            {/* Weekly Attendance Tracking */}
+            {localFilters.reportType === 'weekly' && (
+              <div className="mb-6">
+                <h4 className="text-lg font-semibold text-gray-900 mb-3">Weekly Attendance Tracking</h4>
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Week Starting</th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Present</th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Absent</th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Late</th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Leave</th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Attendance %</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {getWeeklyAttendanceData().map((week, index) => (
+                        <tr key={index}>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                            {new Date(week.weekStart).toLocaleDateString()}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{week.present}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{week.absent}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{week.late}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{week.leave}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                            {week.total > 0 ? Math.round((week.present / week.total) * 100) : 0}%
+                          </td>
                         </tr>
-                      </thead>
-                      <tbody className="bg-white divide-y divide-gray-200">
-                        {currentReport.academicPerformance.subjects.map((subject, index) => (
-                          <tr key={index}>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{subject.subjectName}</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              {subject.averageObtained.toFixed(2)} / {subject.averageTotal.toFixed(2)}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{subject.percentage.toFixed(2)}%</td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
-                                {subject.grade}
-                              </span>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               </div>
             )}
             
-            {/* Attendance Tab */}
-            {activeTab === 'attendance' && (
-              <div>
-                <h4 className="text-lg font-semibold text-gray-900 mb-4">Attendance Details</h4>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                  <div className="bg-blue-50 rounded-lg p-4">
-                    <div className="text-sm font-medium text-blue-800">Total Days</div>
-                    <div className="text-2xl font-semibold text-blue-900">{currentReport.attendance.totalDays}</div>
-                  </div>
-                  <div className="bg-green-50 rounded-lg p-4">
-                    <div className="text-sm font-medium text-green-800">Attendance Rate</div>
-                    <div className="text-2xl font-semibold text-green-900">{currentReport.attendance.percentage}%</div>
-                  </div>
-                  <div className="bg-purple-50 rounded-lg p-4">
-                    <div className="text-sm font-medium text-purple-800">Perfect Attendance</div>
-                    <div className="text-2xl font-semibold text-purple-900">
-                      {currentReport.attendance.percentage === 100 ? 'Yes' : 'No'}
-                    </div>
-                  </div>
+            {/* Academic Performance - Added explanation */}
+            <div className="mb-6">
+              <h4 className="text-lg font-semibold text-gray-900 mb-3">Academic Performance</h4>
+              <p className="text-gray-600 mb-4">
+                This section shows the student's academic performance across different subjects. 
+                The overall performance percentage is calculated based on the average of all subject scores, 
+                and the grade is determined according to the school's grading system.
+              </p>
+              <div className="mb-4">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-gray-700 font-medium">Overall Performance</span>
+                  <span className="text-lg font-bold text-gray-900">
+                    {currentReport.academicPerformance.overallPercentage}% ({currentReport.academicPerformance.overallGrade})
+                  </span>
                 </div>
-                
-                {localFilters.reportType === 'weekly' && (
-                  <div className="mb-6">
-                    <h5 className="text-md font-semibold text-gray-900 mb-3">Weekly Attendance Tracking</h5>
-                    <div className="overflow-x-auto">
-                      <table className="min-w-full divide-y divide-gray-200">
-                        <thead className="bg-gray-50">
-                          <tr>
-                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Week Starting</th>
-                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Present</th>
-                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Absent</th>
-                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Late</th>
-                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Leave</th>
-                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Attendance %</th>
-                          </tr>
-                        </thead>
-                        <tbody className="bg-white divide-y divide-gray-200">
-                          {getWeeklyAttendanceData().map((week, index) => (
-                            <tr key={index}>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                {new Date(week.weekStart).toLocaleDateString()}
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{week.present}</td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{week.absent}</td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{week.late}</td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{week.leave}</td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                {week.total > 0 ? Math.round((week.present / week.total) * 100) : 0}%
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                )}
-                
-                <div className="mb-6">
-                  <h5 className="text-md font-semibold text-gray-900 mb-3">Attendance Trends</h5>
-                  <div className="h-64 flex items-center justify-center bg-gray-50 rounded-lg">
-                    <p className="text-gray-500">Attendance trend chart would be displayed here</p>
-                  </div>
+                <div className="w-full bg-gray-200 rounded-full h-4">
+                  <div 
+                    className="bg-blue-600 h-4 rounded-full" 
+                    style={{ width: `${currentReport.academicPerformance.overallPercentage}%` }}
+                  ></div>
                 </div>
               </div>
-            )}
-            
-            {/* Academic Performance Tab */}
-            {activeTab === 'academic' && (
-              <div>
-                <h4 className="text-lg font-semibold text-gray-900 mb-4">Academic Performance Details</h4>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                  <div className="bg-blue-50 rounded-lg p-4">
-                    <div className="text-sm font-medium text-blue-800">Overall Percentage</div>
-                    <div className="text-2xl font-semibold text-blue-900">{currentReport.academicPerformance.overallPercentage}%</div>
-                  </div>
-                  <div className="bg-green-50 rounded-lg p-4">
-                    <div className="text-sm font-medium text-green-800">Overall Grade</div>
-                    <div className="text-2xl font-semibold text-green-900">{currentReport.academicPerformance.overallGrade}</div>
-                  </div>
-                  <div className="bg-purple-50 rounded-lg p-4">
-                    <div className="text-sm font-medium text-purple-800">Subjects Taken</div>
-                    <div className="text-2xl font-semibold text-purple-900">{currentReport.academicPerformance.subjects.length}</div>
-                  </div>
-                </div>
-                
-                <div className="mb-6">
-                  <h5 className="text-md font-semibold text-gray-900 mb-3">Subject-wise Performance</h5>
-                  <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-200">
-                      <thead className="bg-gray-50">
-                        <tr>
-                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Subject</th>
-                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Average Score</th>
-                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Percentage</th>
-                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Grade</th>
-                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Performance</th>
-                        </tr>
-                      </thead>
-                      <tbody className="bg-white divide-y divide-gray-200">
-                        {currentReport.academicPerformance.subjects.map((subject, index) => (
-                          <tr key={index}>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{subject.subjectName}</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              {subject.averageObtained.toFixed(2)} / {subject.averageTotal.toFixed(2)}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{subject.percentage.toFixed(2)}%</td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
-                                {subject.grade}
-                              </span>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="w-full bg-gray-200 rounded-full h-2">
-                                <div 
-                                  className={`h-2 rounded-full ${
-                                    subject.percentage >= 80 ? 'bg-green-500' : 
-                                    subject.percentage >= 60 ? 'bg-yellow-500' : 'bg-red-500'
-                                  }`} 
-                                  style={{ width: `${subject.percentage}%` }}
-                                ></div>
-                              </div>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
+              
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Subject</th>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Average</th>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Percentage</th>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Grade</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {currentReport.academicPerformance.subjects.map((subject, index) => (
+                      <tr key={index}>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{subject.subjectName}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {subject.averageObtained.toFixed(2)} / {subject.averageTotal.toFixed(2)}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{subject.percentage.toFixed(2)}%</td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
+                            {subject.grade}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
-            )}
+            </div>
             
-            {/* Charts & Trends Tab */}
-            {activeTab === 'charts' && (
-              <div>
-                <h4 className="text-lg font-semibold text-gray-900 mb-4">Performance Charts & Trends</h4>
-                
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-                  <div className="bg-gray-50 rounded-lg p-6">
-                    <h5 className="text-md font-semibold text-gray-900 mb-4">Attendance Trend</h5>
-                    <div className="h-64 flex items-center justify-center">
-                      <p className="text-gray-500">Attendance trend chart would be displayed here</p>
-                    </div>
-                  </div>
-                  
-                  <div className="bg-gray-50 rounded-lg p-6">
-                    <h5 className="text-md font-semibold text-gray-900 mb-4">Academic Performance Trend</h5>
-                    <div className="h-64 flex items-center justify-center">
-                      <p className="text-gray-500">Academic performance trend chart would be displayed here</p>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="mb-6">
-                  <h5 className="text-md font-semibold text-gray-900 mb-3">Subject Performance Trends</h5>
-                  <div className="bg-gray-50 rounded-lg p-6">
-                    <p className="text-gray-500">Subject performance trends chart would be displayed here</p>
-                  </div>
-                </div>
-              </div>
-            )}
-            
-            {/* Academic History Tab */}
-            {activeTab === 'history' && (
-              <div>
+            {/* Academic History - Only show for quarterly and yearly reports */}
+            {localFilters.reportType !== 'monthly' && (
+              <div className="mb-6">
+                <h4 className="text-lg font-semibold text-gray-900 mb-3">Academic History</h4>
+                <p className="text-gray-600 mb-4">
+                  This section shows the student's academic performance history across previous years and classes. 
+                  It includes overall grades, subject-wise performance, and any remarks from teachers for each academic period.
+                </p>
                 <AcademicHistory academicHistory={currentReport.academicHistory} />
               </div>
             )}

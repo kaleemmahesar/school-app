@@ -134,6 +134,7 @@ const StaffAttendanceReport = () => {
       
       setCurrentReport(report);
     } catch (error) {
+      console.error('Error generating report:', error);
       alert(`Failed to generate report: ${error.message || 'Unknown error'}`);
     } finally {
       setReportLoading(false);
@@ -490,8 +491,8 @@ const StaffAttendanceReport = () => {
       {/* Report Preview */}
       {currentReport && (
         <div className="bg-white rounded-lg shadow overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-200 flex flex-col md:flex-row md:justify-between md:items-center">
-            <div className="mb-4 md:mb-0">
+          <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+            <div className="">
               <h2 className="text-lg font-medium text-gray-900">
                 Report for {currentReport.staffName} ({currentReport.position})
               </h2>
@@ -511,186 +512,62 @@ const StaffAttendanceReport = () => {
             </div>
           </div>
 
-          <div className="border-b border-gray-200">
-            <nav className="flex -mb-px">
-              <button
-                onClick={() => setActiveTab('summary')}
-                className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${
-                  activeTab === 'summary'
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                <FaTable className="inline mr-2" />
-                Summary
-              </button>
-              <button
-                onClick={() => setActiveTab('attendance')}
-                className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${
-                  activeTab === 'attendance'
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                <FaUser className="inline mr-2" />
-                Attendance Details
-              </button>
-              <button
-                onClick={() => setActiveTab('charts')}
-                className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${
-                  activeTab === 'charts'
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                <FaChartBar className="inline mr-2" />
-                Charts
-              </button>
-            </nav>
-          </div>
-
           <div className="p-6">
-            {/* Summary Tab */}
-            {activeTab === 'summary' && (
-              <div>
-                <h4 className="text-lg font-semibold text-gray-900 mb-4">Attendance Summary</h4>
-                <div className="grid grid-cols-1 md:grid-cols-6 gap-4 mb-6">
-                  <div className="bg-blue-50 rounded-lg p-4">
-                    <div className="text-sm font-medium text-blue-800">Total Days</div>
-                    <div className="text-2xl font-semibold text-blue-900">{currentReport.attendance.totalDays}</div>
-                  </div>
-                  <div className="bg-green-50 rounded-lg p-4">
-                    <div className="text-sm font-medium text-green-800">Present</div>
-                    <div className="text-2xl font-semibold text-green-900">{currentReport.attendance.present}</div>
-                  </div>
-                  <div className="bg-red-50 rounded-lg p-4">
-                    <div className="text-sm font-medium text-red-800">Absent</div>
-                    <div className="text-2xl font-semibold text-red-900">{currentReport.attendance.absent}</div>
-                  </div>
-                  <div className="bg-yellow-50 rounded-lg p-4">
-                    <div className="text-sm font-medium text-yellow-800">Late</div>
-                    <div className="text-2xl font-semibold text-yellow-900">{currentReport.attendance.late}</div>
-                  </div>
-                  <div className="bg-blue-50 rounded-lg p-4">
-                    <div className="text-sm font-medium text-blue-800">Leave</div>
-                    <div className="text-2xl font-semibold text-blue-900">{currentReport.attendance.leave}</div>
-                  </div>
-                  <div className="bg-purple-50 rounded-lg p-4">
-                    <div className="text-sm font-medium text-purple-800">Attendance %</div>
-                    <div className="text-2xl font-semibold text-purple-900">{currentReport.attendance.percentage}%</div>
-                  </div>
+            {/* Attendance Summary */}
+            <div>
+              <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
+                <div className="bg-blue-50 rounded-lg p-4">
+                  <div className="text-sm font-medium text-blue-800">Total Days</div>
+                  <div className="text-2xl font-semibold text-blue-900">{currentReport.attendance.totalDays}</div>
                 </div>
-                
-                {/* Attendance Summary at Bottom */}
-                <div className="mt-6 pt-4 border-t border-gray-200">
-                  <h4 className="text-md font-medium text-gray-900 mb-3">Attendance Summary</h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-                    <div className="bg-green-50 rounded-lg p-4">
-                      <div className="text-sm font-medium text-green-800">Present</div>
-                      <div className="text-2xl font-semibold text-green-900">{currentReport.attendance.present}</div>
-                    </div>
-                    <div className="bg-red-50 rounded-lg p-4">
-                      <div className="text-sm font-medium text-red-800">Absent</div>
-                      <div className="text-2xl font-semibold text-red-900">{currentReport.attendance.absent}</div>
-                    </div>
-                    <div className="bg-yellow-50 rounded-lg p-4">
-                      <div className="text-sm font-medium text-yellow-800">Late</div>
-                      <div className="text-2xl font-semibold text-yellow-900">{currentReport.attendance.late}</div>
-                    </div>
-                    <div className="bg-blue-50 rounded-lg p-4">
-                      <div className="text-sm font-medium text-blue-800">Leave</div>
-                      <div className="text-2xl font-semibold text-blue-900">{currentReport.attendance.leave}</div>
-                    </div>
-                  </div>
+                <div className="bg-green-50 rounded-lg p-4">
+                  <div className="text-sm font-medium text-green-800">Present</div>
+                  <div className="text-2xl font-semibold text-green-900">{currentReport.attendance.present}</div>
+                </div>
+                <div className="bg-red-50 rounded-lg p-4">
+                  <div className="text-sm font-medium text-red-800">Absent</div>
+                  <div className="text-2xl font-semibold text-red-900">{currentReport.attendance.absent}</div>
+                </div>
+                <div className="bg-yellow-50 rounded-lg p-4">
+                  <div className="text-sm font-medium text-yellow-800">Late</div>
+                  <div className="text-2xl font-semibold text-yellow-900">{currentReport.attendance.late}</div>
+                </div>
+                <div className="bg-purple-50 rounded-lg p-4">
+                  <div className="text-sm font-medium text-purple-800">Attendance %</div>
+                  <div className="text-2xl font-semibold text-purple-900">{currentReport.attendance.percentage}%</div>
                 </div>
               </div>
-            )}
+            </div>
             
-            {/* Attendance Details Tab */}
-            {activeTab === 'attendance' && (
-              <div>
-                <h4 className="text-lg font-semibold text-gray-900 mb-4">Attendance Details</h4>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                  <div className="bg-blue-50 rounded-lg p-4">
-                    <div className="text-sm font-medium text-blue-800">Total Days</div>
-                    <div className="text-2xl font-semibold text-blue-900">{currentReport.attendance.totalDays}</div>
-                  </div>
-                  <div className="bg-green-50 rounded-lg p-4">
-                    <div className="text-sm font-medium text-green-800">Attendance Rate</div>
-                    <div className="text-2xl font-semibold text-green-900">{currentReport.attendance.percentage}%</div>
-                  </div>
-                  <div className="bg-purple-50 rounded-lg p-4">
-                    <div className="text-sm font-medium text-purple-800">Perfect Attendance</div>
-                    <div className="text-2xl font-semibold text-purple-900">
-                      {currentReport.attendance.percentage === 100 ? 'Yes' : 'No'}
-                    </div>
-                  </div>
-                </div>
-                
-                {localFilters.reportType === 'weekly' && (
-                  <div className="mb-6">
-                    <h5 className="text-md font-semibold text-gray-900 mb-3">Weekly Attendance Tracking</h5>
-                    <div className="overflow-x-auto">
-                      <table className="min-w-full divide-y divide-gray-200">
-                        <thead className="bg-gray-50">
-                          <tr>
-                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Week Starting</th>
-                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Present</th>
-                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Absent</th>
-                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Late</th>
-                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Leave</th>
-                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Attendance %</th>
-                          </tr>
-                        </thead>
-                        <tbody className="bg-white divide-y divide-gray-200">
-                          {getWeeklyAttendanceData().map((week, index) => (
-                            <tr key={week.weekStart}>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                {new Date(week.weekStart).toLocaleDateString()}
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{week.present}</td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{week.absent}</td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{week.late}</td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{week.leave}</td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                {week.total > 0 ? Math.round((week.present / week.total) * 100) : 0}%
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                )}
-                
+            {/* Attendance Details */}
+            <div>
+              {localFilters.reportType === 'weekly' && (
                 <div className="mb-6">
-                  <h5 className="text-md font-semibold text-gray-900 mb-3">Detailed Attendance Records</h5>
+                  <h5 className="text-md font-semibold text-gray-900 mb-3">Weekly Attendance Tracking</h5>
                   <div className="overflow-x-auto">
                     <table className="min-w-full divide-y divide-gray-200">
                       <thead className="bg-gray-50">
                         <tr>
-                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Week Starting</th>
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Present</th>
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Absent</th>
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Late</th>
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Leave</th>
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Attendance %</th>
                         </tr>
                       </thead>
                       <tbody className="bg-white divide-y divide-gray-200">
-                        {currentReport.attendanceDetails.map((record, index) => (
-                          <tr key={`${record.date}-${record.status}`}>
+                        {getWeeklyAttendanceData().map((week, index) => (
+                          <tr key={week.weekStart}>
                             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                              {record.date}
+                              {new Date(week.weekStart).toLocaleDateString()}
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                record.status === 'present'
-                                  ? 'bg-green-100 text-green-800'
-                                  : record.status === 'absent'
-                                  ? 'bg-red-100 text-red-800'
-                                  : record.status === 'late'
-                                  ? 'bg-yellow-100 text-yellow-800'
-                                  : 'bg-blue-100 text-blue-800'
-                              }`}>
-                                {record.status.charAt(0).toUpperCase() + record.status.slice(1)}
-                              </span>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{week.present}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{week.absent}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{week.late}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{week.leave}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                              {week.total > 0 ? Math.round((week.present / week.total) * 100) : 0}%
                             </td>
                           </tr>
                         ))}
@@ -698,76 +575,44 @@ const StaffAttendanceReport = () => {
                     </table>
                   </div>
                 </div>
-                
-                {/* Attendance Summary at Bottom */}
-                <div className="mt-6 pt-4 border-t border-gray-200">
-                  <h4 className="text-md font-medium text-gray-900 mb-3">Attendance Summary</h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-                    <div className="bg-green-50 rounded-lg p-4">
-                      <div className="text-sm font-medium text-green-800">Present</div>
-                      <div className="text-2xl font-semibold text-green-900">{currentReport.attendance.present}</div>
-                    </div>
-                    <div className="bg-red-50 rounded-lg p-4">
-                      <div className="text-sm font-medium text-red-800">Absent</div>
-                      <div className="text-2xl font-semibold text-red-900">{currentReport.attendance.absent}</div>
-                    </div>
-                    <div className="bg-yellow-50 rounded-lg p-4">
-                      <div className="text-sm font-medium text-yellow-800">Late</div>
-                      <div className="text-2xl font-semibold text-yellow-900">{currentReport.attendance.late}</div>
-                    </div>
-                    <div className="bg-blue-50 rounded-lg p-4">
-                      <div className="text-sm font-medium text-blue-800">Leave</div>
-                      <div className="text-2xl font-semibold text-blue-900">{currentReport.attendance.leave}</div>
-                    </div>
-                  </div>
+              )}
+              
+              <div className="mb-6">
+                <h5 className="text-md font-semibold text-gray-900 mb-3">Detailed Attendance Records</h5>
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {currentReport.attendanceDetails.map((record, index) => (
+                        <tr key={`${record.date}-${record.status}`}>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                            {record.date}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                              record.status === 'present'
+                                ? 'bg-green-100 text-green-800'
+                                : record.status === 'absent'
+                                ? 'bg-red-100 text-red-800'
+                                : record.status === 'late'
+                                ? 'bg-yellow-100 text-yellow-800'
+                                : 'bg-blue-100 text-blue-800'
+                            }`}>
+                              {record.status.charAt(0).toUpperCase() + record.status.slice(1)}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               </div>
-            )}
-            
-            {/* Charts Tab */}
-            {activeTab === 'charts' && (
-              <div>
-                <h4 className="text-lg font-semibold text-gray-900 mb-4">Attendance Charts</h4>
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  <div className="bg-gray-50 rounded-lg p-6">
-                    <h5 className="text-md font-semibold text-gray-900 mb-4">Attendance Distribution</h5>
-                    <div className="h-64 flex items-center justify-center">
-                      <p className="text-gray-500">Attendance distribution chart would be displayed here</p>
-                    </div>
-                  </div>
-                  
-                  <div className="bg-gray-50 rounded-lg p-6">
-                    <h5 className="text-md font-semibold text-gray-900 mb-4">Attendance Trends</h5>
-                    <div className="h-64 flex items-center justify-center">
-                      <p className="text-gray-500">Attendance trend chart would be displayed here</p>
-                    </div>
-                  </div>
-                </div>
-                
-                {/* Attendance Summary at Bottom */}
-                <div className="mt-6 pt-4 border-t border-gray-200">
-                  <h4 className="text-md font-medium text-gray-900 mb-3">Attendance Summary</h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-                    <div className="bg-green-50 rounded-lg p-4">
-                      <div className="text-sm font-medium text-green-800">Present</div>
-                      <div className="text-2xl font-semibold text-green-900">{currentReport.attendance.present}</div>
-                    </div>
-                    <div className="bg-red-50 rounded-lg p-4">
-                      <div className="text-sm font-medium text-red-800">Absent</div>
-                      <div className="text-2xl font-semibold text-red-900">{currentReport.attendance.absent}</div>
-                    </div>
-                    <div className="bg-yellow-50 rounded-lg p-4">
-                      <div className="text-sm font-medium text-yellow-800">Late</div>
-                      <div className="text-2xl font-semibold text-yellow-900">{currentReport.attendance.late}</div>
-                    </div>
-                    <div className="bg-blue-50 rounded-lg p-4">
-                      <div className="text-sm font-medium text-blue-800">Leave</div>
-                      <div className="text-2xl font-semibold text-blue-900">{currentReport.attendance.leave}</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
+            </div>
           </div>
         </div>
       )}
