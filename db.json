@@ -23,7 +23,7 @@
       "religion": "Islam",
       "parentContact": "033354279226",
       "monthlyFees": 0,
-      "feesPaid": 5000,
+      "feesPaid": 14000,
       "totalFees": 5000,
       "familyId": "family-1763406843004",
       "feesHistory": [
@@ -37,10 +37,120 @@
           "status": "paid",
           "type": "admission",
           "paymentTimestamp": "2025-11-17T19:14:03.004Z"
+        },
+        {
+          "id": "challan-1763406843004-1763471809746",
+          "month": "September 2025",
+          "amount": 9000,
+          "dueDate": "2025-11-28",
+          "description": "",
+          "paid": true,
+          "date": "2025-11-18",
+          "status": "paid",
+          "type": "monthly",
+          "generationTimestamp": "2025-11-18T13:16:49.746Z",
+          "paymentMethod": "cash",
+          "paymentTimestamp": "2025-11-18T13:17:16.443Z"
+        },
+        {
+          "id": "challan-1763406843004-1763471864336",
+          "month": "August 2025",
+          "amount": 9000,
+          "dueDate": "2025-11-28",
+          "description": "",
+          "paid": false,
+          "date": null,
+          "status": "pending",
+          "type": "monthly",
+          "generationTimestamp": "2025-11-18T13:17:44.336Z"
         }
       ],
       "status": "studying",
       "admissionTimestamp": "2025-11-17T19:14:03.004Z"
+    },
+    {
+      "id": "1763471772820",
+      "grNo": "2",
+      "firstName": "Muhammad ",
+      "fatherName": "Asghar",
+      "lastName": "Jameel",
+      "photo": "https://i.pravatar.cc/300?img=1",
+      "address": "Near Postal Life Insuarance",
+      "dateOfBirth": "2023-11-07",
+      "birthPlace": "Larkana",
+      "dateOfAdmission": "2025-11-18",
+      "class": "Class 8",
+      "section": "A",
+      "admissionFees": 10000,
+      "lastSchoolAttended": "",
+      "isTransferStudent": false,
+      "dateOfLeaving": "",
+      "classInWhichLeft": "",
+      "reasonOfLeaving": "",
+      "remarks": "",
+      "religion": "Islam",
+      "parentContact": "033354279226",
+      "monthlyFees": 0,
+      "feesPaid": 10000,
+      "totalFees": 10000,
+      "familyId": "family-1763471772821",
+      "feesHistory": [
+        {
+          "id": "challan-1763471772821-0",
+          "month": "Admission Fees",
+          "amount": 10000,
+          "paid": true,
+          "date": "2025-11-18",
+          "dueDate": "2025-11-18",
+          "status": "paid",
+          "type": "admission",
+          "paymentTimestamp": "2025-11-18T13:16:12.821Z"
+        }
+      ],
+      "status": "studying",
+      "admissionTimestamp": "2025-11-18T13:16:12.821Z"
+    },
+    {
+      "id": "1763471984209",
+      "grNo": "3",
+      "firstName": "Robert",
+      "fatherName": "Farid Sheikh",
+      "lastName": "Johnson",
+      "photo": "https://i.pravatar.cc/300?img=105",
+      "address": "Near Postal Life Insuarance",
+      "dateOfBirth": "",
+      "birthPlace": "Larkana",
+      "dateOfAdmission": "2025-11-18",
+      "class": "Class 9",
+      "section": "A",
+      "admissionFees": 50000,
+      "lastSchoolAttended": "",
+      "isTransferStudent": false,
+      "dateOfLeaving": "",
+      "classInWhichLeft": "",
+      "reasonOfLeaving": "",
+      "remarks": "",
+      "religion": "Islam",
+      "parentContact": "033354279226",
+      "monthlyFees": 0,
+      "feesPaid": 50000,
+      "totalFees": 50000,
+      "familyId": "family-1763471984209",
+      "feesHistory": [
+        {
+          "id": "challan-1763471984209-0",
+          "month": "Admission Fees",
+          "amount": 50000,
+          "paid": true,
+          "date": "2025-11-18",
+          "dueDate": "2025-11-18",
+          "status": "paid",
+          "type": "admission",
+          "paymentTimestamp": "2025-11-18T13:19:44.209Z"
+        }
+      ],
+      "status": "studying",
+      "admissionTimestamp": "2025-11-18T13:19:44.210Z"
     }
   ],
   "expenses": [
@@ -51,6 +161,14 @@
       "date": "2025-11-15",
       "category": "Maintenance",
       "addedTimestamp": "2025-11-17T13:45:37.639Z"
+    },
+    {
+      "id": "1763471951974",
+      "description": "Food",
+      "amount": "500",
+      "date": "2025-11-15",
+      "category": "Maintenance",
+      "addedTimestamp": "2025-11-18T13:19:11.974Z"
     }
   ],
   "income": {
@@ -100,6 +218,34 @@
       ],
       "attendance": [],
       "addedTimestamp": "2025-11-17T10:29:16.936Z"
+    },
+    {
+      "id": "1763472162590",
+      "firstName": "Bilal",
+      "lastName": "Ahmad",
+      "phone": "03337227847",
+      "position": "Physics Teacher",
+      "salary": "40000",
+      "dateOfJoining": "2025-10-01",
+      "jobType": "Teaching",
+      "subject": "Physics",
+      "photo": null,
+      "salaryHistory": [
+        {
+          "id": "sal-1763472162590-1763472191199",
+          "month": "2025-10",
+          "baseSalary": 40000,
+          "allowances": 0,
+          "deductions": 0,
+          "netSalary": 40000,
+          "status": "paid",
+          "paymentDate": "2025-11-18",
+          "paymentMethod": "cash",
+          "paymentTimestamp": "2025-11-18T13:23:11.199Z"
+        }
+      ],
+      "attendance": [],
+      "addedTimestamp": "2025-11-18T13:22:42.590Z"
     }
   ],
   "classes": [
@@ -170,6 +316,35 @@
       ],
       "name": "Class 9",
       "monthlyFees": "8000",
+      "totalStudents": 0
+    },
+    {
+      "id": "1763471711709",
+      "subjects": [
+        {
+          "id": "1763471711709-1763471718860",
+          "name": "English",
+          "teacherId": "",
+          "teacherName": "",
+          "maxMarks": 100
+        },
+        {
+          "id": "1763471711709-1763471724708",
+          "name": "Urdu",
+          "teacherId": "",
+          "teacherName": "",
+          "maxMarks": 100
+        }
+      ],
+      "sections": [
+        {
+          "id": "1763471702198-A",
+          "name": "A",
+          "studentCount": 0
+        }
+      ],
+      "name": "Class 8",
+      "monthlyFees": "7500",
       "totalStudents": 0
     }
   ],
@@ -326,23 +501,78 @@
           "status": "absent"
         }
       ]
-    }
-  ],
-  "staffAttendance": [
+    },
     {
-      "id": "1",
-      "date": "2025-11-15",
+      "id": "bf81",
+      "date": "2025-11-18",
       "classId": "Class 10",
       "records": [
         {
-          "studentId": "1",
+          "studentId": "1763406843004",
           "status": "present"
-        },
+        }
+      ]
+    },
+    {
+      "id": "29e3",
+      "date": "2025-11-19",
+      "classId": "Class 10",
+      "records": [
         {
-          "studentId": "4",
+          "studentId": "1763406843004",
           "status": "present"
         }
       ]
     }
-  ]
+  ],
+  "staffAttendance": [
+    {
+      "id": "sa-1",
+      "date": "2025-11-15",
+      "records": [
+        {
+          "staffId": "1763375356936",
+          "status": "present"
+        },
+        {
+          "staffId": "1763472162590",
+          "status": "present"
+        }
+      ]
+    },
+    {
+      "id": "159c",
+      "date": "2025-11-19",
+      "records": [
+        {
+          "staffId": "1763375356936",
+          "status": "absent"
+        },
+        {
+          "staffId": "1763472162590",
+          "status": "present"
+        }
+      ]
+    }
+  ],
+  "settings": {
+    "level": "high",
+    "hasPG": true,
+    "hasNursery": true,
+    "hasKG": true,
+    "holidays": [
+      "2025-11-22",
+      "2025-11-29"
+    ],
+    "vacations": {
+      "summer": {
+        "start": "2025-06-01",
+        "end": "2025-07-31"
+      },
+      "winter": {
+        "start": "2025-12-20",
+        "end": "2026-01-05"
+      }
+    }
+  }
 }

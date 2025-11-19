@@ -4,38 +4,37 @@ import DatePicker from 'react-datepicker';
 import { FaCalendarAlt, FaUserCheck, FaUserTimes, FaSearch, FaSave, FaClock, FaDoorOpen } from 'react-icons/fa';
 import PageHeader from '../common/PageHeader';
 import { addStaffAttendance, fetchStaffAttendanceByDate } from '../../store/staffSlice';
+import { fetchSchoolInfo } from '../../store/settingsSlice';
 import Pagination from '../common/Pagination';
 import 'react-datepicker/dist/react-datepicker.css';
 
-// Pakistani National Holidays (2025)
-const PAKISTANI_HOLIDAYS = [
-  // New Year's Day
-  '2025-01-01',
-  // Kashmir Day
-  '2025-02-05',
-  // Pakistan Day
-  '2025-03-23',
-  // Labour Day
-  '2025-05-01',
-  // Independence Day
-  '2025-08-14',
-  // Iqbal Day
-  '2025-11-09',
-  // Quaid-e-Azam Day
-  '2025-12-25'
-];
+// Add custom styles for disabled dates
+const customDatePickerStyles = `
+  .react-datepicker__day--disabled {
+    color: #cccccc !important;
+    background-color: #f5f5f5 !important;
+    cursor: not-allowed !important;
+    text-decoration: line-through;
+  }
+  
+  .react-datepicker__day--disabled:hover {
+    background-color: #f5f5f5 !important;
+    color: #cccccc !important;
+  }
+`;
 
 const StaffAttendance = () => {
   const dispatch = useDispatch();
   const { staff, attendanceRecords: storedAttendanceRecords, loading, error } = useSelector(state => state.staff);
+  const { schoolInfo } = useSelector(state => state.settings);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDepartment, setSelectedDepartment] = useState('');
   const [attendanceDate, setAttendanceDate] = useState(new Date().toISOString().split('T')[0]);
   const [attendanceRecords, setAttendanceRecords] = useState({});
-  const [selectedStaff, setSelectedStaff] = useState([]); // For bulk selection
+  const [selectedStaff, setSelectedStaff] = useState([]);
 
   // Get unique departments for dropdown
-  const uniqueDepartments = [...new Set(staff.map(member => member.department))];
+  const uniqueDepartments = [...new Set(staff.map(member => member.id))];
 
   // Filter staff based on search term and department
   const filteredStaff = staff.filter(member => {
@@ -54,14 +53,16 @@ const StaffAttendance = () => {
     dispatch(fetchStaffAttendanceByDate(attendanceDate));
   }, [attendanceDate, dispatch]);
 
+  // Fetch school settings when component mounts
+  useEffect(() => {
+    dispatch(fetchSchoolInfo());
+  }, [dispatch]);
+
   // Initialize attendance records with existing data or defaults
   useEffect(() => {
     const initialAttendance = {};
     
-    // If we have stored attendance records for this date, use them
     if (storedAttendanceRecords && storedAttendanceRecords.length > 0) {
-      // storedAttendanceRecords is an array of attendance records for the date
-      // Each record has a records property which is an array of {staffId, status}
       storedAttendanceRecords.forEach(record => {
         if (record.date === attendanceDate) {
           record.records.forEach(staffRecord => {
@@ -71,7 +72,6 @@ const StaffAttendance = () => {
       });
     }
     
-    // For any staff not in existing records, default to present
     filteredStaff.forEach(member => {
       if (!initialAttendance[member.id]) {
         initialAttendance[member.id] = 'present';
@@ -99,11 +99,6 @@ const StaffAttendance = () => {
     });
   };
 
-  // Get attendance status for a staff member
-  const getAttendanceStatus = (staffId) => {
-    return attendanceRecords[staffId] || 'present';
-  };
-
   // Handle checkbox selection
   const handleCheckboxChange = (staffId) => {
     setSelectedStaff(prev => 
@@ -116,10 +111,8 @@ const StaffAttendance = () => {
   // Handle select all
   const handleSelectAll = () => {
     if (selectedStaff.length === filteredStaff.length && filteredStaff.length > 0) {
-      // Deselect all
       setSelectedStaff([]);
     } else {
-      // Select all
       setSelectedStaff(filteredStaff.map(member => member.id));
     }
   };
@@ -131,7 +124,6 @@ const StaffAttendance = () => {
 
   // Save attendance records
   const saveAttendance = () => {
-    // Prepare attendance data for saving
     const attendanceData = {
       date: attendanceDate,
       records: Object.entries(attendanceRecords).map(([staffId, status]) => ({
@@ -140,7 +132,6 @@ const StaffAttendance = () => {
       }))
     };
     
-    // Dispatch action to save attendance
     dispatch(addStaffAttendance(attendanceData))
       .then(() => {
         alert(`Attendance records saved for ${Object.keys(attendanceRecords).length} staff members`);
@@ -163,7 +154,7 @@ const StaffAttendance = () => {
     });
     
     setAttendanceRecords(updatedAttendance);
-    setSelectedStaff([]); // Clear selection after marking
+    setSelectedStaff([]);
   };
 
   // Mark all as present
@@ -224,7 +215,7 @@ const StaffAttendance = () => {
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(10); // Adjust as needed
+  const [itemsPerPage] = useState(10);
 
   // Calculate pagination values
   const totalPages = Math.ceil(filteredStaff.length / itemsPerPage);
@@ -242,22 +233,116 @@ const StaffAttendance = () => {
   const nextPage = () => setCurrentPage(prev => Math.min(prev + 1, totalPages));
   const prevPage = () => setCurrentPage(prev => Math.max(prev - 1, 1));
 
+  // Get holidays from settings or use default
+  const schoolHolidays = (schoolInfo && schoolInfo.holidays && Array.isArray(schoolInfo.holidays) && schoolInfo.holidays.length > 0) 
+    ? schoolInfo.holidays 
+    : [
+      '2025-01-01',
+      '2025-02-05',
+      '2025-03-23',
+      '2025-05-01',
+      '2025-08-14',
+      '2025-11-09',
+      '2025-12-25'
+    ];
+  
+  // Get vacations from settings or use default
+  const schoolVacations = schoolInfo?.vacations || {
+    summer: { start: '2025-06-01', end: '2025-07-31' },
+    winter: { start: '2025-12-20', end: '2026-01-05' }
+  };
+
+  // Helper function to check if a date is within a vacation period
+  const isDateInVacation = (date) => {
+    const dateStr = date.toISOString().split('T')[0];
+    
+    if (schoolVacations.summer.start && schoolVacations.summer.end) {
+      if (dateStr >= schoolVacations.summer.start && dateStr <= schoolVacations.summer.end) {
+        return true;
+      }
+    }
+    
+    if (schoolVacations.winter.start && schoolVacations.winter.end) {
+      if (dateStr >= schoolVacations.winter.start && dateStr <= schoolVacations.winter.end) {
+        return true;
+      }
+    }
+    
+    return false;
+  };
+
+  // Force styling of holiday dates
+  useEffect(() => {
+    if (schoolInfo && schoolInfo.holidays && schoolInfo.holidays.length > 0) {
+      const timeout = setTimeout(() => {
+        const datePickerContainer = document.querySelector('.react-datepicker');
+        if (datePickerContainer) {
+          const dayElements = datePickerContainer.querySelectorAll('.react-datepicker__day');
+          
+          dayElements.forEach(element => {
+            if (element.classList.contains('react-datepicker__day--disabled')) {
+              return;
+            }
+            
+            const dayText = element.textContent;
+            if (dayText && attendanceDate) {
+              try {
+                const [year, month] = attendanceDate.split('-');
+                const day = parseInt(dayText, 10);
+                
+                const paddedMonth = month.padStart(2, '0');
+                const paddedDay = day.toString().padStart(2, '0');
+                const dateStr = `${year}-${paddedMonth}-${paddedDay}`;
+                
+                if (schoolInfo.holidays.includes(dateStr)) {
+                  element.classList.add('react-datepicker__day--disabled');
+                  element.style.color = '#cccccc';
+                  element.style.backgroundColor = '#f5f5f5';
+                  element.style.cursor = 'not-allowed';
+                  element.style.textDecoration = 'line-through';
+                }
+              } catch (e) {
+              }
+            }
+          });
+        }
+      }, 150);
+      
+      return () => clearTimeout(timeout);
+    }
+  }, [schoolInfo, attendanceDate, schoolHolidays]);
+
   return (
     <>
+      {/* Inject custom styles for DatePicker */}
+      <style>{customDatePickerStyles}</style>
+      
       <PageHeader
         title="Staff Attendance"
         subtitle="Manage staff attendance manually"
         actionButton={
           <button
             onClick={saveAttendance}
-            disabled={Object.keys(attendanceRecords).length === 0}
+            disabled={loading}
             className={`inline-flex items-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white transition-all duration-200 ${
-              Object.keys(attendanceRecords).length === 0
-                ? 'bg-gray-400 cursor-not-allowed'
+              loading 
+                ? 'bg-gray-400 cursor-not-allowed' 
                 : 'bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500'
             }`}
           >
-            <FaSave className="mr-2" /> Save Attendance
+            {loading ? (
+              <>
+                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Saving...
+              </>
+            ) : (
+              <>
+                <FaSave className="mr-2" /> Save Attendance
+              </>
+            )}
           </button>
         }
       />
@@ -277,52 +362,54 @@ const StaffAttendance = () => {
         </div>
       )}
 
-      {/* Filters and Controls */}
+      {/* Attendance Controls - MATCH STUDENT LAYOUT */}
       <div className="bg-white rounded-2xl shadow-lg p-6 mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+        <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr_2fr] gap-4 mb-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Attendance Date</label>
             <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <div className="absolute z-10 inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                 <FaCalendarAlt className="h-5 w-5 text-gray-400" />
               </div>
               <DatePicker
+                key={schoolInfo ? `loaded-${JSON.stringify(schoolInfo.holidays || [])}` : "loading"}
                 selected={attendanceDate ? new Date(attendanceDate) : new Date()}
                 onChange={(date) => {
-                  // Check if selected date is Sunday (0 = Sunday)
-                  if (date.getDay() !== 0) {
-                    setAttendanceDate(date.toISOString().split('T')[0]);
-                  }
+                  if (date.getDay() === 0) return;
+                  const dateString = date.toISOString().split('T')[0];
+                  if (schoolHolidays && schoolHolidays.includes(dateString)) return;
+                  if (isDateInVacation(date)) return;
+                  setAttendanceDate(date.toISOString().split('T')[0]);
                 }}
                 filterDate={(date) => {
-                  // Disable Sundays
                   if (date.getDay() === 0) return false;
-                  
-                  // Disable Pakistani national holidays
                   const dateString = date.toISOString().split('T')[0];
-                  if (PAKISTANI_HOLIDAYS.includes(dateString)) return false;
-                  
+                  if (schoolHolidays && schoolHolidays.includes(dateString)) return false;
+                  if (isDateInVacation(date)) return false;
                   return true;
+                }}
+                dayClassName={(date) => {
+                  const dateString = date.toISOString().split('T')[0];
+                  let classes = '';
+                  if (date.getDay() === 0) {
+                    classes += 'react-datepicker__day--disabled ';
+                  }
+                  if (schoolHolidays && Array.isArray(schoolHolidays) && schoolHolidays.includes(dateString)) {
+                    classes += 'react-datepicker__day--disabled ';
+                  }
+                  if (isDateInVacation(date)) {
+                    classes += 'react-datepicker__day--disabled ';
+                  }
+                  if (date.getDay() === 0 || date.getDay() === 6) {
+                    classes += 'react-datepicker__day--weekend ';
+                  }
+                  return classes.trim();
                 }}
                 className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
                 placeholderText="Select Date"
               />
             </div>
-            <p className="mt-1 text-xs text-gray-500">Note: Sundays and Pakistani national holidays are disabled as school is closed</p>
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Department</label>
-            <select
-              value={selectedDepartment}
-              onChange={(e) => setSelectedDepartment(e.target.value)}
-              className="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="">All Departments</option>
-              {uniqueDepartments.map((dept) => (
-                <option key={dept} value={dept}>{dept}</option>
-              ))}
-            </select>
+            <p className="mt-1 text-xs text-gray-500">Note: Sundays, holidays, and vacation periods are disabled as school is closed</p>
           </div>
           
           <div>
@@ -341,25 +428,23 @@ const StaffAttendance = () => {
             </div>
           </div>
           
-          <div className="flex items-end space-x-2">
-            <button
-              onClick={markAllPresent}
-              className="flex-1 inline-flex items-center justify-center px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-green-700 bg-green-50 hover:bg-green-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
-            >
-              <FaUserCheck className="mr-1" /> All Present
-            </button>
-            <button
-              onClick={markAllAbsent}
-              className="flex-1 inline-flex items-center justify-center px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-red-700 bg-red-50 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-            >
-              <FaUserTimes className="mr-1" /> All Absent
-            </button>
-          </div>
-        </div>
-        
-        {/* Additional Bulk Actions */}
-        <div className="flex flex-wrap gap-2">
-          <button
+          {/* Quick Actions - MATCH STUDENT LAYOUT */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-3">Quick Actions</label>
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={markAllPresent}
+                className="inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded-lg text-white bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+              >
+                <FaUserCheck className="mr-1" /> Mark All Present
+              </button>
+              <button
+                onClick={markAllAbsent}
+                className="inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded-lg text-white bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+              >
+                <FaUserTimes className="mr-1" /> Mark All Absent
+              </button>
+              <button
             onClick={markAllLate}
             className="inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded-lg text-white bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500"
           >
@@ -371,10 +456,17 @@ const StaffAttendance = () => {
           >
             <FaDoorOpen className="mr-1" /> Mark All Leave
           </button>
+            </div>
+          </div>
+        </div>
+        
+        {/* Additional Bulk Actions - MATCH STUDENT LAYOUT */}
+        <div className="flex flex-wrap gap-2">
+          
         </div>
       </div>
 
-      {/* Bulk Selection Actions */}
+      {/* Bulk Selection Actions - MATCH STUDENT LAYOUT */}
       {selectedStaff.length > 0 && (
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
           <div className="flex flex-wrap items-center justify-between">
@@ -417,27 +509,47 @@ const StaffAttendance = () => {
         </div>
       )}
 
-      {/* Attendance Summary Cards - Moved to top */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <div className="bg-green-50 rounded-lg p-4 shadow">
-          <div className="text-sm font-medium text-green-800">Present</div>
-          <div className="text-2xl font-semibold text-green-900">{attendanceSummary.presentCount}</div>
+      {/* Attendance Summary Cards - MATCH STUDENT LAYOUT */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div className="bg-gradient-to-r from-green-500 to-green-600 rounded-xl shadow-lg p-4 text-white">
+          <div className="flex items-center">
+            <FaUserCheck className="h-8 w-8 mr-3" />
+            <div>
+              <p className="text-sm font-medium text-green-100">Present</p>
+              <p className="text-2xl font-bold">{attendanceSummary.presentCount}</p>
+            </div>
+          </div>
         </div>
-        <div className="bg-red-50 rounded-lg p-4 shadow">
-          <div className="text-sm font-medium text-red-800">Absent</div>
-          <div className="text-2xl font-semibold text-red-900">{attendanceSummary.absentCount}</div>
+        <div className="bg-gradient-to-r from-red-500 to-red-600 rounded-xl shadow-lg p-4 text-white">
+          <div className="flex items-center">
+            <FaUserTimes className="h-8 w-8 mr-3" />
+            <div>
+              <p className="text-sm font-medium text-red-100">Absent</p>
+              <p className="text-2xl font-bold">{attendanceSummary.absentCount}</p>
+            </div>
+          </div>
         </div>
-        <div className="bg-yellow-50 rounded-lg p-4 shadow">
-          <div className="text-sm font-medium text-yellow-800">Late</div>
-          <div className="text-2xl font-semibold text-yellow-900">{attendanceSummary.lateCount}</div>
+        <div className="bg-gradient-to-r from-yellow-500 to-yellow-600 rounded-xl shadow-lg p-4 text-white">
+          <div className="flex items-center">
+            <FaClock className="h-8 w-8 mr-3" />
+            <div>
+              <p className="text-sm font-medium text-yellow-100">Late</p>
+              <p className="text-2xl font-bold">{attendanceSummary.lateCount}</p>
+            </div>
+          </div>
         </div>
-        <div className="bg-blue-50 rounded-lg p-4 shadow">
-          <div className="text-sm font-medium text-blue-800">Leave</div>
-          <div className="text-2xl font-semibold text-blue-900">{attendanceSummary.leaveCount}</div>
+        <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl shadow-lg p-4 text-white">
+          <div className="flex items-center">
+            <FaDoorOpen className="h-8 w-8 mr-3" />
+            <div>
+              <p className="text-sm font-medium text-blue-100">Leave</p>
+              <p className="text-2xl font-bold">{attendanceSummary.leaveCount}</p>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Staff Attendance Table */}
+      {/* Staff Attendance Table - MATCH STUDENT LAYOUT */}
       <div className="bg-white rounded-2xl shadow-lg p-6">
         <div className="flex flex-wrap items-center justify-between mb-4">
           <h3 className="text-lg font-semibold text-gray-900">
@@ -468,21 +580,19 @@ const StaffAttendance = () => {
                     type="checkbox"
                     checked={selectedStaff.length > 0 && selectedStaff.length === filteredStaff.length}
                     onChange={handleSelectAll}
-                    className="h-4 w-4 text-blue-600 rounded focus:ring-blue-500"
+                    className="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
                   />
                 </th>
-                <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Staff Member</th>
+                <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Photo</th>
+                <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
                 <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Department</th>
                 <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Position</th>
-                <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Present</th>
-                <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Absent</th>
-                <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Late</th>
-                <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Leave</th>
+                <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {currentStaff.map((member) => (
-                <tr key={member.id} className="hover:bg-gray-50">
+                <tr key={member.id} className={`hover:bg-gray-50 ${selectedStaff.includes(member.id) ? 'bg-blue-50' : ''}`}>
                   <td className="px-4 py-3 whitespace-nowrap text-sm">
                     <input
                       type="checkbox"
@@ -498,73 +608,49 @@ const StaffAttendance = () => {
                           {member.firstName.charAt(0)}{member.lastName.charAt(0)}
                         </div>
                       </div>
-                      <div className="ml-4">
-                        <div className="text-sm font-medium text-gray-900">{member.firstName} {member.lastName}</div>
-                        <div className="text-sm text-gray-500">{member.email}</div>
-                      </div>
                     </div>
                   </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <div className="text-sm font-medium text-gray-900">{member.firstName} {member.lastName}</div>
+                    <div className="text-sm text-gray-500">{member.email}</div>
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
                     {member.department}
                   </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
                     {member.position}
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap">
-                    <button
-                      onClick={() => setAttendanceStatus(member.id, 'present')}
-                      className={getButtonClass(member.id, 'present')}
-                    >
-                      <FaUserCheck className="mr-1" /> Present
-                    </button>
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap">
-                    <button
-                      onClick={() => setAttendanceStatus(member.id, 'absent')}
-                      className={getButtonClass(member.id, 'absent')}
-                    >
-                      <FaUserTimes className="mr-1" /> Absent
-                    </button>
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap">
-                    <button
-                      onClick={() => setAttendanceStatus(member.id, 'late')}
-                      className={getButtonClass(member.id, 'late')}
-                    >
-                      <FaClock className="mr-1" /> Late
-                    </button>
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap">
-                    <button
-                      onClick={() => setAttendanceStatus(member.id, 'leave')}
-                      className={getButtonClass(member.id, 'leave')}
-                    >
-                      <FaDoorOpen className="mr-1" /> Leave
-                    </button>
+                    <div className="flex space-x-2">
+                      <button
+                        onClick={() => setAttendanceStatus(member.id, 'present')}
+                        className={getButtonClass(member.id, 'present')}
+                      >
+                        <FaUserCheck className="mr-1" /> Present
+                      </button>
+                      <button
+                        onClick={() => setAttendanceStatus(member.id, 'absent')}
+                        className={getButtonClass(member.id, 'absent')}
+                      >
+                        <FaUserTimes className="mr-1" /> Absent
+                      </button>
+                      <button
+                        onClick={() => setAttendanceStatus(member.id, 'late')}
+                        className={getButtonClass(member.id, 'late')}
+                      >
+                        <FaClock className="mr-1" /> Late
+                      </button>
+                      <button
+                        onClick={() => setAttendanceStatus(member.id, 'leave')}
+                        className={getButtonClass(member.id, 'leave')}
+                      >
+                        <FaDoorOpen className="mr-1" /> Leave
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
             </tbody>
-            {/* Summary Row at Bottom */}
-            <tfoot className="bg-gray-50">
-              <tr>
-                <td colSpan="4" className="px-4 py-3 text-sm font-medium text-gray-900">
-                  Total Staff: {filteredStaff.length}
-                </td>
-                <td className="px-4 py-3 text-sm text-green-700 font-medium">
-                  <FaUserCheck className="inline mr-1" /> Present: {attendanceSummary.presentCount}
-                </td>
-                <td className="px-4 py-3 text-sm text-red-700 font-medium">
-                  <FaUserTimes className="inline mr-1" /> Absent: {attendanceSummary.absentCount}
-                </td>
-                <td className="px-4 py-3 text-sm text-yellow-700 font-medium">
-                  <FaClock className="inline mr-1" /> Late: {attendanceSummary.lateCount}
-                </td>
-                <td className="px-4 py-3 text-sm text-blue-700 font-medium">
-                  <FaDoorOpen className="inline mr-1" /> Leave: {attendanceSummary.leaveCount}
-                </td>
-              </tr>
-            </tfoot>
           </table>
           {filteredStaff.length === 0 && (
             <div className="text-center py-12">

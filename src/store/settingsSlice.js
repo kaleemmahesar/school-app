@@ -2,86 +2,56 @@ import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { createAsyncThunkWithToast } from '../utils/asyncThunkUtils';
 import { SCHOOL_CONFIG } from '../config/schoolConfig';
 
-// Initial state for school settings - now using the configuration file
-const initialState = {
-  schoolInfo: {
-    name: SCHOOL_CONFIG.name,
-    logo: SCHOOL_CONFIG.logo,
-    level: SCHOOL_CONFIG.level,
-    fundingType: SCHOOL_CONFIG.fundingType,
-    hasPG: SCHOOL_CONFIG.hasPG,
-    hasNursery: SCHOOL_CONFIG.hasNursery,
-    hasKG: SCHOOL_CONFIG.hasKG,
-    theme: 'light', // 'light', 'dark', or 'system'
-    sidebarCollapsed: false,
-    dateFormat: 'DD/MM/YYYY',
-    currency: 'PKR',
-    levelDetails: {
-      primary: { from: 1, to: 5 },
-      middle: { from: 6, to: 8 },
-      high: { from: 9, to: 10 }
-    },
-    gradingStructure: SCHOOL_CONFIG.gradingStructure
-  },
-  loading: false,
-  error: null,
-};
+// Async thunk for fetching school settings from the API
+export const fetchSchoolInfo = createAsyncThunk(
+  'settings/fetchSchoolInfo',
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await fetch('http://localhost:3001/settings');
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch school settings');
+      }
+      
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      return rejectWithValue(error.message || 'Failed to fetch school information');
+    }
+  }
+);
 
-// Async thunks for API calls (mock implementation)
+// Async thunk for updating school settings via the API
 export const updateSchoolInfo = createAsyncThunk(
   'settings/updateSchoolInfo',
-  async (schoolData, { rejectWithValue }) => {
+  async (settingsData, { rejectWithValue }) => {
     try {
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 500));
+      const response = await fetch('http://localhost:3001/settings', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(settingsData),
+      });
       
-      // In a real app, this would be an API call
-      // const response = await api.put('/school/settings', schoolData);
-      // return response.data;
+      if (!response.ok) {
+        throw new Error('Failed to update school settings');
+      }
       
-      return schoolData;
+      const data = await response.json();
+      return data;
     } catch (error) {
       return rejectWithValue(error.message || 'Failed to update school information');
     }
   }
 );
 
-export const fetchSchoolInfo = createAsyncThunk(
-  'settings/fetchSchoolInfo',
-  async (_, { rejectWithValue }) => {
-    try {
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // In a real app, this would be an API call
-      // const response = await api.get('/school/settings');
-      // return response.data;
-      
-      // Return data from the configuration file
-      return {
-        name: SCHOOL_CONFIG.name,
-        logo: SCHOOL_CONFIG.logo,
-        level: SCHOOL_CONFIG.level,
-        fundingType: SCHOOL_CONFIG.fundingType,
-        hasPG: SCHOOL_CONFIG.hasPG,
-        hasNursery: SCHOOL_CONFIG.hasNursery,
-        hasKG: SCHOOL_CONFIG.hasKG,
-        theme: 'light',
-        sidebarCollapsed: false,
-        dateFormat: 'DD/MM/YYYY',
-        currency: 'PKR',
-        levelDetails: {
-          primary: { from: 1, to: 5 },
-          middle: { from: 6, to: 8 },
-          high: { from: 9, to: 10 }
-        },
-        gradingStructure: SCHOOL_CONFIG.gradingStructure
-      };
-    } catch (error) {
-      return rejectWithValue(error.message || 'Failed to fetch school information');
-    }
-  }
-);
+// Initial state
+const initialState = {
+  schoolInfo: null,
+  loading: false,
+  error: null,
+};
 
 const settingsSlice = createSlice({
   name: 'settings',
@@ -91,6 +61,12 @@ const settingsSlice = createSlice({
       state.error = null;
     },
     resetSettings: () => initialState,
+    // Add a reducer to update holidays
+    setHolidays: (state, action) => {
+      if (state.schoolInfo) {
+        state.schoolInfo.holidays = action.payload;
+      }
+    }
   },
   extraReducers: (builder) => {
     builder
@@ -123,5 +99,5 @@ const settingsSlice = createSlice({
   },
 });
 
-export const { clearError, resetSettings } = settingsSlice.actions;
+export const { clearError, resetSettings, setHolidays } = settingsSlice.actions;
 export default settingsSlice.reducer;

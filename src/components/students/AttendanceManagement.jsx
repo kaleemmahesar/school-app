@@ -4,31 +4,30 @@ import DatePicker from 'react-datepicker';
 import { FaCalendarAlt, FaUserCheck, FaUserTimes, FaSearch, FaSave, FaClock, FaCalendarDay } from 'react-icons/fa';
 import PageHeader from '../common/PageHeader';
 import { addNewAttendanceRecord, fetchAttendanceByDateAndClass } from '../../store/attendanceSlice';
+import { fetchSchoolInfo } from '../../store/settingsSlice'; // Add this import
 import Pagination from '../common/Pagination';
 import 'react-datepicker/dist/react-datepicker.css';
 
-// Pakistani National Holidays (2025)
-const PAKISTANI_HOLIDAYS = [
-  // New Year's Day
-  '2025-01-01',
-  // Kashmir Day
-  '2025-02-05',
-  // Pakistan Day
-  '2025-03-23',
-  // Labour Day
-  '2025-05-01',
-  // Independence Day
-  '2025-08-14',
-  // Iqbal Day
-  '2025-11-09',
-  // Quaid-e-Azam Day
-  '2025-12-25'
-];
+// Add custom styles for disabled dates
+const customDatePickerStyles = `
+  .react-datepicker__day--disabled {
+    color: #cccccc !important;
+    background-color: #f5f5f5 !important;
+    cursor: not-allowed !important;
+    text-decoration: line-through;
+  }
+  
+  .react-datepicker__day--disabled:hover {
+    background-color: #f5f5f5 !important;
+    color: #cccccc !important;
+  }
+`;
 
 const AttendanceManagement = () => {
   const dispatch = useDispatch();
   const { students } = useSelector(state => state.students);
   const { attendanceRecords: storedAttendanceRecords, loading, error } = useSelector(state => state.attendance);
+  const { schoolInfo } = useSelector(state => state.settings); // Get school info for holidays
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedClass, setSelectedClass] = useState('Class 10');
   const [selectedSection, setSelectedSection] = useState('');
@@ -39,7 +38,6 @@ const AttendanceManagement = () => {
   // Get unique classes for dropdown
   const uniqueClasses = useMemo(() => [...new Set(students.map(student => student.class))], [students]);
 
-  
   
   // Get sections for selected class
   const classSections = useMemo(() => selectedClass 
@@ -63,52 +61,46 @@ const AttendanceManagement = () => {
   }), [students, searchTerm, selectedClass, selectedSection]);
 
   // Load existing attendance records for the selected date and class
-useEffect(() => {
-  if (selectedDate) {
-    // Fetch attendance for the selected date, with or without class filter
-    dispatch(fetchAttendanceByDateAndClass({ date: selectedDate, classId: selectedClass || '' }));
-  }
-}, [selectedClass, selectedDate, dispatch]);
+  useEffect(() => {
+    if (selectedDate) {
+      // Fetch attendance for the selected date, with or without class filter
+      dispatch(fetchAttendanceByDateAndClass({ date: selectedDate, classId: selectedClass || '' }));
+    }
+  }, [selectedClass, selectedDate, dispatch]);
+
+  // Fetch school settings when component mounts
+  useEffect(() => {
+    dispatch(fetchSchoolInfo());
+  }, [dispatch]);
 
   // Initialize attendance records with existing data or defaults
-useEffect(() => {
-  const initialAttendance = {};
-  console.log('storedAttendanceRecords:', storedAttendanceRecords);
-console.log('selectedDate:', selectedDate);
-console.log('selectedClass:', selectedClass);
-  // If we have stored attendance records for this date and class, use them
-  console.log('Processing storedAttendanceRecords:', storedAttendanceRecords);
-  if (storedAttendanceRecords && storedAttendanceRecords.length > 0) {
-    // The API returns an array, and we need to check each record
-    storedAttendanceRecords.forEach(record => {
-      console.log('Checking record:', record);
-      // Check if record matches the selected date and class (if class is selected)
-      const dateMatches = record.date === selectedDate;
-      const classMatches = selectedClass ? record.classId === selectedClass : true;
-      
-      if (dateMatches && classMatches) {
-        console.log('Found matching record, processing records:', record.records);
-        record.records.forEach(studentRecord => {
-          initialAttendance[studentRecord.studentId] = studentRecord.status;
-          console.log(`Setting student ${studentRecord.studentId} to ${studentRecord.status}`);
-        });
+  useEffect(() => {
+    const initialAttendance = {};
+    // If we have stored attendance records for this date and class, use them
+    if (storedAttendanceRecords && storedAttendanceRecords.length > 0) {
+      // The API returns an array, and we need to check each record
+      storedAttendanceRecords.forEach(record => {
+        // Check if record matches the selected date and class (if class is selected)
+        const dateMatches = record.date === selectedDate;
+        const classMatches = selectedClass ? record.classId === selectedClass : true;
+        
+        if (dateMatches && classMatches) {
+          record.records.forEach(studentRecord => {
+            initialAttendance[studentRecord.studentId] = studentRecord.status;
+          });
+        }
+      });
+    }
+    
+    // For any students not in existing records, default to absent
+    filteredStudents.forEach(student => {
+      if (!initialAttendance.hasOwnProperty(student.id)) {
+        initialAttendance[student.id] = 'absent';
       }
     });
-  }
-  
-  // For any students not in existing records, default to absent
-  console.log('Setting defaults for students without records:');
-  filteredStudents.forEach(student => {
-    if (!initialAttendance.hasOwnProperty(student.id)) {
-      initialAttendance[student.id] = 'absent';
-      console.log(`Setting student ${student.id} to absent (default)`);
-    } else {
-      console.log(`Student ${student.id} already has status: ${initialAttendance[student.id]}`);
-    }
-  });
-  
-  setAttendanceRecords(initialAttendance);
-}, [storedAttendanceRecords, selectedDate, selectedClass, filteredStudents]);
+    
+    setAttendanceRecords(initialAttendance);
+  }, [storedAttendanceRecords, selectedDate, selectedClass, filteredStudents]);
 
   // Handle attendance status change
   const handleAttendanceChange = (studentId, status) => {
@@ -196,7 +188,6 @@ console.log('selectedClass:', selectedClass);
     setSelectedStudents([]); // Clear selection after marking
   };
   
-
   // Get attendance summary
   const getAttendanceSummary = () => {
     const presentCount = Object.values(attendanceRecords).filter(status => status === 'present').length;
@@ -252,8 +243,104 @@ console.log('selectedClass:', selectedClass);
   const nextPage = () => setCurrentPage(prev => Math.min(prev + 1, totalPages));
   const prevPage = () => setCurrentPage(prev => Math.max(prev - 1, 1));
 
+  // Get holidays from settings or use default
+  const schoolHolidays = (schoolInfo && schoolInfo.holidays && Array.isArray(schoolInfo.holidays) && schoolInfo.holidays.length > 0) 
+    ? schoolInfo.holidays 
+    : [
+      '2025-01-01', // New Year's Day
+      '2025-02-05', // Kashmir Day
+      '2025-03-23', // Pakistan Day
+      '2025-05-01', // Labour Day
+      '2025-08-14', // Independence Day
+      '2025-11-09', // Iqbal Day
+      '2025-12-25'  // Quaid-e-Azam Day
+    ];
+  
+  // Get vacations from settings or use default
+  const schoolVacations = schoolInfo?.vacations || {
+    summer: { start: '2025-06-01', end: '2025-07-31' },
+    winter: { start: '2025-12-20', end: '2026-01-05' }
+  };
+
+  // Helper function to check if a date is within a vacation period
+  const isDateInVacation = (date) => {
+    const dateStr = date.toISOString().split('T')[0];
+    
+    // Check summer vacation
+    if (schoolVacations.summer.start && schoolVacations.summer.end) {
+      if (dateStr >= schoolVacations.summer.start && dateStr <= schoolVacations.summer.end) {
+        return true;
+      }
+    }
+    
+    // Check winter vacation
+    if (schoolVacations.winter.start && schoolVacations.winter.end) {
+      if (dateStr >= schoolVacations.winter.start && dateStr <= schoolVacations.winter.end) {
+        return true;
+      }
+    }
+    
+    return false;
+  };
+
+  // Force styling of holiday dates
+  useEffect(() => {
+    // Only run this after schoolInfo is loaded
+    if (schoolInfo && schoolInfo.holidays && schoolInfo.holidays.length > 0) {
+      // Small delay to ensure DatePicker has rendered
+      const timeout = setTimeout(() => {
+        // Get the date picker container
+        const datePickerContainer = document.querySelector('.react-datepicker');
+        if (datePickerContainer) {
+          // Get all date picker day elements
+          const dayElements = datePickerContainer.querySelectorAll('.react-datepicker__day');
+          
+          dayElements.forEach(element => {
+            // Skip if already disabled
+            if (element.classList.contains('react-datepicker__day--disabled')) {
+              return;
+            }
+            
+            // Try to get the date from the element's attributes or text
+            const dayText = element.textContent;
+            if (dayText && selectedDate) {
+              try {
+                // Create a date object for the first day of the selected month
+                const [year, month] = selectedDate.split('-');
+                const day = parseInt(dayText, 10);
+                
+                // Create date string in YYYY-MM-DD format
+                const paddedMonth = month.padStart(2, '0');
+                const paddedDay = day.toString().padStart(2, '0');
+                const dateStr = `${year}-${paddedMonth}-${paddedDay}`;
+                
+                // Check if this date is a holiday
+                if (schoolInfo.holidays.includes(dateStr)) {
+                  // Add disabled class
+                  element.classList.add('react-datepicker__day--disabled');
+                  // Also add inline styles for immediate visual feedback
+                  element.style.color = '#cccccc';
+                  element.style.backgroundColor = '#f5f5f5';
+                  element.style.cursor = 'not-allowed';
+                  element.style.textDecoration = 'line-through';
+                }
+              } catch (e) {
+                // Ignore errors in date parsing
+              }
+            }
+          });
+        }
+      }, 150); // Increased delay to ensure DatePicker is fully rendered
+      
+      return () => clearTimeout(timeout);
+    }
+  }, [schoolInfo, selectedDate, schoolHolidays]);
+
   return (
     <>
+      {/* Inject custom styles for DatePicker */}
+      <style>{customDatePickerStyles}</style>
+      
       <PageHeader
         title="Attendance Management"
         subtitle="Track student attendance manually"
@@ -309,28 +396,67 @@ console.log('selectedClass:', selectedClass);
                 <FaCalendarAlt className="h-5 w-5 text-gray-400" />
               </div>
               <DatePicker
+                key={schoolInfo ? `loaded-${JSON.stringify(schoolInfo.holidays || [])}` : "loading"}
                 selected={selectedDate ? new Date(selectedDate) : new Date()}
                 onChange={(date) => {
                   // Check if selected date is Sunday (0 = Sunday)
-                  if (date.getDay() !== 0) {
-                    setSelectedDate(date.toISOString().split('T')[0]);
-                  }
+                  if (date.getDay() === 0) return;
+                  
+                  // Check if selected date is a holiday
+                  const dateString = date.toISOString().split('T')[0];
+                  if (schoolHolidays && schoolHolidays.includes(dateString)) return;
+                  
+                  // Check if selected date is in vacation period
+                  if (isDateInVacation(date)) return;
+                  
+                  setSelectedDate(date.toISOString().split('T')[0]);
                 }}
                 filterDate={(date) => {
                   // Disable Sundays
                   if (date.getDay() === 0) return false;
                   
-                  // Disable Pakistani national holidays
+                  // Disable school holidays
                   const dateString = date.toISOString().split('T')[0];
-                  if (PAKISTANI_HOLIDAYS.includes(dateString)) return false;
+                  if (schoolHolidays && schoolHolidays.includes(dateString)) return false;
+                  
+                  // Disable vacation periods
+                  if (isDateInVacation(date)) return false;
                   
                   return true;
+                }}
+                dayClassName={(date) => {
+                  // Add special styling for Sundays, holidays, and vacation periods
+                  const dateString = date.toISOString().split('T')[0];
+                  let classes = '';
+                  
+                  // Check if it's a Sunday
+                  if (date.getDay() === 0) {
+                    classes += 'react-datepicker__day--disabled ';
+                  }
+                  
+                  // Check if it's a holiday (using the same logic as filterDate)
+                  // Ensure schoolHolidays is properly loaded before checking
+                  if (schoolHolidays && Array.isArray(schoolHolidays) && schoolHolidays.includes(dateString)) {
+                    classes += 'react-datepicker__day--disabled '; // Use the same class as Sundays
+                  }
+                  
+                  // Check if it's in a vacation period (using the same logic as filterDate)
+                  if (isDateInVacation(date)) {
+                    classes += 'react-datepicker__day--disabled ';
+                  }
+                  
+                  // Check if it's a weekend (Saturday or Sunday)
+                  if (date.getDay() === 0 || date.getDay() === 6) {
+                    classes += 'react-datepicker__day--weekend ';
+                  }
+                  
+                  return classes.trim();
                 }}
                 className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
                 placeholderText="Select Date"
               />
             </div>
-            <p className="mt-1 text-xs text-gray-500">Note: Sundays and Pakistani national holidays are disabled as school is closed</p>
+            <p className="mt-1 text-xs text-gray-500">Note: Sundays, holidays, and vacation periods are disabled as school is closed</p>
           </div>
           
           <div>
@@ -400,7 +526,6 @@ console.log('selectedClass:', selectedClass);
       </div>
 
       
-
       {/* Attendance Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <div className="bg-gradient-to-r from-green-500 to-green-600 rounded-xl shadow-lg p-4 text-white">

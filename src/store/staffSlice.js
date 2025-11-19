@@ -18,12 +18,21 @@ export const fetchStaff = createAsyncThunk('staff/fetchStaff', async () => {
   return await response.json();
 });
 
-// Fetch staff attendance by date
+// Fetch staff attendance by date - UPDATED TO USE REAL API
 export const fetchStaffAttendanceByDate = createAsyncThunk('staff/fetchStaffAttendanceByDate', async (date) => {
-  // Simulate API call
-  await new Promise(resolve => setTimeout(resolve, 500));
-  const records = await getStaffAttendanceByDate(date);
-  return records;
+  try {
+    const response = await fetch(`${API_BASE_URL}/staffAttendance?date=${date}`);
+    if (!response.ok) {
+      throw new Error('Failed to fetch staff attendance');
+    }
+    const records = await response.json();
+    return records;
+  } catch (error) {
+    // Fallback to mock API if real API fails
+    await new Promise(resolve => setTimeout(resolve, 500));
+    const records = await getStaffAttendanceByDate(date);
+    return records;
+  }
 });
 
 export const addStaff = createAsyncThunk('staff/addStaff', async (newStaff) => {
@@ -203,12 +212,56 @@ export const payStaffSalary = createAsyncThunk('staff/payStaffSalary', async ({ 
   return await response.json();
 });
 
+// Add staff attendance - UPDATED TO USE REAL API
 export const addStaffAttendance = createAsyncThunk('staff/addStaffAttendance', async ({ date, records }) => {
-  // Simulate API call
-  await new Promise(resolve => setTimeout(resolve, 500));
-  // Also save to the mock API
-  await addStaffAttendanceRecord({ date, records });
-  return { date, records };
+  try {
+    // First, check if attendance record for this date already exists
+    const existingResponse = await fetch(`${API_BASE_URL}/staffAttendance?date=${date}`);
+    let existingRecords = [];
+    if (existingResponse.ok) {
+      existingRecords = await existingResponse.json();
+    }
+    
+    const attendanceData = { date, records };
+    
+    if (existingRecords && existingRecords.length > 0) {
+      // Update existing record
+      const existingRecord = existingRecords[0];
+      const response = await fetch(`${API_BASE_URL}/staffAttendance/${existingRecord.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(attendanceData),
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to update staff attendance');
+      }
+      
+      return await response.json();
+    } else {
+      // Create new record
+      const response = await fetch(`${API_BASE_URL}/staffAttendance`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(attendanceData),
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to add staff attendance');
+      }
+      
+      return await response.json();
+    }
+  } catch (error) {
+    // Fallback to mock API if real API fails
+    await new Promise(resolve => setTimeout(resolve, 500));
+    await addStaffAttendanceRecord({ date, records });
+    return { date, records };
+  }
 });
 
 const staffSlice = createSlice({

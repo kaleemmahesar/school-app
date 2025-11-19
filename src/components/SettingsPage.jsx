@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { updateSchoolInfo, fetchSchoolInfo } from '../store/settingsSlice';
-import { FaSchool, FaGraduationCap, FaToggleOn, FaToggleOff, FaSave, FaUndo } from 'react-icons/fa';
+import { updateSchoolInfo, fetchSchoolInfo, setHolidays } from '../store/settingsSlice';
+import { FaSchool, FaGraduationCap, FaToggleOn, FaToggleOff, FaSave, FaUndo, FaCalendarAlt, FaPlus, FaTrash, FaSun, FaSnowflake } from 'react-icons/fa';
 import { SCHOOL_CONFIG } from '../config/schoolConfig';
 
 const SettingsPage = () => {
@@ -13,6 +13,12 @@ const SettingsPage = () => {
     hasPG: SCHOOL_CONFIG.hasPG,
     hasNursery: SCHOOL_CONFIG.hasNursery,
     hasKG: SCHOOL_CONFIG.hasKG,
+  });
+  
+  const [holidays, setHolidaysState] = useState([]);
+  const [vacations, setVacations] = useState({
+    summer: { start: '', end: '' },
+    winter: { start: '', end: '' }
   });
 
   // Initialize form with school info
@@ -28,6 +34,22 @@ const SettingsPage = () => {
         hasNursery: schoolInfo.hasNursery !== undefined ? schoolInfo.hasNursery : SCHOOL_CONFIG.hasNursery,
         hasKG: schoolInfo.hasKG !== undefined ? schoolInfo.hasKG : SCHOOL_CONFIG.hasKG,
       });
+      
+      // Set holidays from schoolInfo
+      if (schoolInfo.holidays) {
+        setHolidaysState(schoolInfo.holidays);
+      }
+      
+      // Set vacations from schoolInfo
+      if (schoolInfo.vacations) {
+        setVacations(schoolInfo.vacations);
+      } else {
+        // Default values for Pakistan
+        setVacations({
+          summer: { start: '2025-06-01', end: '2025-07-31' },
+          winter: { start: '2025-12-20', end: '2026-01-05' }
+        });
+      }
     }
   }, [schoolInfo]);
 
@@ -45,11 +67,43 @@ const SettingsPage = () => {
       [field]: !prev[field]
     }));
   };
+  
+  // Handle holiday changes
+  const handleAddHoliday = () => {
+    setHolidaysState(prev => [...prev, '']);
+  };
+  
+  const handleHolidayChange = (index, value) => {
+    const updatedHolidays = [...holidays];
+    updatedHolidays[index] = value;
+    setHolidaysState(updatedHolidays);
+  };
+  
+  const handleRemoveHoliday = (index) => {
+    const updatedHolidays = holidays.filter((_, i) => i !== index);
+    setHolidaysState(updatedHolidays);
+  };
+  
+  // Handle vacation changes
+  const handleVacationChange = (type, field, value) => {
+    setVacations(prev => ({
+      ...prev,
+      [type]: {
+        ...prev[type],
+        [field]: value
+      }
+    }));
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      await dispatch(updateSchoolInfo(formData)).unwrap();
+      // Update school info including holidays and vacations
+      await dispatch(updateSchoolInfo({
+        ...formData,
+        holidays,
+        vacations
+      })).unwrap();
     } catch (err) {
       console.error('Failed to update school info:', err);
     }
@@ -61,6 +115,23 @@ const SettingsPage = () => {
       hasPG: SCHOOL_CONFIG.hasPG,
       hasNursery: SCHOOL_CONFIG.hasNursery,
       hasKG: SCHOOL_CONFIG.hasKG,
+    });
+    
+    // Reset holidays to default
+    setHolidaysState([
+      '2025-01-01', // New Year's Day
+      '2025-02-05', // Kashmir Day
+      '2025-03-23', // Pakistan Day
+      '2025-05-01', // Labour Day
+      '2025-08-14', // Independence Day
+      '2025-11-09', // Iqbal Day
+      '2025-12-25'  // Quaid-e-Azam Day
+    ]);
+    
+    // Reset vacations to default
+    setVacations({
+      summer: { start: '2025-06-01', end: '2025-07-31' },
+      winter: { start: '2025-12-20', end: '2026-01-05' }
     });
   };
 
@@ -207,6 +278,116 @@ const SettingsPage = () => {
                   </div>
                 </div>
               </div>
+
+              {/* Vacations Configuration Section */}
+              <div className="border-t border-gray-200 pt-6">
+                <h3 className="text-md font-medium text-gray-900 mb-4 flex items-center">
+                  <FaSun className="mr-2 text-orange-500" />
+                  School Vacations
+                </h3>
+                <p className="text-sm text-gray-500 mb-4">
+                  Configure summer and winter vacations. Students will not be marked as absent during these periods.
+                </p>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Summer Vacation */}
+                  <div className="border border-gray-200 rounded-lg p-4">
+                    <div className="flex items-center mb-3">
+                      <FaSun className="text-orange-500 mr-2" />
+                      <h4 className="font-medium text-gray-900">Summer Vacation</h4>
+                    </div>
+                    <div className="space-y-3">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+                        <input
+                          type="date"
+                          value={vacations.summer.start}
+                          onChange={(e) => handleVacationChange('summer', 'start', e.target.value)}
+                          className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">End Date</label>
+                        <input
+                          type="date"
+                          value={vacations.summer.end}
+                          onChange={(e) => handleVacationChange('summer', 'end', e.target.value)}
+                          className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Winter Vacation */}
+                  <div className="border border-gray-200 rounded-lg p-4">
+                    <div className="flex items-center mb-3">
+                      <FaSnowflake className="text-blue-500 mr-2" />
+                      <h4 className="font-medium text-gray-900">Winter Vacation</h4>
+                    </div>
+                    <div className="space-y-3">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+                        <input
+                          type="date"
+                          value={vacations.winter.start}
+                          onChange={(e) => handleVacationChange('winter', 'start', e.target.value)}
+                          className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">End Date</label>
+                        <input
+                          type="date"
+                          value={vacations.winter.end}
+                          onChange={(e) => handleVacationChange('winter', 'end', e.target.value)}
+                          className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Holidays Configuration Section */}
+              <div className="border-t border-gray-200 pt-6">
+                <h3 className="text-md font-medium text-gray-900 mb-4 flex items-center">
+                  <FaCalendarAlt className="mr-2 text-purple-500" />
+                  School Holidays
+                </h3>
+                <p className="text-sm text-gray-500 mb-4">
+                  Configure holidays for the current year. Students will not be marked as absent on these days.
+                </p>
+                
+                <div className="space-y-3">
+                  {holidays.map((holiday, index) => (
+                    <div key={index} className="flex items-center space-x-2">
+                      <input
+                        type="date"
+                        value={holiday}
+                        onChange={(e) => handleHolidayChange(index, e.target.value)}
+                        className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveHoliday(index)}
+                        className="inline-flex items-center p-2 border border-transparent rounded-md text-red-700 bg-red-100 hover:bg-red-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                      >
+                        <FaTrash className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={handleAddHoliday}
+                    className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                  >
+                    <FaPlus className="mr-1 h-4 w-4" />
+                    Add Holiday
+                  </button>
+                </div>
+              </div>
+              
+              
             </div>
           </div>
 
