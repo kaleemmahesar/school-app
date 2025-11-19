@@ -1,5 +1,6 @@
 import React from 'react';
 import { FaUserFriends, FaDollarSign, FaPrint } from 'react-icons/fa';
+import WhatsAppFeeReminder from './WhatsAppFeeReminder';
 
 const FamilyFeesView = ({ familyGroups, students, onPayFees, onPrintChallan }) => {
   return (
@@ -91,6 +92,9 @@ const FamilyFeesView = ({ familyGroups, students, onPayFees, onPrintChallan }) =
                       <FaDollarSign className="mr-1" /> Pay
                     </button>
                   ) : null}
+                  <WhatsAppFeeReminder 
+                    student={students.find(s => s.id === challan.studentId)} 
+                  />
                   <button
                     onClick={() => {
                       // Find the student for this challan

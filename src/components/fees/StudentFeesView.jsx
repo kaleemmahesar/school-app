@@ -1,5 +1,6 @@
 import React from 'react';
 import { FaEye, FaCheckCircle, FaExclamationCircle } from 'react-icons/fa';
+import WhatsAppFeeReminder from './WhatsAppFeeReminder';
 
 const StudentFeesView = ({ filteredStudents, onViewDetails }) => {
   return (
@@ -58,6 +59,7 @@ const StudentFeesView = ({ filteredStudents, onViewDetails }) => {
               ) : (
                 <FaCheckCircle className="text-green-500" />
               )}
+              <WhatsAppFeeReminder student={student} />
               <button
                 onClick={() => onViewDetails(student)}
                 className="inline-flex items-center px-3 py-1 border border-gray-300 text-xs font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50"

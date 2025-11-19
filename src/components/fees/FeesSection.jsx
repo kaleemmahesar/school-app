@@ -18,6 +18,7 @@ import Pagination from '../common/Pagination';
 import { printChallanAsPDF } from '../../utils/challanPrinter';
 import { useSchoolFunding } from '../../hooks/useSchoolFunding';
 import NGOFundingInfo from '../common/NGOFundingInfo';
+import WhatsAppFeeReminder from './WhatsAppFeeReminder';
 
 const FeesSection = () => {
   const dispatch = useDispatch();
