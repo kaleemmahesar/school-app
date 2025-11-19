@@ -1,4 +1,4 @@
-import { createSlice } from '@reduxjs/toolkit';
+import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { toast } from 'react-toastify';
 import { createAsyncThunkWithToast, createAddThunk, createUpdateThunk, createDeleteThunk } from '../utils/asyncThunkUtils';
 import { API_BASE_URL } from '../utils/apiConfig';
@@ -28,9 +28,16 @@ export const fetchExpenses = createAsyncThunkWithToast(
 export const addExpense = createAddThunk(
   'expenses/addExpense',
   async (expenseData) => {
+    // Add academic year based on expense date
+    const expenseDate = new Date(expenseData.date || new Date());
+    const expenseYear = expenseDate.getFullYear();
+    const nextYear = expenseYear + 1;
+    const academicYear = `${expenseYear}-${nextYear}`;
+    
     const newExpense = {
       id: Date.now().toString(),
       ...expenseData,
+      academicYear, // Add academic year field
       // Add timestamp for when expense was added
       addedTimestamp: new Date().toISOString()
     };

@@ -12,6 +12,8 @@ import reportsReducer from './reportsSlice';
 import attendanceReducer from './attendanceSlice';
 import parentsReducer from './parentsSlice';
 import incomeReducer from './incomeSlice';
+import promotionsReducer from './promotionSlice';
+import alumniReducer from './alumniSlice';
 
 export const store = configureStore({
   reducer: {
@@ -28,6 +30,8 @@ export const store = configureStore({
     attendance: attendanceReducer,
     parents: parentsReducer,
     income: incomeReducer,
+    promotions: promotionsReducer,
+    alumni: alumniReducer,
   },
 });
 

@@ -3,161 +3,111 @@ import { toast } from 'react-toastify';
 import { createAsyncThunkWithToast } from '../utils/asyncThunkUtils';
 import { API_BASE_URL } from '../utils/apiConfig';
 
-// Mock data for student marks
-const mockMarks = [
-  {
-    id: '1',
-    studentId: '1',
-    studentName: 'John Doe',
-    class: 'Class 10',
-    section: 'A',
-    examType: 'Midterm',
-    year: '2025',
-    marks: [
-      { subjectId: '10math', subjectName: 'Mathematics', marksObtained: 85, totalMarks: 100, grade: 'A' },
-      { subjectId: '10eng', subjectName: 'English', marksObtained: 78, totalMarks: 100, grade: 'B+' },
-      { subjectId: '10sci', subjectName: 'Science', marksObtained: 92, totalMarks: 100, grade: 'A+' },
-      { subjectId: '10hist', subjectName: 'History', marksObtained: 88, totalMarks: 100, grade: 'A' }
-    ],
-    totalObtained: 343,
-    totalMarks: 400,
-    percentage: 85.75,
-    overallGrade: 'A'
-  },
-  {
-    id: '2',
-    studentId: '2',
-    studentName: 'Jane Smith',
-    class: 'Class 9',
-    section: 'B',
-    examType: 'Midterm',
-    year: '2025',
-    marks: [
-      { subjectId: '9math', subjectName: 'Mathematics', marksObtained: 76, totalMarks: 100, grade: 'B+' },
-      { subjectId: '9eng', subjectName: 'English', marksObtained: 82, totalMarks: 100, grade: 'A-' },
-      { subjectId: '9sci', subjectName: 'Science', marksObtained: 89, totalMarks: 100, grade: 'A' },
-      { subjectId: '9geo', subjectName: 'Geography', marksObtained: 77, totalMarks: 100, grade: 'B+' }
-    ],
-    totalObtained: 324,
-    totalMarks: 400,
-    percentage: 81.0,
-    overallGrade: 'B+'
-  },
-  {
-    id: '3',
-    studentId: '21',
-    studentName: 'Sara Ali',
-    class: 'Class 10',
-    section: 'A',
-    examType: 'Midterm',
-    year: '2025',
-    marks: [
-      { subjectId: '10math', subjectName: 'Mathematics', marksObtained: 88, totalMarks: 100, grade: 'A' },
-      { subjectId: '10eng', subjectName: 'English', marksObtained: 82, totalMarks: 100, grade: 'A-' },
-      { subjectId: '10sci', subjectName: 'Science', marksObtained: 90, totalMarks: 100, grade: 'A+' },
-      { subjectId: '10hist', subjectName: 'History', marksObtained: 85, totalMarks: 100, grade: 'A' }
-    ],
-    totalObtained: 345,
-    totalMarks: 400,
-    percentage: 86.25,
-    overallGrade: 'A'
-  },
-  {
-    id: '4',
-    studentId: '22',
-    studentName: 'Hamza Rizvi',
-    class: 'Class 9',
-    section: 'B',
-    examType: 'Midterm',
-    year: '2025',
-    marks: [
-      { subjectId: '9math', subjectName: 'Mathematics', marksObtained: 78, totalMarks: 100, grade: 'B+' },
-      { subjectId: '9eng', subjectName: 'English', marksObtained: 84, totalMarks: 100, grade: 'A-' },
-      { subjectId: '9sci', subjectName: 'Science', marksObtained: 87, totalMarks: 100, grade: 'A' },
-      { subjectId: '9geo', subjectName: 'Geography', marksObtained: 80, totalMarks: 100, grade: 'B+' }
-    ],
-    totalObtained: 329,
-    totalMarks: 400,
-    percentage: 82.25,
-    overallGrade: 'B+'
-  },
-  {
-    id: '5',
-    studentId: '23',
-    studentName: 'Zara Khan',
-    class: 'Class 8',
-    section: 'A',
-    examType: 'Midterm',
-    year: '2025',
-    marks: [
-      { subjectId: '8math', subjectName: 'Mathematics', marksObtained: 85, totalMarks: 100, grade: 'A' },
-      { subjectId: '8eng', subjectName: 'English', marksObtained: 79, totalMarks: 100, grade: 'B+' },
-      { subjectId: '8sci', subjectName: 'Science', marksObtained: 88, totalMarks: 100, grade: 'A' },
-      { subjectId: '8hist', subjectName: 'History', marksObtained: 83, totalMarks: 100, grade: 'B+' }
-    ],
-    totalObtained: 335,
-    totalMarks: 400,
-    percentage: 83.75,
-    overallGrade: 'B+'
-  }
-];
-
+// Initial state with empty marks array
 const initialState = {
-  marks: mockMarks,
+  marks: [],
   loading: false,
   error: null,
 };
 
-// Async thunks for mock API calls
-export const fetchMarks = createAsyncThunk('marks/fetchMarks', async (_, { rejectWithValue }) => {
-  try {
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 500));
-    return mockMarks;
-  } catch (error) {
-    return rejectWithValue(error.message);
+// Async thunk to fetch marks from the server
+export const fetchMarks = createAsyncThunkWithToast(
+  'marks/fetchMarks',
+  async () => {
+    const response = await fetch(`${API_BASE_URL}/marks`);
+    if (!response.ok) {
+      throw new Error('Failed to fetch marks');
+    }
+    return await response.json();
+  },
+  {
+    delay: 500
   }
-});
+);
 
-export const addMarks = createAsyncThunk('marks/addMarks', async (marksData, { rejectWithValue }) => {
-  try {
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 500));
+// Async thunk to add new marks
+export const addMarks = createAsyncThunkWithToast(
+  'marks/addMarks',
+  async (marksData) => {
+    // Add academic year based on current date
+    const currentDate = new Date();
+    const currentYear = currentDate.getFullYear();
+    const nextYear = currentYear + 1;
+    const academicYear = `${currentYear}-${nextYear}`;
+    
     const newMarks = {
       id: Date.now().toString(),
       ...marksData,
+      academicYear, // Add academic year field
+      year: currentYear.toString(), // Keep existing year field for backward compatibility
     };
-    toast.success('Marksheet added successfully');
-    return newMarks;
-  } catch (error) {
-    toast.error('Failed to add marksheet');
-    return rejectWithValue(error.message);
+    
+    const response = await fetch(`${API_BASE_URL}/marks`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(newMarks),
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to add marks');
+    }
+    
+    return await response.json();
+  },
+  {
+    successMessage: 'Marks added successfully',
+    errorMessage: 'Failed to add marks',
+    delay: 500
   }
-});
+);
 
-export const updateMarks = createAsyncThunk('marks/updateMarks', async (marksData, { rejectWithValue }) => {
-  try {
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 500));
-    toast.success('Marksheet updated successfully');
-    return marksData;
-  } catch (error) {
-    toast.error('Failed to update marksheet');
-    return rejectWithValue(error.message);
+// Async thunk to update existing marks
+export const updateMarks = createAsyncThunkWithToast(
+  'marks/updateMarks',
+  async (marksData) => {
+    const response = await fetch(`${API_BASE_URL}/marks/${marksData.id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(marksData),
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to update marks');
+    }
+    
+    return await response.json();
+  },
+  {
+    successMessage: 'Marks updated successfully',
+    errorMessage: 'Failed to update marks',
+    delay: 500
   }
-});
+);
 
-export const deleteMarks = createAsyncThunk('marks/deleteMarks', async (marksId, { rejectWithValue }) => {
-  try {
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 500));
-    toast.success('Marksheet deleted successfully');
+// Async thunk to delete marks
+export const deleteMarks = createAsyncThunkWithToast(
+  'marks/deleteMarks',
+  async (marksId) => {
+    const response = await fetch(`${API_BASE_URL}/marks/${marksId}`, {
+      method: 'DELETE',
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to delete marks');
+    }
+    
     return marksId;
-  } catch (error) {
-    toast.error('Failed to delete marksheet');
-    return rejectWithValue(error.message);
+  },
+  {
+    successMessage: 'Marks deleted successfully',
+    errorMessage: 'Failed to delete marks',
+    delay: 500
   }
-});
+);
 
 const marksSlice = createSlice({
   name: 'marks',

@@ -36,7 +36,8 @@
           "dueDate": "2025-11-17",
           "status": "paid",
           "type": "admission",
-          "paymentTimestamp": "2025-11-17T19:14:03.004Z"
+          "paymentTimestamp": "2025-11-17T19:14:03.004Z",
+          "academicYear": "2025-2026"
         },
         {
           "id": "challan-1763406843004-1763471809746",
@@ -50,7 +51,8 @@
           "type": "monthly",
           "generationTimestamp": "2025-11-18T13:16:49.746Z",
           "paymentMethod": "cash",
-          "paymentTimestamp": "2025-11-18T13:17:16.443Z"
+          "paymentTimestamp": "2025-11-18T13:17:16.443Z",
+          "academicYear": "2025-2026"
         },
         {
           "id": "challan-1763406843004-1763471864336",
@@ -62,7 +64,8 @@
           "date": null,
           "status": "pending",
           "type": "monthly",
-          "generationTimestamp": "2025-11-18T13:17:44.336Z"
+          "generationTimestamp": "2025-11-18T13:17:44.336Z",
+          "academicYear": "2025-2026"
         },
         {
           "id": "challan-1763406843004-1763552332809",
@@ -74,11 +77,13 @@
           "date": null,
           "status": "pending",
           "type": "monthly",
-          "generationTimestamp": "2025-11-19T11:38:52.809Z"
+          "generationTimestamp": "2025-11-19T11:38:52.809Z",
+          "academicYear": "2025-2026"
         }
       ],
       "status": "studying",
-      "admissionTimestamp": "2025-11-17T19:14:03.004Z"
+      "admissionTimestamp": "2025-11-17T19:14:03.004Z",
+      "academicYear": "2025-2026"
     },
     {
       "id": "1763471772820",
@@ -116,11 +121,13 @@
           "dueDate": "2025-11-18",
           "status": "paid",
           "type": "admission",
-          "paymentTimestamp": "2025-11-18T13:16:12.821Z"
+          "paymentTimestamp": "2025-11-18T13:16:12.821Z",
+          "academicYear": "2025-2026"
         }
       ],
       "status": "studying",
-      "admissionTimestamp": "2025-11-18T13:16:12.821Z"
+      "admissionTimestamp": "2025-11-18T13:16:12.821Z",
+      "academicYear": "2025-2026"
     },
     {
       "id": "1763471984209",
@@ -158,11 +165,13 @@
           "dueDate": "2025-11-18",
           "status": "paid",
           "type": "admission",
-          "paymentTimestamp": "2025-11-18T13:19:44.209Z"
+          "paymentTimestamp": "2025-11-18T13:19:44.209Z",
+          "academicYear": "2025-2026"
         }
       ],
       "status": "studying",
-      "admissionTimestamp": "2025-11-18T13:19:44.210Z"
+      "admissionTimestamp": "2025-11-18T13:19:44.210Z",
+      "academicYear": "2025-2026"
     }
   ],
   "expenses": [
@@ -411,6 +420,7 @@
       "id": "1",
       "date": "2025-11-15",
       "classId": "Class 10",
+      "academicYear": "2025-2026",
       "records": [
         {
           "studentId": "1",
@@ -426,6 +436,7 @@
       "id": "b6c3",
       "date": "2025-11-16",
       "classId": "Class 10",
+      "academicYear": "2025-2026",
       "records": [
         {
           "studentId": "1",
@@ -449,6 +460,7 @@
       "id": "c30c",
       "date": "2025-11-14",
       "classId": "Class 10",
+      "academicYear": "2025-2026",
       "records": [
         {
           "studentId": "1",
@@ -472,6 +484,7 @@
       "id": "396e",
       "date": "2025-11-13",
       "classId": "Class 10",
+      "academicYear": "2025-2026",
       "records": [
         {
           "studentId": "1",
@@ -495,6 +508,7 @@
       "id": "5a1e",
       "date": "2025-11-12",
       "classId": "Class 10",
+      "academicYear": "2025-2026",
       "records": [
         {
           "studentId": "1",
@@ -518,6 +532,7 @@
       "id": "bf81",
       "date": "2025-11-18",
       "classId": "Class 10",
+      "academicYear": "2025-2026",
       "records": [
         {
           "studentId": "1763406843004",
@@ -529,6 +544,7 @@
       "id": "29e3",
       "date": "2025-11-19",
       "classId": "Class 10",
+      "academicYear": "2025-2026",
       "records": [
         {
           "studentId": "1763406843004",
@@ -586,5 +602,9 @@
         "end": "2026-01-05"
       }
     }
-  }
+  },
+  "marks": [],
+  "promotions": [],
+  "alumni": [],
+  "batches": []
 }

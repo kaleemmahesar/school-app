@@ -20,6 +20,16 @@ export const fetchAttendanceRecords = async () => {
 // Save attendance record (either add new or update existing)
 export const addAttendanceRecord = async (attendanceData) => {
   try {
+    // Prevent future dates
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const attendanceDate = new Date(attendanceData.date);
+    attendanceDate.setHours(0, 0, 0, 0);
+    
+    if (attendanceDate > today) {
+      throw new Error('Cannot record attendance for future dates');
+    }
+    
     // First, check if a record already exists for this date and class
     const existingResponse = await fetch(`${API_BASE_URL}/studentsAttendance?date=${attendanceData.date}&classId=${attendanceData.classId}`);
     
@@ -29,12 +39,39 @@ export const addAttendanceRecord = async (attendanceData) => {
     
     const existingRecords = await existingResponse.json();
     
+    // Check for duplicate student records within the same attendance record
+    const duplicateStudents = attendanceData.records.filter((record, index, self) => 
+      self.findIndex(r => r.studentId === record.studentId) !== index
+    );
+    
+    if (duplicateStudents.length > 0) {
+      throw new Error('Duplicate student records found in attendance data');
+    }
+    
     if (existingRecords && existingRecords.length > 0) {
       // Update existing record
       const existingRecord = existingRecords[0];
+      
+      // Check for duplicate student records when merging with existing data
+      const allStudentIds = [
+        ...existingRecord.records.map(r => r.studentId),
+        ...attendanceData.records.map(r => r.studentId)
+      ];
+      
+      const duplicateStudentIds = allStudentIds.filter((id, index, self) => 
+        self.indexOf(id) !== index
+      );
+      
+      if (duplicateStudentIds.length > 0) {
+        throw new Error('Duplicate student records found when updating attendance');
+      }
+      
       const updatedData = {
         ...existingRecord,
-        records: attendanceData.records
+        records: [
+          ...existingRecord.records,
+          ...attendanceData.records
+        ]
       };
       
       const updateResponse = await fetch(`${API_BASE_URL}/studentsAttendance/${existingRecord.id}`, {
@@ -52,13 +89,24 @@ export const addAttendanceRecord = async (attendanceData) => {
       const updatedRecord = await updateResponse.json();
       return updatedRecord;
     } else {
+      // Determine academic year based on attendance date
+      const attendanceYear = attendanceDate.getFullYear();
+      const nextYear = attendanceYear + 1;
+      const academicYear = `${attendanceYear}-${nextYear}`;
+      
+      // Add academic year to attendance data
+      const attendanceDataWithAcademicYear = {
+        ...attendanceData,
+        academicYear
+      };
+      
       // Add new record
       const response = await fetch(`${API_BASE_URL}/studentsAttendance`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(attendanceData),
+        body: JSON.stringify(attendanceDataWithAcademicYear),
       });
       
       if (!response.ok) {

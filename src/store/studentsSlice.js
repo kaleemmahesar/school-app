@@ -2,6 +2,7 @@ import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { toast } from 'react-toastify';
 import { createAsyncThunkWithToast, createAddThunk, createUpdateThunk, createDeleteThunk } from '../utils/asyncThunkUtils';
 import { API_BASE_URL } from '../utils/apiConfig';
+import { formatPakistaniPhoneNumber } from '../utils/phoneUtils';
 
 /**
  * Initial state for the students slice
@@ -38,6 +39,11 @@ export const fetchStudents = createAsyncThunkWithToast(
 export const addStudent = createAddThunk(
   'students/addStudent',
   async (studentData) => {
+    // Validate required fields
+    if (!studentData.class) {
+      throw new Error('Student must have a class assigned');
+    }
+    
     // Calculate totalFees if not provided
     let totalFees = parseFloat(studentData.totalFees) || 0;
     const monthlyFees = parseFloat(studentData.monthlyFees) || 0;
@@ -55,6 +61,35 @@ export const addStudent = createAddThunk(
     // Create fees history with admission fees
     const feesHistory = [];
     
+    // Determine academic year based on admission date
+    const admissionDate = new Date(studentData.dateOfAdmission || new Date());
+    const admissionYear = admissionDate.getFullYear();
+    const nextYear = admissionYear + 1;
+    const academicYear = `${admissionYear}-${nextYear}`;
+    
+    // Validate roll number uniqueness within class and academic year
+    const studentsResponse = await fetch(`${API_BASE_URL}/students`);
+    if (!studentsResponse.ok) {
+      throw new Error('Failed to fetch students for roll number validation');
+    }
+    
+    const existingStudents = await studentsResponse.json();
+    const isRollNumberTaken = existingStudents.some(student => 
+      student.class === studentData.class && 
+      student.academicYear === academicYear && 
+      student.grNo === studentData.grNo
+    );
+    
+    if (isRollNumberTaken) {
+      throw new Error(`Roll number ${studentData.grNo} is already taken in ${studentData.class} for academic year ${academicYear}`);
+    }
+    
+    // Use Dicebear placeholder if no photo is provided
+    const photo = studentData.photo || `https://api.dicebear.com/7.x/initials/svg?seed=${studentData.firstName} ${studentData.lastName}`;
+    
+    // Format parent contact number
+    const parentContact = formatPakistaniPhoneNumber(studentData.parentContact);
+    
     // Add admission fees record if admission fees are specified
     if (admissionFees > 0) {
       feesHistory.push({
@@ -66,6 +101,7 @@ export const addStudent = createAddThunk(
         dueDate: studentData.dateOfAdmission || new Date().toISOString().split('T')[0],
         status: 'paid',
         type: 'admission',
+        academicYear, // Add academic year to challan
         // Add timestamp for when admission fee was processed
         paymentTimestamp: new Date().toISOString()
       });
@@ -77,6 +113,8 @@ export const addStudent = createAddThunk(
     const newStudent = {
       id: Date.now().toString(),
       ...studentData,
+      photo, // Use Dicebear placeholder if no photo provided
+      parentContact, // Format parent contact number
       monthlyFees,
       admissionFees,
       feesPaid,
@@ -84,6 +122,7 @@ export const addStudent = createAddThunk(
       familyId,
       feesHistory,
       status: 'studying',
+      academicYear, // Add academic year field
       // Add timestamp for when student was added
       admissionTimestamp: new Date().toISOString()
     };
@@ -118,12 +157,25 @@ export const addStudent = createAddThunk(
 export const updateStudent = createUpdateThunk(
   'students/updateStudent',
   async (studentData) => {
+    // Validate required fields
+    if (!studentData.class) {
+      throw new Error('Student must have a class assigned');
+    }
+    
+    // Format parent contact number
+    const parentContact = formatPakistaniPhoneNumber(studentData.parentContact);
+    
+    const updatedStudentData = {
+      ...studentData,
+      parentContact // Format parent contact number
+    };
+    
     const response = await fetch(`${API_BASE_URL}/students/${studentData.id}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(studentData),
+      body: JSON.stringify(updatedStudentData),
     });
     
     if (!response.ok) {
@@ -251,30 +303,38 @@ export const generateChallan = createAsyncThunkWithToast(
     
     const student = await studentResponse.json();
     
-    // Check if a challan already exists for this student and month
-    if (student.feesHistory) {
-      // Convert month format from YYYY-MM to Month YYYY for comparison
-      const monthNames = ["January", "February", "March", "April", "May", "June",
-        "July", "August", "September", "October", "November", "December"];
-      const [year, monthIndex] = (challanData.month || '2025-01').split('-');
-      const monthName = monthNames[parseInt(monthIndex) - 1] || 'Unknown';
-      const formattedMonth = `${monthName} ${year}`;
-      
-      const existingChallan = student.feesHistory.find(
-        challan => challan.month === formattedMonth && challan.type === 'monthly'
-      );
-      
-      if (existingChallan) {
-        throw new Error(`A challan for ${formattedMonth} already exists for this student`);
-      }
-    }
-    
     // Convert month format from YYYY-MM to Month YYYY
     const monthNames = ["January", "February", "March", "April", "May", "June",
       "July", "August", "September", "October", "November", "December"];
     const [year, monthIndex] = (challanData.month || '2025-01').split('-');
     const monthName = monthNames[parseInt(monthIndex) - 1] || 'Unknown';
     const formattedMonth = `${monthName} ${year}`;
+    
+    // Determine academic year based on challan month
+    const challanYear = year;
+    const nextYear = parseInt(challanYear) + 1;
+    const academicYear = `${challanYear}-${nextYear}`;
+    
+    // Check if a challan already exists for this student and month
+    if (student.feesHistory) {
+      const existingChallan = student.feesHistory.find(
+        challan => challan.month === formattedMonth && challan.type === 'monthly' && challan.academicYear === academicYear
+      );
+      
+      if (existingChallan) {
+        throw new Error(`A challan for ${formattedMonth} already exists for this student in academic year ${academicYear}`);
+      }
+      
+      // Count existing monthly challans for this academic year
+      const monthlyChallansCount = student.feesHistory.filter(
+        challan => challan.type === 'monthly' && challan.academicYear === academicYear
+      ).length;
+      
+      // Limit to 12 challans per academic year
+      if (monthlyChallansCount >= 12) {
+        throw new Error(`Maximum 12 challans allowed per academic year. Student already has 12 challans for ${academicYear}`);
+      }
+    }
     
     // Create new challan
     const newChallan = {
@@ -287,6 +347,7 @@ export const generateChallan = createAsyncThunkWithToast(
       date: null,
       status: 'pending',
       type: 'monthly',
+      academicYear, // Add academic year to challan
       // Add timestamp for when challan was generated
       generationTimestamp: new Date().toISOString()
     };
@@ -349,14 +410,29 @@ export const bulkGenerateChallans = createAsyncThunkWithToast(
       
       const student = await studentResponse.json();
       
+      // Determine academic year based on challan month
+      const challanYear = year;
+      const nextYear = parseInt(challanYear) + 1;
+      const academicYear = `${challanYear}-${nextYear}`;
+      
       // Check if a challan already exists for this student and month
       if (student.feesHistory) {
         const existingChallan = student.feesHistory.find(
-          challan => challan.month === formattedMonth && challan.type === 'monthly'
+          challan => challan.month === formattedMonth && challan.type === 'monthly' && challan.academicYear === academicYear
         );
         
         if (existingChallan) {
-          throw new Error(`A challan for ${formattedMonth} already exists for student ${student.firstName} ${student.lastName}`);
+          throw new Error(`A challan for ${formattedMonth} already exists for student ${student.firstName} ${student.lastName} in academic year ${academicYear}`);
+        }
+        
+        // Count existing monthly challans for this academic year
+        const monthlyChallansCount = student.feesHistory.filter(
+          challan => challan.type === 'monthly' && challan.academicYear === academicYear
+        ).length;
+        
+        // Limit to 12 challans per academic year
+        if (monthlyChallansCount >= 12) {
+          throw new Error(`Maximum 12 challans allowed per academic year. Student ${student.firstName} ${student.lastName} already has 12 challans for ${academicYear}`);
         }
       }
       
@@ -371,6 +447,7 @@ export const bulkGenerateChallans = createAsyncThunkWithToast(
         date: null,
         status: 'pending',
         type: 'monthly',
+        academicYear, // Add academic year to challan
         // Add timestamp for when challan was generated
         generationTimestamp: new Date().toISOString()
       };
