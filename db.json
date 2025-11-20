@@ -589,8 +589,10 @@
     "hasNursery": true,
     "hasKG": true,
     "holidays": [
-      "2025-11-22",
-      "2025-11-29"
+      {
+        "title": "Pakistan Day",
+        "date": "2025-11-21"
+      }
     ],
     "vacations": {
       "summer": {
@@ -606,5 +608,16 @@
   "marks": [],
   "promotions": [],
   "alumni": [],
-  "batches": []
+  "batches": [],
+  "events": [
+    {
+      "title": "Parents Teachers Meeting Two",
+      "description": "Join us for the Parents Teachers Meeting where we will review your child’s academic progress and share important updates. This is a great opportunity to strengthen communication between parents and teachers.",
+      "date": "2025-11-19T19:00:00.000Z",
+      "startTime": "10:00",
+      "endTime": "12:00",
+      "type": "event",
+      "id": "event-1763637668125"
+    }
+  ]
 }

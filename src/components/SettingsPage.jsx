@@ -35,9 +35,12 @@ const SettingsPage = () => {
         hasKG: schoolInfo.hasKG !== undefined ? schoolInfo.hasKG : SCHOOL_CONFIG.hasKG,
       });
       
-      // Set holidays from schoolInfo
+      // Set holidays from schoolInfo, converting to new format if needed
       if (schoolInfo.holidays) {
-        setHolidaysState(schoolInfo.holidays);
+        const formattedHolidays = schoolInfo.holidays.map(holiday => 
+          typeof holiday === 'string' ? { title: '', date: holiday } : holiday
+        );
+        setHolidaysState(formattedHolidays);
       }
       
       // Set vacations from schoolInfo
@@ -70,12 +73,15 @@ const SettingsPage = () => {
   
   // Handle holiday changes
   const handleAddHoliday = () => {
-    setHolidaysState(prev => [...prev, '']);
+    setHolidaysState(prev => [...prev, { title: '', date: '' }]);
   };
   
-  const handleHolidayChange = (index, value) => {
+  const handleHolidayChange = (index, field, value) => {
     const updatedHolidays = [...holidays];
-    updatedHolidays[index] = value;
+    updatedHolidays[index] = {
+      ...updatedHolidays[index],
+      [field]: value
+    };
     setHolidaysState(updatedHolidays);
   };
   
@@ -98,10 +104,15 @@ const SettingsPage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
+      // Format holidays to include both title and date
+      const formattedHolidays = holidays.map(holiday => 
+        typeof holiday === 'string' ? { title: '', date: holiday } : holiday
+      ).filter(holiday => holiday.date); // Filter out empty dates
+      
       // Update school info including holidays and vacations
       await dispatch(updateSchoolInfo({
         ...formData,
-        holidays,
+        holidays: formattedHolidays,
         vacations
       })).unwrap();
     } catch (err) {
@@ -119,13 +130,13 @@ const SettingsPage = () => {
     
     // Reset holidays to default
     setHolidaysState([
-      '2025-01-01', // New Year's Day
-      '2025-02-05', // Kashmir Day
-      '2025-03-23', // Pakistan Day
-      '2025-05-01', // Labour Day
-      '2025-08-14', // Independence Day
-      '2025-11-09', // Iqbal Day
-      '2025-12-25'  // Quaid-e-Azam Day
+      { title: 'New Year\'s Day', date: '2025-01-01' },
+      { title: 'Kashmir Day', date: '2025-02-05' },
+      { title: 'Pakistan Day', date: '2025-03-23' },
+      { title: 'Labour Day', date: '2025-05-01' },
+      { title: 'Independence Day', date: '2025-08-14' },
+      { title: 'Iqbal Day', date: '2025-11-09' },
+      { title: 'Quaid-e-Azam Day', date: '2025-12-25' }
     ]);
     
     // Reset vacations to default
@@ -360,20 +371,29 @@ const SettingsPage = () => {
                 
                 <div className="space-y-3">
                   {holidays.map((holiday, index) => (
-                    <div key={index} className="flex items-center space-x-2">
+                    <div key={index} className="grid grid-cols-1 md:grid-cols-2 gap-2">
                       <input
-                        type="date"
-                        value={holiday}
-                        onChange={(e) => handleHolidayChange(index, e.target.value)}
+                        type="text"
+                        placeholder="Holiday Title (e.g., Iqbal Day)"
+                        value={holiday.title}
+                        onChange={(e) => handleHolidayChange(index, 'title', e.target.value)}
                         className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                       />
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveHoliday(index)}
-                        className="inline-flex items-center p-2 border border-transparent rounded-md text-red-700 bg-red-100 hover:bg-red-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-                      >
-                        <FaTrash className="h-4 w-4" />
-                      </button>
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="date"
+                          value={holiday.date}
+                          onChange={(e) => handleHolidayChange(index, 'date', e.target.value)}
+                          className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveHoliday(index)}
+                          className="inline-flex items-center p-2 border border-transparent rounded-md text-red-700 bg-red-100 hover:bg-red-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                        >
+                          <FaTrash className="h-4 w-4" />
+                        </button>
+                      </div>
                     </div>
                   ))}
                   <button

@@ -13,6 +13,7 @@ import { useSchoolFunding } from '../hooks/useSchoolFunding';
 import FundingConditional from './common/FundingConditional';
 import NGOFundingInfo from './common/NGOFundingInfo';
 import { usePermissions } from '../hooks/usePermissions';
+import EventCalendar from './dashboard/EventCalendar';
 
 // Mock subsidy data for when viewing subsidies
 const mockSubsidies = [
@@ -828,7 +829,7 @@ const Dashboard = () => {
       </FundingConditional>
 
       {/* Financial Summary for Owner */}
-      
+      <EventCalendar />
 
       {/* Academic Stats for Admin users */}
       {isAdmin() && (
