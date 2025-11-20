@@ -588,6 +588,7 @@
     "hasPG": true,
     "hasNursery": true,
     "hasKG": true,
+    "fundingType": "traditional",
     "holidays": [
       {
         "title": "Pakistan Day",

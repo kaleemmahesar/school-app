@@ -72,6 +72,36 @@ const FeesSection = () => {
     dispatch(fetchStudents());
   }, [dispatch]);
 
+  // Set current academic year as default batch
+  useEffect(() => {
+    if (!selectedBatch && students.length > 0) {
+      // Get current academic year based on current date
+      const currentYear = new Date().getFullYear();
+      const nextYear = currentYear + 1;
+      const currentAcademicYear = `${currentYear}-${nextYear}`;
+      
+      // Check if current academic year exists in the data
+      const hasCurrentBatch = students.some(student => student.academicYear === currentAcademicYear);
+      
+      // If current academic year exists, set it as default
+      if (hasCurrentBatch) {
+        setSelectedBatch(currentAcademicYear);
+      } else {
+        // Otherwise, set to the most recent batch
+        const uniqueBatches = [...new Set(students.map(student => student.academicYear).filter(Boolean))];
+        if (uniqueBatches.length > 0) {
+          // Sort batches and get the most recent one
+          const sortedBatches = uniqueBatches.sort((a, b) => {
+            const aYear = parseInt(a.split('-')[0]);
+            const bYear = parseInt(b.split('-')[0]);
+            return bYear - aYear;
+          });
+          setSelectedBatch(sortedBatches[0]);
+        }
+      }
+    }
+  }, [students, selectedBatch]);
+
   // Ref to track the last updated student ID to prevent infinite loops
   const lastUpdatedStudentIdRef = useRef(null);
 
@@ -349,6 +379,25 @@ const FeesSection = () => {
       return;
     }
     
+    // Check if student is in current batch and not passed out
+    const student = students.find(s => s.id === challanData.studentId);
+    if (!student) {
+      alert('Selected student not found.');
+      return;
+    }
+    
+    // Check if student has passed out
+    if (student.status === 'passed_out' || student.status === 'left') {
+      alert('Cannot generate challan for passed out or left students.');
+      return;
+    }
+    
+    // Check if student is in current batch
+    if (selectedBatch && student.academicYear !== selectedBatch) {
+      alert('Cannot generate challan for students from a different batch.');
+      return;
+    }
+    
     try {
       // Dispatch the action to generate the challan
       const result = await dispatch(generateChallan({
@@ -360,7 +409,7 @@ const FeesSection = () => {
       })).unwrap(); // Use unwrap to catch errors properly
     
       // Get the student after generating the challan
-      const student = students.find(s => s.id === challanData.studentId) || result;
+      const updatedStudent = students.find(s => s.id === challanData.studentId) || result;
       
       // Create the challan object for printing
       const monthNames = ["January", "February", "March", "April", "May", "June",
@@ -385,7 +434,7 @@ const FeesSection = () => {
       
       // Set the print view data and show print view
       setPrintChallan(newChallan);
-      setPrintStudent(student);
+      setPrintStudent(updatedStudent);
       setShowPrintView(true);
       
       // Reset form and close modal on success
@@ -442,7 +491,30 @@ const FeesSection = () => {
       studentIds = filteredStudents.map(student => student.id);
     }
     
-    if (studentIds.length > 0) {
+    // Filter students to only include those from current batch who haven't passed out
+    const validStudents = studentIds
+      .map(id => students.find(s => s.id === id))
+      .filter(student => 
+        student && 
+        student.status !== 'passed_out' && 
+        student.status !== 'left' && 
+        (!selectedBatch || student.academicYear === selectedBatch)
+      );
+    
+    // If no valid students after filtering, show appropriate message
+    if (validStudents.length === 0) {
+      if (filteredStudents.length > 0) {
+        alert('No eligible students found. Only current batch students who have not passed out or left can have challans generated.');
+      } else {
+        alert('No students found for the selected criteria.');
+      }
+      return;
+    }
+    
+    // Use valid student IDs for challan generation
+    const validStudentIds = validStudents.map(student => student.id);
+    
+    if (validStudentIds.length > 0) {
       // Generate the challan objects that will be created
       const monthNames = ["January", "February", "March", "April", "May", "June",
         "July", "August", "September", "October", "November", "December"];
@@ -454,7 +526,7 @@ const FeesSection = () => {
       const formattedMonth = `${monthName} ${year}`;
       
       // Create the challan objects that will be generated
-      const generatedChallans = studentIds.map(studentId => {
+      const generatedChallans = validStudentIds.map(studentId => {
         const student = students.find(s => s.id === studentId);
         if (student) {
           return {
@@ -475,7 +547,7 @@ const FeesSection = () => {
       
       // Dispatch the bulk generation action
       dispatch(bulkGenerateChallans({ 
-        studentIds, 
+        studentIds: validStudentIds, 
         challanTemplate: {
           month: data.month,
           dueDate: data.dueDate,
@@ -937,11 +1009,15 @@ const FeesSection = () => {
       />
 
       <div className="">
-        <FeesHeader 
-          onGenerateChallan={handleGenerateChallan}
-          onExportCSV={exportStudentsToCSV}
-          onBulkPrint={handleBulkPrintChallans}
-        />
+        {/* Only show header when not viewing a specific student */}
+        {!showStudentDetails && (
+          <FeesHeader 
+            onGenerateChallan={handleGenerateChallan}
+            onExportCSV={exportStudentsToCSV}
+            onBulkPrint={handleBulkPrintChallans}
+            isGenerateDisabled={filteredStudents.length > 0 && filteredStudents.every(student => student.status === 'passed_out' || student.status === 'left')}
+          />
+        )}
         
         {/* Only show stats when not viewing a specific student */}
         {!showStudentDetails && (

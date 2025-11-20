@@ -244,9 +244,13 @@ const AttendanceManagement = () => {
   const prevPage = () => setCurrentPage(prev => Math.max(prev - 1, 1));
 
   // Get holidays from settings or use default
-  const schoolHolidays = (schoolInfo && schoolInfo.holidays && Array.isArray(schoolInfo.holidays) && schoolInfo.holidays.length > 0) 
-    ? schoolInfo.holidays 
-    : [
+  const schoolHolidays = React.useMemo(() => {
+    if (schoolInfo && schoolInfo.holidays && Array.isArray(schoolInfo.holidays) && schoolInfo.holidays.length > 0) {
+      return schoolInfo.holidays
+        .map(holiday => typeof holiday === 'string' ? holiday : (holiday.date || ''))
+        .filter(date => date && typeof date === 'string');
+    }
+    return [
       '2025-01-01', // New Year's Day
       '2025-02-05', // Kashmir Day
       '2025-03-23', // Pakistan Day
@@ -255,6 +259,7 @@ const AttendanceManagement = () => {
       '2025-11-09', // Iqbal Day
       '2025-12-25'  // Quaid-e-Azam Day
     ];
+  }, [schoolInfo]);
   
   // Get vacations from settings or use default
   const schoolVacations = schoolInfo?.vacations || {
@@ -314,8 +319,13 @@ const AttendanceManagement = () => {
                 const paddedDay = day.toString().padStart(2, '0');
                 const dateStr = `${year}-${paddedMonth}-${paddedDay}`;
                 
-                // Check if this date is a holiday
-                if (schoolInfo.holidays.includes(dateStr)) {
+                // Check if this date is a holiday (handle both old and new formats)
+                const isHoliday = schoolInfo.holidays.some(holiday => {
+                  const holidayDate = typeof holiday === 'string' ? holiday : holiday.date;
+                  return holidayDate === dateStr;
+                });
+                
+                if (isHoliday) {
                   // Add disabled class
                   element.classList.add('react-datepicker__day--disabled');
                   // Also add inline styles for immediate visual feedback
@@ -334,7 +344,7 @@ const AttendanceManagement = () => {
       
       return () => clearTimeout(timeout);
     }
-  }, [schoolInfo, selectedDate, schoolHolidays]);
+  }, [schoolInfo, selectedDate]);
 
   return (
     <>

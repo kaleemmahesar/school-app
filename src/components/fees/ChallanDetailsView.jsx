@@ -48,7 +48,12 @@ const ChallanDetailsView = ({
                     });
                     setShowGenerateModal(true);
                   }}
-                  className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-lg text-white bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                  disabled={detailViewStudent.status === 'passed_out' || detailViewStudent.status === 'left'}
+                  className={`inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
+                    detailViewStudent.status === 'passed_out' || detailViewStudent.status === 'left'
+                      ? 'bg-gray-400 cursor-not-allowed'
+                      : 'bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700'
+                  }`}
                 >
                   <FaPlus className="mr-1" /> Generate Challan
                 </button>
@@ -174,7 +179,12 @@ const ChallanDetailsView = ({
                       });
                       setShowGenerateModal(true);
                     }}
-                    className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                    disabled={detailViewStudent.status === 'passed_out' || detailViewStudent.status === 'left'}
+                    className={`inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
+                      detailViewStudent.status === 'passed_out' || detailViewStudent.status === 'left'
+                      ? 'bg-gray-400 cursor-not-allowed'
+                      : 'bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700'
+                  }`}
                   >
                     <FaPlus className="mr-2" /> Generate First Challan
                   </button>

@@ -1,7 +1,7 @@
 import React from 'react';
 import { FaPlus, FaDownload } from 'react-icons/fa';
 
-const FeesHeader = ({ onGenerateChallan, onExportCSV }) => {
+const FeesHeader = ({ onGenerateChallan, onExportCSV, isGenerateDisabled = false }) => {
   return (
     <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
       <div>
@@ -11,7 +11,12 @@ const FeesHeader = ({ onGenerateChallan, onExportCSV }) => {
       <div className="mt-4 md:mt-0 flex space-x-2">
         <button
           onClick={onGenerateChallan}
-          className="inline-flex items-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700"
+          disabled={isGenerateDisabled}
+          className={`inline-flex items-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
+            isGenerateDisabled
+              ? 'bg-gray-400 cursor-not-allowed'
+              : 'bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700'
+          }`}
         >
           <FaPlus className="mr-2" /> Generate Challan
         </button>
