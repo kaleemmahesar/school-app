@@ -5,7 +5,7 @@ const FeesHeader = ({ onGenerateChallan, onExportCSV }) => {
   return (
     <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Fees Management</h1>
+        <h1 className="text-2xl font-bold text-gray-900">Fees Managements</h1>
         <p className="mt-1 text-sm text-gray-600">Manage student fees, challans, and payments</p>
       </div>
       <div className="mt-4 md:mt-0 flex space-x-2">

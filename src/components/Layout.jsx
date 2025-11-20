@@ -113,6 +113,19 @@ const Layout = ({ children }) => {
       }
     ];
 
+    // Batch Management section - available to Owner, Admin, Staff
+    try {
+      if (hasPermission('students')) {
+        baseItems.push({
+          name: 'Batch Management',
+          path: '/batches',
+          icon: <FaGraduationCapIcon className="mr-2" />
+        });
+      }
+    } catch (e) {
+      console.warn('Error checking batch management permissions:', e);
+    }
+
     // Students section - available to Owner, Admin, Staff, Teacher
     try {
       if (hasPermission('students') || hasPermission('attendance') || hasPermission('marksheets') || hasPermission('reports') || hasPermission('certificates') || hasPermission('examinations')) {
@@ -134,6 +147,7 @@ const Layout = ({ children }) => {
       console.warn('Error checking student permissions:', e);
     }
 
+    
     // Classes section - available to Owner, Admin, Staff
     try {
       if (hasPermission('classes')) {

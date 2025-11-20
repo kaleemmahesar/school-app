@@ -22,6 +22,7 @@ import AttendanceManagement from './components/students/AttendanceManagement'
 import StudentReportGenerator from './components/students/StudentReportGenerator'
 import FinancialReporting from './components/FinancialReporting'
 import StaffAttendance from './components/staff/StaffAttendance'
+import BatchManagementPage from './components/BatchManagementPage'
 import { ToastContainer } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
 import './index.css'
@@ -56,6 +57,11 @@ function App() {
             <Route path="/students/reports" element={
               <ProtectedRoute permission="student-reports">
                 <Layout><StudentReportGenerator /></Layout>
+              </ProtectedRoute>
+            } />
+            <Route path="/batches" element={
+              <ProtectedRoute permission="students">
+                <Layout><BatchManagementPage /></Layout>
               </ProtectedRoute>
             } />
             <Route path="/fees" element={

@@ -62,6 +62,7 @@ const FeesSection = () => {
   const [selectedClass, setSelectedClass] = useState('');
   const [selectedSection, setSelectedSection] = useState('');
   const [viewMode, setViewMode] = useState('student');
+  const [selectedBatch, setSelectedBatch] = useState('');
   
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -143,7 +144,7 @@ const FeesSection = () => {
       lastUpdateTimestampRef.current = 0;
     }
   }, [students, detailViewStudent, showStudentDetails]);
-
+  const uniqueBatches = useMemo(() => [...new Set(students.map(student => student.academicYear).filter(Boolean))], [students]);
   const uniqueClasses = useMemo(() => [...new Set(students.map(student => student.class))], [students]);
   const classSections = useMemo(() => selectedClass 
     ? [...new Set(students.filter(student => student.class === selectedClass).map(student => student.section))]
@@ -200,20 +201,21 @@ const FeesSection = () => {
   const studentStats = useMemo(() => generateStudentFeeStats(), [students]);
 
   const filteredStudents = useMemo(() => studentStats.filter(student => {
-    const matchesSearch = 
-      `${student.firstName} ${student.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      student.class.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      student.section.toLowerCase().includes(searchTerm.toLowerCase());
+  const matchesSearch = 
+    `${student.firstName} ${student.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    student.class.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    student.section.toLowerCase().includes(searchTerm.toLowerCase());
+  
+  const matchesStatus = filterStatus === 'all' || 
+    (filterStatus === 'paid' && student.completionRate === 100 && student.admissionPaid) || 
+    (filterStatus === 'pending' && (student.completionRate < 100 || !student.admissionPaid));
     
-    const matchesStatus = filterStatus === 'all' || 
-      (filterStatus === 'paid' && student.completionRate === 100 && student.admissionPaid) || 
-      (filterStatus === 'pending' && (student.completionRate < 100 || !student.admissionPaid));
-      
-    const matchesClass = !selectedClass || student.class === selectedClass;
-    const matchesSection = !selectedSection || student.section === selectedSection;
-    
-    return matchesSearch && matchesStatus && matchesClass && matchesSection;
-  }), [studentStats, searchTerm, filterStatus, selectedClass, selectedSection]);
+  const matchesClass = !selectedClass || student.class === selectedClass;
+  const matchesSection = !selectedSection || student.section === selectedSection;
+  const matchesBatch = !selectedBatch || student.academicYear === selectedBatch;
+  
+  return matchesSearch && matchesStatus && matchesClass && matchesSection && matchesBatch;
+}), [studentStats, searchTerm, filterStatus, selectedClass, selectedSection, selectedBatch]);
   
   // Pagination functions
   const paginate = (pageNumber) => setCurrentPage(pageNumber);
@@ -820,7 +822,7 @@ const FeesSection = () => {
     return (
       <div className="p-6">
         <div className="bg-white rounded-2xl shadow-lg p-6">
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Fees Management</h1>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">Fees Managementsss</h1>
           <p className="text-gray-600 mb-6">Manage student fees and financial records</p>
           
           <NGOFundingInfo />
@@ -958,25 +960,29 @@ const FeesSection = () => {
             </h3>
             
             <FeesFilters
-              viewMode={viewMode}
-              searchTerm={searchTerm}
-              setSearchTerm={setSearchTerm}
-              filterStatus={filterStatus}
-              setFilterStatus={setFilterStatus}
-              selectedClass={selectedClass}
-              setSelectedClass={setSelectedClass}
-              selectedSection={selectedSection}
-              setSelectedSection={setSelectedSection}
-              uniqueClasses={uniqueClasses}
-              classSections={classSections}
-              onBulkGenerate={handleBulkGenerate}
-              onClearFilters={() => {
-                setSearchTerm('');
-                setFilterStatus('all');
-                setSelectedClass('');
-                setSelectedSection('');
-              }}
-            />
+  viewMode={viewMode}
+  searchTerm={searchTerm}
+  setSearchTerm={setSearchTerm}
+  filterStatus={filterStatus}
+  setFilterStatus={setFilterStatus}
+  selectedClass={selectedClass}
+  setSelectedClass={setSelectedClass}
+  selectedSection={selectedSection}
+  setSelectedSection={setSelectedSection}
+  selectedBatch={selectedBatch}
+  setSelectedBatch={setSelectedBatch}
+  uniqueClasses={uniqueClasses}
+  classSections={classSections}
+  uniqueBatches={uniqueBatches}
+  onBulkGenerate={handleBulkGenerate}
+  onClearFilters={() => {
+    setSearchTerm('');
+    setFilterStatus('all');
+    setSelectedClass('');
+    setSelectedSection('');
+    setSelectedBatch('');
+  }}
+/>
             
             <div className="overflow-hidden rounded-lg border border-gray-200">
               <table className="min-w-full divide-y divide-gray-200">

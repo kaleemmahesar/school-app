@@ -11,8 +11,11 @@ const FeesFilters = ({
   setSelectedClass,
   selectedSection,
   setSelectedSection,
+  selectedBatch,  // Add this line
+  setSelectedBatch,  // Add this line
   uniqueClasses,
   classSections,
+  uniqueBatches,  // Add this line
   onBulkGenerate,
   onClearFilters
 }) => {
@@ -50,24 +53,22 @@ const FeesFilters = ({
           </div>
           
           {/* Class Filter - only show in student view */}
-          {viewMode === 'student' && (
-            <div className="flex items-center space-x-2">
-              <FaFilter className="text-gray-400" />
-              <select
-                value={selectedClass}
-                onChange={(e) => {
-                  setSelectedClass(e.target.value);
-                  setSelectedSection(''); // Reset section when class changes
-                }}
-                className="block w-full pl-3 pr-10 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value="">All Classes</option>
-                {uniqueClasses.map((cls) => (
-                  <option key={cls} value={cls}>{cls}</option>
-                ))}
-              </select>
-            </div>
-          )}
+          {/* Batch Filter - only show in student view */}
+{viewMode === 'student' && (
+  <div className="flex items-center space-x-2">
+    <FaFilter className="text-gray-400" />
+    <select
+      value={selectedBatch}
+      onChange={(e) => setSelectedBatch(e.target.value)}
+      className="block w-full pl-3 pr-10 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+    >
+      <option value="">All Batches</option>
+      {uniqueBatches.map((batch) => (
+        <option key={batch} value={batch}>{batch}</option>
+      ))}
+    </select>
+  </div>
+)}
           
           {/* Section Filter - only show in student view */}
           {viewMode === 'student' && (
