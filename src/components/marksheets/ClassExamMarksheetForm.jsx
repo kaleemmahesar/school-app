@@ -1,13 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { FaBook, FaGraduationCap, FaClipboardList, FaCheck, FaCogs, FaTrophy, FaMedal } from 'react-icons/fa';
 import { jsPDF } from 'jspdf';
 import BulkMarksheetPrintView from './BulkMarksheetPrintView';
 import IndividualMarksheetPrintView from './IndividualMarksheetPrintView';
 import PrintMarksheetsView from './PrintMarksheetsView';
+import { getCurrentAcademicYear } from '../../utils/dateUtils';
 
 const ClassExamMarksheetForm = ({ 
   classes, 
   students, 
+  exams, // Add exams prop
   onSubmit, 
   onCancel 
 }) => {
@@ -15,6 +17,7 @@ const ClassExamMarksheetForm = ({
   const [selectedClass, setSelectedClass] = useState('');
   const [selectedSection, setSelectedSection] = useState('');
   const [examType, setExamType] = useState('');
+  const [selectedExam, setSelectedExam] = useState(null);
   const [year, setYear] = useState(new Date().getFullYear().toString());
   const [subjectMarks, setSubjectMarks] = useState([]);
   const [studentMarks, setStudentMarks] = useState([]);
@@ -30,38 +33,65 @@ const ClassExamMarksheetForm = ({
   ]);
   const [showGradeConfig, setShowGradeConfig] = useState(false);
   
+  // Filter students to only include those in current batch who haven't passed out
+  const currentAcademicYear = getCurrentAcademicYear();
+  const eligibleStudents = useMemo(() => {
+    return students.filter(student => 
+      student.academicYear === currentAcademicYear && 
+      student.status !== 'passed_out' && 
+      student.status !== 'left'
+    );
+  }, [students, currentAcademicYear]);
+
   // Get sections for selected class
   const classSections = selectedClass 
     ? classes.find(cls => cls.name === selectedClass)?.sections || []
     : [];
     
   // Get students for selected class and section
-  const filteredStudents = students.filter(student => 
-    student.class === selectedClass && student.section === selectedSection
-  );
-  
+  const filteredStudents = useMemo(() => {
+    return eligibleStudents.filter(student => 
+      student.class === selectedClass && student.section === selectedSection
+    );
+  }, [eligibleStudents, selectedClass, selectedSection]);
+
   // Get subjects for selected class
   const classSubjects = selectedClass 
     ? classes.find(cls => cls.name === selectedClass)?.subjects || []
     : [];
 
+  // Get filtered exams for the selected class (memoized to prevent infinite loops)
+  const filteredExams = useMemo(() => {
+    return exams && exams
+      .filter(exam => !selectedClass || exam.class === selectedClass || (exam.classes && exam.classes.includes(selectedClass)))
+      .map(exam => {
+        // If exam has scheduled subjects for this class, use those; otherwise use class subjects
+        const scheduledSubjects = exam.scheduledSubjects?.find(sc => sc.className === selectedClass)?.subjects;
+        return {
+          ...exam,
+          effectiveSubjects: scheduledSubjects || exam.subjects || []
+        };
+      }) || [];
+  }, [exams, selectedClass]);
+
   // Initialize form when class is selected
   useEffect(() => {
     if (selectedClass && selectedSection) {
-      // Get subjects for selected class
-      const classData = classes.find(cls => cls.name === selectedClass);
-      const subjects = classData?.subjects || [];
+      // Get subjects for selected class from the selected exam if available
+      const selectedExamForClass = filteredExams.find(exam => exam.examType === examType);
+      const subjects = selectedExamForClass?.effectiveSubjects || 
+                      classes.find(cls => cls.name === selectedClass)?.subjects || [];
       
       // Initialize subject marks structure
       const initialSubjectMarks = subjects.map(subject => ({
         subjectId: subject.id,
         subjectName: subject.name,
-        totalMarks: 100
+        totalMarks: subject.maxMarks || 100
       }));
       setSubjectMarks(initialSubjectMarks);
       
       // Get students for selected class and section
-      const studentsInClass = students.filter(student => 
+      const studentsInClass = eligibleStudents.filter(student => 
         student.class === selectedClass && student.section === selectedSection
       );
       
@@ -79,7 +109,7 @@ const ClassExamMarksheetForm = ({
       }));
       setStudentMarks(initialStudentMarks);
     }
-  }, [selectedClass, selectedSection, classes, students]);
+  }, [selectedClass, selectedSection, examType]);
 
   // Handle marks change for a specific student and subject
   const handleMarksChange = (studentIndex, subjectIndex, value) => {
@@ -142,7 +172,7 @@ const ClassExamMarksheetForm = ({
     e.preventDefault();
     
     // Validate required fields
-    if (!selectedClass || !selectedSection || !examType || !year) {
+    if (!selectedClass || !selectedSection || !examType) {
       alert('Please fill in all required fields');
       return;
     }
@@ -402,27 +432,34 @@ const ClassExamMarksheetForm = ({
                 </div>
                 <select
                   value={examType}
-                  onChange={(e) => setExamType(e.target.value)}
+                  onChange={(e) => {
+                    const selectedExamObj = filteredExams.find(exam => exam.examType === e.target.value);
+                    setExamType(e.target.value);
+                    setSelectedExam(selectedExamObj);
+                    if (selectedExamObj) {
+                      setYear(selectedExamObj.year || new Date().getFullYear().toString());
+                    }
+                  }}
                   className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
                   required
                 >
                   <option value="">Select Exam Type</option>
-                  <option value="Midterm">Midterm</option>
-                  <option value="Final">Final</option>
-                  <option value="Quiz">Quiz</option>
-                  <option value="Assignment">Assignment</option>
+                  {filteredExams.map(exam => (
+                    <option key={exam.id} value={exam.examType}>
+                      {exam.examType} - {exam.class} ({exam.startDate} to {exam.endDate})
+                    </option>
+                  ))}
                 </select>
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Year *</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Year</label>
               <input
-                type="number"
+                type="text"
                 value={year}
-                onChange={(e) => setYear(e.target.value)}
-                className="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
-                required
+                readOnly
+                className="block w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100"
               />
             </div>
           </div>

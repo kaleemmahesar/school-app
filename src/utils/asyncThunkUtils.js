@@ -17,15 +17,15 @@ export const createAsyncThunkWithToast = (
   payloadCreator, 
   { successMessage, errorMessage, delay = 500 } = {}
 ) => {
-  return createAsyncThunk(typePrefix, async (arg, { rejectWithValue }) => {
+  return createAsyncThunk(typePrefix, async (arg, thunkAPI) => {
     try {
       // Simulate API delay if specified
       if (delay > 0) {
         await new Promise(resolve => setTimeout(resolve, delay));
       }
       
-      // Execute the payload creator
-      const result = await payloadCreator(arg);
+      // Execute the payload creator with both arg and thunkAPI
+      const result = await payloadCreator(arg, thunkAPI);
       
       // Show success message if provided
       if (successMessage) {
@@ -40,7 +40,7 @@ export const createAsyncThunkWithToast = (
       }
       
       // Return the error for rejection
-      return rejectWithValue(error.message || error);
+      return thunkAPI.rejectWithValue(error.message || error);
     }
   });
 };

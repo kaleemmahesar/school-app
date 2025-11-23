@@ -2,14 +2,17 @@ import React, { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchExams, addExam, updateExam, deleteExam } from '../store/examsSlice';
 import { fetchClasses } from '../store/classesSlice';
+import { fetchStudents } from '../store/studentsSlice'; // Add students import
 import { FaPlus, FaEdit, FaTrash, FaSearch, FaCalendarAlt, FaFileAlt, FaEye, FaCheck } from 'react-icons/fa';
 import ExamSlipGenerator from './examinations/ExamSlipGenerator';
 import ExamResultsTracker from './examinations/ExamResultsTracker';
+import { getCurrentAcademicYear } from '../utils/dateUtils';
 
 const ExaminationSection = () => {
   const dispatch = useDispatch();
   const { exams, loading, error } = useSelector(state => state.exams);
   const { classes } = useSelector(state => state.classes);
+  const { students } = useSelector(state => state.students); // Add students selector
   
   const [searchTerm, setSearchTerm] = useState('');
   const [showForm, setShowForm] = useState(false);
@@ -31,6 +34,7 @@ const ExaminationSection = () => {
   useEffect(() => {
     dispatch(fetchExams());
     dispatch(fetchClasses());
+    dispatch(fetchStudents()); // Fetch students to filter classes
   }, [dispatch]);
 
   const handleEdit = (exam) => {
@@ -50,32 +54,48 @@ const ExaminationSection = () => {
 
   const handleSave = (examData) => {
     if (currentExam) {
-      dispatch(updateExam({ ...examData, id: currentExam.id }));
+      // For editing, we need to preserve the scheduled subjects structure
+      dispatch(updateExam(examData));
     } else {
       // Create exams for each selected class
       examData.classes.forEach(className => {
-        const examForClass = {
-          ...examData,
-          class: className,
+        // Check if this class is eligible (has students in current batch who haven't passed out)
+        const isClassEligible = students.some(student => 
+          student.class === className && 
+          student.academicYear === currentAcademicYear && 
+          student.status !== 'passed_out' && 
+          student.status !== 'left'
+        );
+        
+        if (isClassEligible) {
           // Get subjects for this class from the class data and apply schedule
-          subjects: classes.find(c => c.name === className)?.subjects.map(subject => {
-            // Find schedule data for this subject
+          const classSubjects = classes.find(c => c.name === className)?.subjects || [];
+          const scheduledSubjectsForClass = examData.scheduledSubjects?.find(sc => sc.className === className)?.subjects || [];
+          
+          // Merge scheduled data with class subjects
+          const subjectsWithSchedule = classSubjects.map(subject => {
             const subjectId = subject.id || subject.name;
-            const schedule = examData.scheduledSubjects?.find(sc => sc.className === className)
-              ?.subjects?.find(s => (s.id || s.name) === subjectId) || {};
-            
+            const scheduledSubject = scheduledSubjectsForClass.find(s => (s.id || s.name) === subjectId);
             return {
               ...subject,
-              date: schedule.date || '',
-              time: schedule.time || '',
-              duration: schedule.duration || 180
+              date: scheduledSubject?.date || subject.date || '',
+              time: scheduledSubject?.time || subject.time || '',
+              duration: scheduledSubject?.duration || subject.duration || 180
             };
-          }) || []
-        };
-        // Remove the classes array and scheduledSubjects as we're creating individual exams
-        delete examForClass.classes;
-        delete examForClass.scheduledSubjects;
-        dispatch(addExam(examForClass));
+          });
+          
+          // Create a copy of examData and remove classes and scheduledSubjects
+          const examForClass = {
+            ...examData,
+            class: className,
+            subjects: subjectsWithSchedule
+          };
+          
+          // Remove the classes array and scheduledSubjects as we're creating individual exams
+          delete examForClass.classes;
+          delete examForClass.scheduledSubjects;
+          dispatch(addExam(examForClass));
+        }
       });
     }
     resetForm();
@@ -106,11 +126,24 @@ const ExaminationSection = () => {
     setSelectedExam(null);
   };
 
-  // Filter exams based on search term
+  // Filter classes to only include those with students in current batch who haven't passed out
+  const currentAcademicYear = getCurrentAcademicYear();
+  const eligibleClasses = classes.filter(cls => {
+    // Check if this class has any students in the current academic year who haven't passed out
+    return students.some(student => 
+      student.class === cls.name && 
+      student.academicYear === currentAcademicYear && 
+      student.status !== 'passed_out' && 
+      student.status !== 'left'
+    );
+  });
+  
+  // Filter exams based on search term and current academic year
   const filteredExams = exams.filter(exam => 
-    exam.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    exam.academicYear === currentAcademicYear &&
+    (exam.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     exam.class.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    exam.examType.toLowerCase().includes(searchTerm.toLowerCase())
+    exam.examType.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   if (loading) return <div className="flex justify-center items-center h-64"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div></div>;
@@ -186,7 +219,7 @@ const ExaminationSection = () => {
               setFormData={setFormData}
               onSubmit={handleSave}
               onCancel={resetForm}
-              classes={classes}
+              classes={eligibleClasses} // Use eligibleClasses instead of all classes
             />
           )}
 
@@ -214,6 +247,7 @@ const ExaminationSection = () => {
                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Class</th>
                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date Range</th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Academic Year</th>
                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                     <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                   </tr>
@@ -240,6 +274,9 @@ const ExaminationSection = () => {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         {exam.startDate} to {exam.endDate}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {exam.academicYear}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
@@ -299,6 +336,49 @@ const ExaminationSection = () => {
 // Exam Form Component
 const ExamForm = ({ formData, setFormData, onSubmit, onCancel, classes }) => {
   const [subjectSchedule, setSubjectSchedule] = useState({});
+
+  // Initialize subject schedule when form data changes
+  useEffect(() => {
+    // Create a default schedule for all subjects in selected classes
+    const initialSchedule = {};
+    
+    // If we're editing an existing exam, initialize with existing subject data
+    if (formData.id && formData.subjects) {
+      formData.subjects.forEach(subject => {
+        const subjectKey = subject.id || subject.name;
+        initialSchedule[subjectKey] = {
+          date: subject.date || '',
+          time: subject.time || '',
+          duration: subject.duration || 180
+        };
+      });
+    } else {
+      // For new exams, initialize with default values
+      formData.classes.forEach(className => {
+        const classObj = classes.find(c => c.name === className);
+        if (classObj && classObj.subjects) {
+          classObj.subjects.forEach(subject => {
+            const subjectKey = subject.id || subject.name;
+            if (!initialSchedule[subjectKey]) {
+              initialSchedule[subjectKey] = {
+                date: subject.date || '',
+                time: subject.time || '',
+                duration: subject.duration || 180
+              };
+            }
+          });
+        }
+      });
+    }
+    
+    // Only update if we have new data
+    if (Object.keys(initialSchedule).length > 0) {
+      setSubjectSchedule(prev => ({
+        ...prev,
+        ...initialSchedule
+      }));
+    }
+  }, [formData.classes, classes, formData.id, formData.subjects]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -418,9 +498,6 @@ const ExamForm = ({ formData, setFormData, onSubmit, onCancel, classes }) => {
               <option value="">Select exam type</option>
               <option value="Midterm">Midterm</option>
               <option value="Final">Final</option>
-              <option value="Quiz">Quiz</option>
-              <option value="Assignment">Assignment</option>
-              <option value="Project">Project</option>
             </select>
           </div>
           
@@ -644,7 +721,7 @@ const ExamDetail = ({ exam, classes }) => {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h2 className="text-2xl font-bold text-gray-900">{exam.name}</h2>
-          <p className="text-gray-600">{exam.class} - {exam.section || 'All Sections'}</p>
+          <p className="text-gray-600">{exam.class} - {exam.section || 'All Sections'} ({exam.academicYear})</p>
         </div>
         <span className="px-3 py-1 inline-flex text-sm leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
           {exam.examType}

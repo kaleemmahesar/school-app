@@ -1,34 +1,33 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchMarks, addMarks, updateMarks, deleteMarks } from '../store/marksSlice';
-import { fetchStudents } from '../store/studentsSlice';
-import { fetchClasses } from '../store/classesSlice';
-import { FaPlus, FaEdit, FaTrash, FaSearch, FaGraduationCap, FaClipboardList, FaEye, FaTrophy, FaMedal } from 'react-icons/fa';
-import { jsPDF } from 'jspdf';
-import ClassExamMarksheetForm from './marksheets/ClassExamMarksheetForm';
+import { fetchExams } from '../store/examsSlice';
+import { FaPlus, FaEye, FaEdit, FaTrash, FaSearch, FaGraduationCap, FaClipboard, FaFilter, FaDownload } from 'react-icons/fa';
 import StudentMarksheetForm from './marksheets/StudentMarksheetForm';
+import ClassExamMarksheetForm from './marksheets/ClassExamMarksheetForm';
 import IndividualMarksheetPrintView from './marksheets/IndividualMarksheetPrintView';
+
 import Pagination from './common/Pagination';
+import { getCurrentAcademicYear } from '../utils/dateUtils';
 
 const MarksheetsSection = () => {
   const dispatch = useDispatch();
-  const { marks, loading, error } = useSelector(state => state.marks);
   const { students } = useSelector(state => state.students);
   const { classes } = useSelector(state => state.classes);
+  const { marks, loading, error } = useSelector(state => state.marks);
+  const { exams } = useSelector(state => state.exams);
   
+  const [view, setView] = useState('list');
+  const [showForm, setShowForm] = useState(false);
+  const [bulkMode, setBulkMode] = useState(false);
+  const [selectedStudentData, setSelectedStudentData] = useState(null);
+  const [currentMarks, setCurrentMarks] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedClass, setSelectedClass] = useState('');
   const [selectedSection, setSelectedSection] = useState('');
-  const [showForm, setShowForm] = useState(false);
-  const [currentMarks, setCurrentMarks] = useState(null);
-  const [bulkMode, setBulkMode] = useState(false);
-  const [view, setView] = useState('list'); // 'list', 'detail', or 'marksheet'
-  const [selectedStudentData, setSelectedStudentData] = useState(null);
-  
-  // Pagination state
+  const [selectedBatch, setSelectedBatch] = useState(''); // Add batch filter state
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(10); // Adjust as needed
-  
+  const [itemsPerPage] = useState(10);
   const [formData, setFormData] = useState({
     studentId: '',
     studentName: '',
@@ -39,53 +38,172 @@ const MarksheetsSection = () => {
     marks: []
   });
 
+  // Fetch marks and exams data on component mount
   useEffect(() => {
     dispatch(fetchMarks());
-    dispatch(fetchStudents());
-    dispatch(fetchClasses());
+    dispatch(fetchExams());
   }, [dispatch]);
 
-  // Prepare student data with marksheet counts
-  const studentsWithMarks = students.map(student => {
-    const studentMarks = marks.filter(mark => mark.studentId === student.id);
-    return {
-      id: student.id,
-      name: `${student.firstName} ${student.lastName}`,
-      class: student.class,
-      section: student.section,
-      marksCount: studentMarks.length,
-      marks: studentMarks
-    };
-  });
+  // Set current academic year as default batch
+  useEffect(() => {
+    if (!selectedBatch && students.length > 0) {
+      const currentAcademicYear = getCurrentAcademicYear();
+      // Check if current academic year exists in the data
+      const hasCurrentBatch = students.some(student => student.academicYear === currentAcademicYear);
+      
+      // If current academic year exists, set it as default
+      if (hasCurrentBatch) {
+        setSelectedBatch(currentAcademicYear);
+      } else {
+        // Otherwise, set to the most recent batch
+        const uniqueBatches = [...new Set(students.map(student => student.academicYear).filter(Boolean))];
+        if (uniqueBatches.length > 0) {
+          // Sort batches and get the most recent one
+          const sortedBatches = uniqueBatches.sort((a, b) => {
+            const aYear = parseInt(a.split('-')[0]);
+            const bYear = parseInt(b.split('-')[0]);
+            return bYear - aYear;
+          });
+          setSelectedBatch(sortedBatches[0]);
+        }
+      }
+    }
+  }, [students, selectedBatch]);
 
-  // Filter students based on search and filters
-  const filteredStudents = studentsWithMarks.filter(student => {
-    const matchesSearch = 
-      student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      student.class.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      student.section.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesClass = !selectedClass || student.class === selectedClass;
-    const matchesSection = !selectedSection || student.section === selectedSection;
-    
-    return matchesSearch && matchesClass && matchesSection;
-  });
+  // Get unique batches from students
+  const uniqueBatches = useMemo(() => {
+    const batches = students.map(student => student.academicYear).filter(Boolean);
+    return [...new Set(batches)];
+  }, [students]);
+
+  // Filter exams based on current academic year
+  const filteredExams = useMemo(() => {
+    const currentAcademicYear = getCurrentAcademicYear();
+    return exams.filter(exam => 
+      exam.academicYear === currentAcademicYear
+    );
+  }, [exams]);
+
+  // Filter exams by selected class for the forms
+  const formFilteredExams = useMemo(() => {
+    // This will be filtered by class in the forms themselves
+    return filteredExams;
+  }, [filteredExams]);
+
+  // Get students with their marksheet counts
+  const studentsWithMarks = useMemo(() => {
+    return students.map(student => {
+      const studentMarks = marks.filter(mark => mark.studentId === student.id);
+      const studentName = `${student.firstName} ${student.lastName}`;
+      
+      return {
+        ...student,
+        name: studentName,
+        marksCount: studentMarks.length,
+        marks: studentMarks
+      };
+    });
+  }, [students, marks]);
+
+  // Filter students based on search, filters, and batch
+  const filteredStudents = useMemo(() => {
+    return studentsWithMarks.filter(student => {
+      const matchesSearch = 
+        student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        student.class.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        student.section.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      const matchesClass = !selectedClass || student.class === selectedClass;
+      const matchesSection = !selectedSection || student.section === selectedSection;
+      const matchesBatch = !selectedBatch || student.academicYear === selectedBatch; // Add batch filter
+      
+      return matchesSearch && matchesClass && matchesSection && matchesBatch;
+    });
+  }, [studentsWithMarks, searchTerm, selectedClass, selectedSection, selectedBatch]);
 
   // Calculate pagination values
-  const totalPages = Math.ceil(filteredStudents.length / itemsPerPage);
-  const indexOfLastItem = currentPage * itemsPerPage;
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentStudents = filteredStudents.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = useMemo(() => Math.ceil(filteredStudents.length / itemsPerPage), [filteredStudents, itemsPerPage]);
+  const indexOfLastItem = useMemo(() => currentPage * itemsPerPage, [currentPage, itemsPerPage]);
+  const indexOfFirstItem = useMemo(() => indexOfLastItem - itemsPerPage, [indexOfLastItem, itemsPerPage]);
+  const currentStudents = useMemo(() => filteredStudents.slice(indexOfFirstItem, indexOfLastItem), [filteredStudents, indexOfFirstItem, indexOfLastItem]);
 
   // Reset pagination when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, selectedClass, selectedSection]);
+  }, [searchTerm, selectedClass, selectedSection, selectedBatch]); // Add selectedBatch to dependency array
 
   // Pagination functions
   const paginate = (pageNumber) => setCurrentPage(pageNumber);
   const nextPage = () => setCurrentPage(prev => Math.min(prev + 1, totalPages));
   const prevPage = () => setCurrentPage(prev => Math.max(prev - 1, 1));
+  
+  // Handle functions
+  const handleBackToList = () => {
+    setView('list');
+    setSelectedStudentData(null);
+    setCurrentMarks(null);
+  };
+  
+  const handleViewDetails = (student) => {
+    setSelectedStudentData(student);
+    setView('detail');
+  };
+
+  const handleViewMarksheet = (marksheet) => {
+    setCurrentMarks(marksheet);
+    setView('marksheet-view'); // New view state for viewing
+  };
+
+  const handleEdit = (marksheet) => {
+    setCurrentMarks(marksheet);
+    setView('marksheet-edit'); // New view state for editing
+  };
+  
+  const handleDelete = (id) => {
+    if (window.confirm('Are you sure you want to delete this marksheet?')) {
+      dispatch(deleteMarks(id));
+    }
+  };
+  
+  const handleSaveMarks = (marksheetData) => {
+    // Handle bulk marksheets (array of marksheets)
+    if (Array.isArray(marksheetData)) {
+      marksheetData.forEach(marksheet => {
+        if (marksheet.id && marks.find(m => m.id === marksheet.id)) {
+          dispatch(updateMarks(marksheet));
+        } else {
+          dispatch(addMarks(marksheet));
+        }
+      });
+    } 
+    // Handle single marksheet
+    else {
+      if (marksheetData.id && marks.find(m => m.id === marksheetData.id)) {
+        dispatch(updateMarks(marksheetData));
+      } else {
+        dispatch(addMarks(marksheetData));
+      }
+    }
+  };
+  
+  const resetForm = () => {
+    setShowForm(false);
+    setBulkMode(false);
+    setCurrentMarks(null);
+  };
+  
+  const downloadMarksheet = () => {
+    alert('In a full implementation, this would download the marksheet as a PDF');
+  };
+
+  // Clear all filters
+  const clearFilters = () => {
+    setSearchTerm('');
+    setSelectedClass('');
+    setSelectedSection('');
+    setSelectedBatch(getCurrentAcademicYear()); // Reset to current batch
+    setCurrentPage(1);
+  };
 
   return (
     <div className="">
@@ -140,7 +258,7 @@ const MarksheetsSection = () => {
                     : 'bg-gray-500 hover:bg-gray-600'
                 }`}
               >
-                <FaClipboardList className="mr-2" /> Bulk Entry
+                <FaClipboard className="mr-2" /> Bulk Entry
               </button>
             </div>
           ) : (
@@ -200,6 +318,12 @@ const MarksheetsSection = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <div className="flex justify-end space-x-2">
                         <button
+                          onClick={() => handleViewMarksheet(marksheet)}
+                          className="inline-flex items-center px-3 py-1 border border-gray-300 text-xs font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50"
+                        >
+                          <FaEye className="mr-1" /> View
+                        </button>
+                        <button
                           onClick={() => handleEdit(marksheet)}
                           className="inline-flex items-center px-3 py-1 border border-gray-300 text-xs font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50"
                         >
@@ -228,10 +352,10 @@ const MarksheetsSection = () => {
         </div>
       )}
 
-      {view === 'marksheet' && currentMarks && (
+      {view === 'marksheet-view' && currentMarks && (
         <div className="bg-white rounded-2xl shadow-lg p-6 max-h-[calc(100vh-100px)] overflow-y-auto">
           <div className="flex justify-between items-center mb-6 sticky top-0 bg-white py-2 z-10">
-            <h2 className="text-xl font-bold text-gray-900">Student Marksheet</h2>
+            <h2 className="text-xl font-bold text-gray-900">View Student Marksheet</h2>
             <button
               onClick={handleBackToList}
               className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
@@ -271,8 +395,29 @@ const MarksheetsSection = () => {
               </svg>
               Download PDF
             </button>
+            <button
+              onClick={() => handleEdit(currentMarks)}
+              className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            >
+              <FaEdit className="mr-2" /> Edit Marksheet
+            </button>
           </div>
         </div>
+      )}
+
+      {view === 'marksheet-edit' && currentMarks && (
+        <StudentMarksheetForm
+          classes={classes}
+          students={studentsWithMarks}
+          exams={formFilteredExams}
+          currentMarks={currentMarks}
+          onSubmit={(marksheetData) => {
+            handleSaveMarks(marksheetData);
+            setView('detail'); // Go back to student details after editing
+            alert('Marksheet updated successfully!');
+          }}
+          onCancel={() => setView('detail')} // Go back to student details on cancel
+        />
       )}
 
       {view === 'list' && (
@@ -280,7 +425,8 @@ const MarksheetsSection = () => {
           {showForm && !bulkMode && (
             <StudentMarksheetForm
               classes={classes}
-              students={students}
+              students={studentsWithMarks}
+              exams={formFilteredExams} // Pass filtered exams
               currentMarks={currentMarks}
               onSubmit={(marksheetData) => {
                 handleSaveMarks(marksheetData);
@@ -294,7 +440,8 @@ const MarksheetsSection = () => {
           {showForm && bulkMode && (
             <ClassExamMarksheetForm
               classes={classes}
-              students={students}
+              students={studentsWithMarks}
+              exams={formFilteredExams} // Pass filtered exams
               onSubmit={(marksheetsData) => {
                 handleSaveMarks(marksheetsData);
                 resetForm();
@@ -349,6 +496,26 @@ const MarksheetsSection = () => {
                         <option value="C">C</option>
                       </select>
                     </div>
+                    
+                    <div className="flex items-center space-x-2">
+                      <select
+                        value={selectedBatch}
+                        onChange={(e) => setSelectedBatch(e.target.value)}
+                        className="block w-full pl-3 pr-10 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                      >
+                        <option value="">All Batches</option>
+                        {uniqueBatches.map(batch => (
+                          <option key={batch} value={batch}>{batch}</option>
+                        ))}
+                      </select>
+                    </div>
+                    
+                    <button
+                      onClick={clearFilters}
+                      className="inline-flex items-center px-3 py-1 border border-gray-300 text-xs font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50"
+                    >
+                      <FaFilter className="mr-1" /> Clear Filters
+                    </button>
                   </div>
                 </div>
               </div>

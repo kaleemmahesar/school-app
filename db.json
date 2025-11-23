@@ -108,7 +108,7 @@
       "religion": "Islam",
       "parentContact": "03337227847",
       "monthlyFees": 0,
-      "feesPaid": 10000,
+      "feesPaid": 34000,
       "totalFees": 10000,
       "familyId": "family-1763471772821",
       "feesHistory": [
@@ -123,6 +123,54 @@
           "type": "admission",
           "paymentTimestamp": "2025-11-18T13:16:12.821Z",
           "academicYear": "2025-2026"
+        },
+        {
+          "id": "challan-1763471772820-1763666558123",
+          "month": "October 2025",
+          "amount": 7500,
+          "dueDate": "2025-11-30",
+          "description": "",
+          "paid": true,
+          "date": "2025-12-05",
+          "status": "paid",
+          "type": "monthly",
+          "academicYear": "2025-2026",
+          "generationTimestamp": "2025-11-20T19:22:38.123Z",
+          "paymentMethod": "cash",
+          "paymentTimestamp": "2025-11-20T19:34:04.949Z",
+          "fineAmount": 500
+        },
+        {
+          "id": "challan-1763471772820-1763666566280",
+          "month": "September 2025",
+          "amount": 7500,
+          "dueDate": "2025-11-30",
+          "description": "",
+          "paid": true,
+          "date": "2025-12-01",
+          "status": "paid",
+          "type": "monthly",
+          "academicYear": "2025-2026",
+          "generationTimestamp": "2025-11-20T19:22:46.280Z",
+          "paymentMethod": "cash",
+          "paymentTimestamp": "2025-11-20T19:32:31.433Z",
+          "fineAmount": 500
+        },
+        {
+          "id": "challan-1763471772820-1763667574507",
+          "month": "August 2025",
+          "amount": 7500,
+          "dueDate": "2025-11-30",
+          "description": "",
+          "paid": true,
+          "date": "2025-12-05",
+          "status": "paid",
+          "type": "monthly",
+          "academicYear": "2025-2026",
+          "generationTimestamp": "2025-11-20T19:39:34.507Z",
+          "paymentMethod": "cash",
+          "paymentTimestamp": "2025-11-20T19:39:57.164Z",
+          "fineAmount": 500
         }
       ],
       "status": "studying",
@@ -141,6 +189,50 @@
       "birthPlace": "Larkana",
       "dateOfAdmission": "2025-11-18",
       "class": "Class 9",
+      "section": "A",
+      "admissionFees": 50000,
+      "lastSchoolAttended": "",
+      "isTransferStudent": false,
+      "dateOfLeaving": "",
+      "classInWhichLeft": "",
+      "reasonOfLeaving": "",
+      "remarks": "",
+      "religion": "Islam",
+      "parentContact": "03337227847",
+      "monthlyFees": 0,
+      "feesPaid": 50000,
+      "totalFees": 50000,
+      "familyId": "family-1763471984209",
+      "feesHistory": [
+        {
+          "id": "challan-1763471984209-0",
+          "month": "Admission Fees",
+          "amount": 50000,
+          "paid": true,
+          "date": "2025-11-18",
+          "dueDate": "2025-11-18",
+          "status": "paid",
+          "type": "admission",
+          "paymentTimestamp": "2025-11-18T13:19:44.209Z",
+          "academicYear": "2025-2026"
+        }
+      ],
+      "status": "studying",
+      "admissionTimestamp": "2025-11-18T13:19:44.210Z",
+      "academicYear": "2025-2026"
+    },
+    {
+      "id": "1763471984109",
+      "grNo": "3",
+      "firstName": "Kamal",
+      "fatherName": "Farid Sheikh",
+      "lastName": "Johnson",
+      "photo": "https://i.pravatar.cc/300?img=105",
+      "address": "Near Postal Life Insuarance",
+      "dateOfBirth": "",
+      "birthPlace": "Larkana",
+      "dateOfAdmission": "2025-11-18",
+      "class": "Class 8",
       "section": "A",
       "admissionFees": 50000,
       "lastSchoolAttended": "",
@@ -606,7 +698,127 @@
       }
     }
   },
-  "marks": [],
+  "marks": [
+    {
+      "0": {
+        "id": "17638791374601763471772820",
+        "studentId": "1763471772820",
+        "studentName": "Muhammad  Jameel",
+        "class": "Class 8",
+        "section": "A",
+        "examType": "Midterm",
+        "year": "2025",
+        "marks": [
+          {
+            "subjectId": "1763471711709-1763471718860",
+            "subjectName": "English",
+            "marksObtained": "88",
+            "totalMarks": 100,
+            "grade": "A"
+          },
+          {
+            "subjectId": "1763471711709-1763471724708",
+            "subjectName": "Urdu",
+            "marksObtained": "77",
+            "totalMarks": 100,
+            "grade": "B+"
+          }
+        ],
+        "totalObtained": 165,
+        "totalMarks": 200,
+        "percentage": "82.50",
+        "overallGrade": "A"
+      },
+      "1": {
+        "id": "17638791374601763471984109",
+        "studentId": "1763471984109",
+        "studentName": "Kamal Johnson",
+        "class": "Class 8",
+        "section": "A",
+        "examType": "Midterm",
+        "year": "2025",
+        "marks": [
+          {
+            "subjectId": "1763471711709-1763471718860",
+            "subjectName": "English",
+            "marksObtained": "66",
+            "totalMarks": 100,
+            "grade": "B"
+          },
+          {
+            "subjectId": "1763471711709-1763471724708",
+            "subjectName": "Urdu",
+            "marksObtained": "55",
+            "totalMarks": 100,
+            "grade": "C"
+          }
+        ],
+        "totalObtained": 121,
+        "totalMarks": 200,
+        "percentage": "60.50",
+        "overallGrade": "B"
+      },
+      "id": "1763879141263"
+    },
+    {
+      "id": "17638802493171763471772820",
+      "studentId": "1763471772820",
+      "studentName": "Muhammad  Jameel",
+      "class": "Class 8",
+      "section": "A",
+      "examType": "Midterm",
+      "year": "2025",
+      "marks": [
+        {
+          "subjectId": "1763471711709-1763471718860",
+          "subjectName": "English",
+          "marksObtained": "56",
+          "totalMarks": 100,
+          "grade": "C"
+        },
+        {
+          "subjectId": "1763471711709-1763471724708",
+          "subjectName": "Urdu",
+          "marksObtained": "66",
+          "totalMarks": 100,
+          "grade": "B"
+        }
+      ],
+      "totalObtained": 122,
+      "totalMarks": 200,
+      "percentage": "61.00",
+      "overallGrade": "B"
+    },
+    {
+      "id": "17638802493181763471984109",
+      "studentId": "1763471984109",
+      "studentName": "Kamal Johnson",
+      "class": "Class 8",
+      "section": "A",
+      "examType": "Midterm",
+      "year": "2025",
+      "marks": [
+        {
+          "subjectId": "1763471711709-1763471718860",
+          "subjectName": "English",
+          "marksObtained": "66",
+          "totalMarks": 100,
+          "grade": "B"
+        },
+        {
+          "subjectId": "1763471711709-1763471724708",
+          "subjectName": "Urdu",
+          "marksObtained": "100",
+          "totalMarks": 100,
+          "grade": "A+"
+        }
+      ],
+      "totalObtained": 166,
+      "totalMarks": 200,
+      "percentage": "83.00",
+      "overallGrade": "A"
+    }
+  ],
   "promotions": [],
   "alumni": [],
   "batches": [],
@@ -619,6 +831,41 @@
       "endTime": "12:00",
       "type": "event",
       "id": "event-1763637668125"
+    }
+  ],
+  "exams": [
+    {
+      "id": "6740",
+      "name": "MidTerms ",
+      "section": "A",
+      "examType": "Midterm",
+      "startDate": "2025-11-25",
+      "endDate": "2025-12-05",
+      "subjects": [
+        {
+          "id": "1763471711709-1763471718860",
+          "name": "English",
+          "teacherId": "",
+          "teacherName": "",
+          "maxMarks": 100,
+          "date": "2025-11-26",
+          "time": "10:00",
+          "duration": 180
+        },
+        {
+          "id": "1763471711709-1763471724708",
+          "name": "Urdu",
+          "teacherId": "",
+          "teacherName": "",
+          "maxMarks": 100,
+          "date": "2025-11-27",
+          "time": "10:00",
+          "duration": 180
+        }
+      ],
+      "maxMarks": 100,
+      "class": "Class 8",
+      "academicYear": "2025-2026"
     }
   ]
 }

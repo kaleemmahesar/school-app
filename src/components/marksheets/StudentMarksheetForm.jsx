@@ -1,10 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { FaBook, FaGraduationCap, FaClipboardList, FaCheck, FaCogs } from 'react-icons/fa';
 import MarksheetPrintView from './MarksheetPrintView';
+import { getCurrentAcademicYear } from '../../utils/dateUtils';
 
 const StudentMarksheetForm = ({ 
   classes, 
   students, 
+  exams, // Add exams prop
   onSubmit, 
   onCancel,
   currentMarks
@@ -14,44 +16,101 @@ const StudentMarksheetForm = ({
   const [selectedSection, setSelectedSection] = useState('');
   const [selectedStudent, setSelectedStudent] = useState('');
   const [examType, setExamType] = useState('');
+  const [selectedExam, setSelectedExam] = useState(null);
   const [year, setYear] = useState(new Date().getFullYear().toString());
   const [subjectMarks, setSubjectMarks] = useState([]);
   const [showPrintPreview, setShowPrintPreview] = useState(false);
   const [previewData, setPreviewData] = useState(null);
   
+  // Filter students to only include those in current batch who haven't passed out
+  const currentAcademicYear = getCurrentAcademicYear();
+  const eligibleStudents = useMemo(() => {
+    return students.filter(student => 
+      student.academicYear === currentAcademicYear && 
+      student.status !== 'passed_out' && 
+      student.status !== 'left'
+    );
+  }, [students, currentAcademicYear]);
+
+  // Get all students for the selected class and section (without academic year filtering)
+  const filteredStudents = useMemo(() => {
+    return students.filter(student => 
+      student.class === selectedClass && student.section === selectedSection
+    );
+  }, [students, selectedClass, selectedSection]);
+
   // Get sections for selected class
   const classSections = selectedClass 
     ? classes.find(cls => cls.name === selectedClass)?.sections || []
     : [];
     
-  // Get students for selected class and section
-  const filteredStudents = students.filter(student => 
-    student.class === selectedClass && student.section === selectedSection
-  );
-  
   // Get subjects for selected class
   const classSubjects = selectedClass 
     ? classes.find(cls => cls.name === selectedClass)?.subjects || []
     : [];
 
-  // Initialize form when class is selected
+  // Get filtered exams for the selected class (memoized to prevent infinite loops)
+  const filteredExams = useMemo(() => {
+    return exams && exams
+      .filter(exam => !selectedClass || exam.class === selectedClass || (exam.classes && exam.classes.includes(selectedClass)))
+      .map(exam => {
+        // If exam has scheduled subjects for this class, use those; otherwise use class subjects
+        const scheduledSubjects = exam.scheduledSubjects?.find(sc => sc.className === selectedClass)?.subjects;
+        return {
+          ...exam,
+          effectiveSubjects: scheduledSubjects || exam.subjects || []
+        };
+      }) || [];
+  }, [exams, selectedClass]);
+
+  // Initialize form when class is selected (only for new marksheets, not when editing)
   useEffect(() => {
-    if (selectedClass && selectedSection) {
-      // Get subjects for selected class
-      const classData = classes.find(cls => cls.name === selectedClass);
-      const subjects = classData?.subjects || [];
+    // Only initialize if we're not editing an existing marksheet
+    if (selectedClass && !currentMarks) {
+      // Get subjects for selected class from the selected exam if available
+      const selectedExamForClass = filteredExams.find(exam => exam.examType === examType);
+      const subjects = selectedExamForClass?.effectiveSubjects || 
+                      classes.find(cls => cls.name === selectedClass)?.subjects || [];
       
       // Initialize subject marks structure
       const initialSubjectMarks = subjects.map(subject => ({
         subjectId: subject.id,
         subjectName: subject.name,
         marksObtained: '',
-        totalMarks: 100,
+        totalMarks: subject.maxMarks || 100,
         grade: ''
       }));
       setSubjectMarks(initialSubjectMarks);
     }
-  }, [selectedClass, selectedSection, classes]);
+  }, [selectedClass, examType, currentMarks]);
+
+  // Update student selection when students change
+  useEffect(() => {
+    // No need to reset selected student now that we show all students
+  }, [students, selectedStudent]);
+
+  // Pre-fill form when currentMarks is provided (for editing)
+  useEffect(() => {
+    if (currentMarks) {
+      // Set form fields based on currentMarks
+      setSelectedClass(currentMarks.class || '');
+      setSelectedSection(currentMarks.section || '');
+      setSelectedStudent(currentMarks.studentId || '');
+      setExamType(currentMarks.examType || '');
+      setYear(currentMarks.year || new Date().getFullYear().toString());
+      
+      // Set subject marks
+      if (currentMarks.marks && Array.isArray(currentMarks.marks)) {
+        setSubjectMarks(currentMarks.marks.map(subject => ({
+          subjectId: subject.subjectId || subject.id,
+          subjectName: subject.subjectName || subject.name,
+          marksObtained: subject.marksObtained !== undefined ? subject.marksObtained : '',
+          totalMarks: subject.totalMarks || 100,
+          grade: subject.grade || ''
+        })));
+      }
+    }
+  }, [currentMarks]);
 
   // Handle marks change for a specific subject
   const handleMarksChange = (subjectIndex, field, value) => {
@@ -60,6 +119,13 @@ const StudentMarksheetForm = ({
     if (field === 'marksObtained') {
       const obtained = parseInt(value) || 0;
       const total = updatedSubjectMarks[subjectIndex].totalMarks;
+      
+      // Validate that obtained marks don't exceed total marks
+      if (obtained > total) {
+        alert(`Obtained marks cannot exceed total marks (${total})`);
+        return;
+      }
+      
       const percentage = total > 0 ? (obtained / total) * 100 : 0;
       
       // Simple grade calculation
@@ -100,7 +166,7 @@ const StudentMarksheetForm = ({
     e.preventDefault();
     
     // Validate required fields
-    if (!selectedClass || !selectedSection || !selectedStudent || !examType || !year) {
+    if (!selectedClass || !selectedSection || !selectedStudent || !examType) {
       alert('Please fill in all required fields');
       return;
     }
@@ -112,6 +178,18 @@ const StudentMarksheetForm = ({
     
     if (!allMarksEntered) {
       alert('Please enter marks for all subjects');
+      return;
+    }
+    
+    // Validate that no obtained marks exceed total marks
+    const marksValid = subjectMarks.every(subject => {
+      const obtained = parseInt(subject.marksObtained) || 0;
+      const total = parseInt(subject.totalMarks) || 0;
+      return obtained <= total;
+    });
+    
+    if (!marksValid) {
+      alert('Obtained marks cannot exceed total marks for any subject');
       return;
     }
     
@@ -283,32 +361,39 @@ const StudentMarksheetForm = ({
             </div>
             <select
               value={examType}
-              onChange={(e) => setExamType(e.target.value)}
+              onChange={(e) => {
+                const selectedExamObj = filteredExams.find(exam => exam.examType === e.target.value);
+                setExamType(e.target.value);
+                setSelectedExam(selectedExamObj);
+                if (selectedExamObj) {
+                  setYear(selectedExamObj.year || new Date().getFullYear().toString());
+                }
+              }}
               className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
               required
             >
               <option value="">Select Exam Type</option>
-              <option value="Midterm">Midterm</option>
-              <option value="Final">Final</option>
-              <option value="Quiz">Quiz</option>
-              <option value="Assignment">Assignment</option>
+              {filteredExams.map(exam => (
+                <option key={exam.id} value={exam.examType}>
+                  {exam.examType} - {exam.class} ({exam.startDate} to {exam.endDate})
+                </option>
+              ))}
             </select>
           </div>
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Year *</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Year</label>
           <input
-            type="number"
+            type="text"
             value={year}
-            onChange={(e) => setYear(e.target.value)}
-            className="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
-            required
+            readOnly
+            className="block w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100"
           />
         </div>
       </div>
 
-      {selectedClass && selectedSection && selectedStudent && (
+      {selectedClass && selectedSection && selectedStudent && examType && year && (
         <div className="mb-6">
           <h4 className="text-md font-medium text-gray-900 mb-3">Enter Marks</h4>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

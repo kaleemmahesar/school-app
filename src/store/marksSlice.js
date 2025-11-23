@@ -29,17 +29,9 @@ export const fetchMarks = createAsyncThunkWithToast(
 export const addMarks = createAsyncThunkWithToast(
   'marks/addMarks',
   async (marksData) => {
-    // Add academic year based on current date
-    const currentDate = new Date();
-    const currentYear = currentDate.getFullYear();
-    const nextYear = currentYear + 1;
-    const academicYear = `${currentYear}-${nextYear}`;
-    
     const newMarks = {
-      id: Date.now().toString(),
-      ...marksData,
-      academicYear, // Add academic year field
-      year: currentYear.toString(), // Keep existing year field for backward compatibility
+      id: marksData.id || Date.now().toString(),
+      ...marksData
     };
     
     const response = await fetch(`${API_BASE_URL}/marks`, {

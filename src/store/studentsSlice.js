@@ -254,6 +254,25 @@ export const payFees = createAsyncThunkWithToast(
       throw new Error('Challan not found');
     }
     
+    // Calculate fine amount based on due date
+    const calculateFineAmount = (dueDate) => {
+      if (!dueDate) return 0;
+      const today = new Date(paymentDate || new Date());
+      const due = new Date(dueDate);
+      // Reset time part for accurate date comparison
+      today.setHours(0, 0, 0, 0);
+      due.setHours(0, 0, 0, 0);
+      
+      // If payment date is after due date, apply fine
+      if (today > due) {
+        return 500; // Fixed late fee
+      }
+      return 0;
+    };
+    
+    // Calculate the fine amount
+    const fineAmount = calculateFineAmount(targetChallan.dueDate);
+    
     // Update the challan status
     targetChallan.paid = true;
     targetChallan.status = 'paid';
@@ -261,9 +280,11 @@ export const payFees = createAsyncThunkWithToast(
     targetChallan.paymentMethod = paymentMethod || 'cash';
     // Add timestamp for when payment was made
     targetChallan.paymentTimestamp = new Date().toISOString();
+    // Store the calculated fine amount
+    targetChallan.fineAmount = fineAmount;
     
-    // Update total fees paid
-    targetStudent.feesPaid = (parseFloat(targetStudent.feesPaid) || 0) + parseFloat(targetChallan.amount || 0);
+    // Update total fees paid (including fine)
+    targetStudent.feesPaid = (parseFloat(targetStudent.feesPaid) || 0) + parseFloat(targetChallan.amount || 0) + fineAmount;
     
     // Update student in database
     const response = await fetch(`${API_BASE_URL}/students/${targetStudent.id}`, {

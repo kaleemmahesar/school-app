@@ -1,22 +1,8 @@
 import React from 'react';
 import { FaPrint } from 'react-icons/fa';
 import Logo from '../../img/logo.png';
-import PaidChallanView from './PaidChallanView';
 
-const SingleChallanPrintView = ({ challan, student, schoolInfo, onPrint, onBack }) => {
-  // If challan is paid, render the paid challan view
-  if (challan.status === 'paid') {
-    return (
-      <PaidChallanView
-        challan={challan}
-        student={student}
-        schoolInfo={schoolInfo}
-        onPrint={onPrint}
-        onBack={onBack}
-      />
-    );
-  }
-
+const PaidChallanView = ({ challan, student, schoolInfo, onPrint, onBack }) => {
   const safeSchoolInfo = schoolInfo || {
     name: "School Management System",
     address: "123 Education Street, Learning City",
@@ -36,22 +22,6 @@ const SingleChallanPrintView = ({ challan, student, schoolInfo, onPrint, onBack 
       });
     } catch (error) {
       console.error('Error formatting date:', error);
-      return 'Invalid Date';
-    }
-  };
-
-  // Calculate due date + 10 days for expiry
-  const calculateExpiryDate = (dueDate) => {
-    if (!dueDate) return 'N/A';
-    try {
-      const date = new Date(dueDate);
-      date.setDate(date.getDate() + 10);
-      return date.toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric'
-      });
-    } catch (error) {
       return 'Invalid Date';
     }
   };
@@ -82,7 +52,7 @@ const SingleChallanPrintView = ({ challan, student, schoolInfo, onPrint, onBack 
     return 0;
   };
 
-  const ChallanCopy = ({ copyType }) => {
+  const PaidChallanCopy = ({ copyType }) => {
     const studentName = student 
       ? `${student.firstName} ${student.lastName}`
       : 'N/A';
@@ -94,9 +64,11 @@ const SingleChallanPrintView = ({ challan, student, schoolInfo, onPrint, onBack 
     
     // Calculate amounts
     const tuitionFee = Math.round(challan.amount) || 0;
-    // For unpaid challans, calculate fine based on current date vs due date
-    // For paid challans, this component won't be used (PaidChallanView will be used instead)
-    const fineAmount = calculateFineAmount(challan.dueDate);
+    // For paid challans, use the stored fineAmount from the payment
+    // If not available, calculate based on payment date vs due date
+    const fineAmount = challan.fineAmount !== undefined ? 
+      Math.round(challan.fineAmount) : 
+      calculateFineAmount(challan.dueDate);
     const totalAmount = tuitionFee + fineAmount;
     
     return (
@@ -106,12 +78,19 @@ const SingleChallanPrintView = ({ challan, student, schoolInfo, onPrint, onBack 
           <img src={Logo} alt="School Logo" className="mx-auto mb-2" style={{ maxWidth: '100px', maxHeight: '50px', objectFit: 'contain' }} />
           <div className="text-center">
             <div className="font-bold text-md">ABC High School</div>
-        </div>
+          </div>
         </div>
         
         {/* Copy Type */}
         <div className="text-center font-bold text-xs mb-2 border-b border-gray-400 pb-1">
-          {copyType} COPY
+          {copyType} COPY - PAID
+        </div>
+        
+        {/* Paid Stamp */}
+        <div className="text-center mb-3">
+          <div className="inline-block bg-green-100 text-green-800 px-4 py-2 rounded-full font-bold text-lg border-2 border-green-500">
+            PAID
+          </div>
         </div>
         
         {/* Challan Details */}
@@ -125,8 +104,8 @@ const SingleChallanPrintView = ({ challan, student, schoolInfo, onPrint, onBack 
             <span>{formatDate(challan.dueDate)}</span>
           </div>
           <div className="flex justify-between mb-1">
-            <span>Expiry Date:</span>
-            <span>{calculateExpiryDate(challan.dueDate)}</span>
+            <span>Payment Date:</span>
+            <span>{formatDate(challan.date)}</span>
           </div>
           <div className="flex justify-between mb-1">
             <span>GR #:</span>
@@ -177,21 +156,23 @@ const SingleChallanPrintView = ({ challan, student, schoolInfo, onPrint, onBack 
           </table>
         </div>
         
-        {/* Grant Total and Payment */}
+        {/* Payment Info */}
         <div className="text-xs mb-2">
           <div className="flex justify-between font-bold mb-1">
-            <span>Grant Total:</span>
+            <span>Amount Paid:</span>
             <span>Rs. {totalAmount}</span>
           </div>
           <div className="border border-gray-400 p-2 mb-2">
-            <div className="font-bold mb-1">Payment Received:</div>
-            <div>Signature: ________________________</div>
+            <div className="font-bold mb-1">Payment Method:</div>
+            <div>{challan.paymentMethod || 'Cash'}</div>
+            <div className="mt-1 font-bold">Payment Received By:</div>
+            <div>________________________</div>
           </div>
         </div>
         
         {/* Footer Info */}
         <div className="text-xs text-center border-t border-gray-400 pt-2">
-          <div className="mb-1">Late fee will be charged if not paid on time</div>
+          <div className="mb-1">Thank you for your payment</div>
           <div>For queries contact: +1 (555) 123-4567</div>
         </div>
       </div>
@@ -203,13 +184,13 @@ const SingleChallanPrintView = ({ challan, student, schoolInfo, onPrint, onBack 
       <div className="print-container">
         {/* Header - Hidden in print view */}
         <div className="flex justify-between items-center mb-4 p-4 bg-white border-b print:hidden">
-          <h1 className="text-xl font-bold text-gray-900">Challan Print Preview</h1>
+          <h1 className="text-xl font-bold text-gray-900">Paid Challan Receipt</h1>
           <div className="flex space-x-2">
             <button
               onClick={onPrint}
-              className="inline-flex items-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700"
+              className="inline-flex items-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700"
             >
-              <FaPrint className="mr-2" /> Print Challan
+              <FaPrint className="mr-2" /> Print Receipt
             </button>
             <button
               onClick={onBack}
@@ -220,12 +201,12 @@ const SingleChallanPrintView = ({ challan, student, schoolInfo, onPrint, onBack 
           </div>
         </div>
 
-        {/* Printable Challan - 3 copies on one page */}
+        {/* Printable Paid Challan - 3 copies on one page */}
         <div className="print-container">
           <div className="challan-page" style={{ pageBreakAfter: 'avoid', pageBreakInside: 'avoid', display: 'block', width: '100%' }}>
-            <ChallanCopy copyType="STUDENT" />
-            <ChallanCopy copyType="BANK" />
-            <ChallanCopy copyType="SCHOOL" />
+            <PaidChallanCopy copyType="STUDENT" />
+            <PaidChallanCopy copyType="BANK" />
+            <PaidChallanCopy copyType="SCHOOL" />
           </div>
         </div>
 
@@ -388,4 +369,4 @@ const SingleChallanPrintView = ({ challan, student, schoolInfo, onPrint, onBack 
   );
 };
 
-export default SingleChallanPrintView;
+export default PaidChallanView;

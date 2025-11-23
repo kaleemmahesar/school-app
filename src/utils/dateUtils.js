@@ -229,6 +229,13 @@ export const formatDateRange = (startDate, endDate, locale = 'en-US') => {
   return `${formatDate(start, locale)} - ${formatDate(end, locale)}`;
 };
 
+// Get current academic year in format YYYY-YYYY
+export const getCurrentAcademicYear = () => {
+  const currentYear = new Date().getFullYear();
+  const nextYear = currentYear + 1;
+  return `${currentYear}-${nextYear}`;
+};
+
 export default {
   formatDate,
   formatISODate,
@@ -238,5 +245,6 @@ export default {
   addDays,
   getStartOfMonth,
   getEndOfMonth,
-  formatDateRange
+  formatDateRange,
+  getCurrentAcademicYear
 };

@@ -3,131 +3,124 @@ import { toast } from 'react-toastify';
 import { createAsyncThunkWithToast } from '../utils/asyncThunkUtils';
 import { API_BASE_URL } from '../utils/apiConfig';
 
-// Mock data for examinations
-const mockExams = [
-  {
-    id: '1',
-    name: 'Midterm Examination',
-    class: 'Class 10',
-    section: 'A',
-    examType: 'Midterm',
-    startDate: '2025-10-15',
-    endDate: '2025-10-20',
-    subjects: [
-      { id: '10math', name: 'Mathematics', date: '2023-10-15', time: '09:00', duration: 180 },
-      { id: '10eng', name: 'English', date: '2023-10-16', time: '09:00', duration: 180 },
-      { id: '10sci', name: 'Science', date: '2023-10-17', time: '09:00', duration: 180 },
-      { id: '10hist', name: 'History', date: '2023-10-18', time: '09:00', duration: 180 }
-    ],
-    maxMarks: 100,
-    status: 'scheduled'
-  },
-  {
-    id: '2',
-    name: 'Final Examination',
-    class: 'Class 9',
-    section: 'B',
-    examType: 'Final',
-    startDate: '2023-12-01',
-    endDate: '2023-12-10',
-    subjects: [
-      { id: '9math', name: 'Mathematics', date: '2023-12-01', time: '09:00', duration: 180 },
-      { id: '9eng', name: 'English', date: '2023-12-02', time: '09:00', duration: 180 },
-      { id: '9sci', name: 'Science', date: '2023-12-03', time: '09:00', duration: 180 },
-      { id: '9geo', name: 'Geography', date: '2023-12-04', time: '09:00', duration: 180 }
-    ],
-    maxMarks: 100,
-    status: 'scheduled'
-  },
-  {
-    id: '3',
-    name: 'Monthly Test',
-    class: 'Class 10',
-    section: 'A',
-    examType: 'Monthly',
-    startDate: '2025-10-20',
-    endDate: '2025-10-22',
-    subjects: [
-      { id: '10math', name: 'Mathematics', date: '2025-10-20', time: '09:00', duration: 180 },
-      { id: '10eng', name: 'English', date: '2025-10-21', time: '09:00', duration: 180 },
-      { id: '10sci', name: 'Science', date: '2025-10-22', time: '09:00', duration: 180 }
-    ],
-    maxMarks: 50,
-    status: 'scheduled'
-  },
-  {
-    id: '4',
-    name: 'Class Assessment',
-    class: 'Class 8',
-    section: 'A',
-    examType: 'Assessment',
-    startDate: '2025-10-25',
-    endDate: '2025-10-26',
-    subjects: [
-      { id: '8math', name: 'Mathematics', date: '2025-10-25', time: '09:00', duration: 120 },
-      { id: '8eng', name: 'English', date: '2025-10-26', time: '09:00', duration: 120 }
-    ],
-    maxMarks: 100,
-    status: 'scheduled'
-  }
-];
-
 const initialState = {
-  exams: mockExams,
+  exams: [],
   loading: false,
   error: null,
 };
 
-// Async thunks for mock API calls
-export const fetchExams = createAsyncThunk('exams/fetchExams', async (_, { rejectWithValue }) => {
-  try {
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 500));
-    return mockExams;
-  } catch (error) {
-    return rejectWithValue(error.message);
+// Async thunks for API calls
+export const fetchExams = createAsyncThunkWithToast(
+  'exams/fetchExams',
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/exams`);
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Failed to fetch examinations: ${response.status} ${response.statusText} - ${errorText}`);
+      }
+      return await response.json();
+    } catch (error) {
+      return rejectWithValue(error.message || 'Failed to fetch examinations');
+    }
+  },
+  {
+    errorMessage: 'Failed to load examinations',
+    successMessage: null,
+    delay: 0
   }
-});
+);
 
-export const addExam = createAsyncThunk('exams/addExam', async (examData, { rejectWithValue }) => {
-  try {
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 500));
-    const newExam = {
-      id: Date.now().toString(),
-      ...examData,
-    };
-    toast.success('Examination added successfully');
-    return newExam;
-  } catch (error) {
-    toast.error('Failed to add examination');
-    return rejectWithValue(error.message);
+export const addExam = createAsyncThunkWithToast(
+  'exams/addExam',
+  async (examData, { rejectWithValue }) => {
+    try {
+      // Determine current academic year
+      const currentYear = new Date().getFullYear();
+      const nextYear = currentYear + 1;
+      const academicYear = `${currentYear}-${nextYear}`;
+      
+      // Add academic year to exam data
+      const examWithAcademicYear = {
+        ...examData,
+        academicYear
+      };
+      
+      const response = await fetch(`${API_BASE_URL}/exams`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(examWithAcademicYear),
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to add examination');
+      }
+      
+      return await response.json();
+    } catch (error) {
+      return rejectWithValue(error.message);
+    }
+  },
+  {
+    errorMessage: 'Failed to add examination',
+    successMessage: 'Examination added successfully',
+    delay: 500
   }
-});
+);
 
-export const updateExam = createAsyncThunk('exams/updateExam', async (examData, { rejectWithValue }) => {
-  try {
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 500));
-    toast.success('Examination updated successfully');
-    return examData;
-  } catch (error) {
-    toast.error('Failed to update examination');
-    return rejectWithValue(error.message);
+export const updateExam = createAsyncThunkWithToast(
+  'exams/updateExam',
+  async (examData, { rejectWithValue }) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/exams/${examData.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(examData),
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to update examination');
+      }
+      
+      return await response.json();
+    } catch (error) {
+      return rejectWithValue(error.message);
+    }
+  },
+  {
+    errorMessage: 'Failed to update examination',
+    successMessage: 'Examination updated successfully',
+    delay: 500
   }
-});
+);
 
-export const deleteExam = createAsyncThunk('exams/deleteExam', async (examId, { rejectWithValue }) => {
-  try {
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 500));
-    toast.success('Examination deleted successfully');
-    return examId;
-  } catch (error) {
-    toast.error('Failed to delete examination');
-    return rejectWithValue(error.message);
+export const deleteExam = createAsyncThunkWithToast(
+  'exams/deleteExam',
+  async (examId, { rejectWithValue }) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/exams/${examId}`, {
+        method: 'DELETE',
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to delete examination');
+      }
+      
+      return examId;
+    } catch (error) {
+      return rejectWithValue(error.message);
+    }
+  },
+  {
+    errorMessage: 'Failed to delete examination',
+    successMessage: 'Examination deleted successfully',
+    delay: 500
   }
-});
+);
 
 const examsSlice = createSlice({
   name: 'exams',
@@ -145,7 +138,7 @@ const examsSlice = createSlice({
       })
       .addCase(fetchExams.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.error.message;
+        state.error = action.payload || action.error.message || 'Failed to load examinations';
       })
       .addCase(addExam.fulfilled, (state, action) => {
         state.exams.push(action.payload);
