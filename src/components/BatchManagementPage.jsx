@@ -2,10 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { fetchStudents } from '../store/studentsSlice';
-import { fetchBatches, addBatch } from '../store/alumniSlice';
+import { fetchBatches, addBatch, updateBatch, deleteBatch } from '../store/alumniSlice';
 import PageHeader from './common/PageHeader';
 import PromotionManagement from './PromotionManagement';
-import { FaPlus, FaSearch, FaFilter, FaUsers, FaCalendarAlt, FaUserGraduate, FaEdit, FaDownload, FaPrint } from 'react-icons/fa';
+import { FaPlus, FaSearch, FaFilter, FaUsers, FaCalendarAlt, FaUserGraduate, FaEdit, FaDownload, FaPrint, FaCheck, FaTimes, FaTrash } from 'react-icons/fa';
 import Pagination from './common/Pagination';
 
 const BatchManagementPage = () => {
@@ -19,6 +19,7 @@ const BatchManagementPage = () => {
   const [selectedClass, setSelectedClass] = useState('');
   const [selectedSection, setSelectedSection] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [activeTab, setActiveTab] = useState('students'); // 'students' or 'promotion'
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
@@ -26,40 +27,43 @@ const BatchManagementPage = () => {
     name: '',
     startDate: '',
     endDate: '',
-    status: 'active'
+    status: 'active' // Changed default to 'active'
   });
+  const [editingBatch, setEditingBatch] = useState(null);
 
   useEffect(() => {
     dispatch(fetchStudents());
+    // Only fetch batches once when component mounts
     dispatch(fetchBatches());
-  }, [dispatch]);
+  }, [dispatch]); // Empty dependency array means this runs once
+
+  // Auto-update batch statuses based on end dates
+  useEffect(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Set to start of day for comparison
+    
+    batches.forEach(batch => {
+      // Only check active batches
+      if (batch.status === 'active') {
+        const endDate = new Date(batch.endDate);
+        endDate.setHours(0, 0, 0, 0); // Set to start of day for comparison
+        
+        // If batch end date has passed, mark as completed
+        if (endDate < today) {
+          const updatedBatch = {
+            ...batch,
+            status: 'completed'
+          };
+          dispatch(updateBatch(updatedBatch));
+        }
+      }
+    });
+  }, [batches, dispatch]);
 
   // Get unique academic years from students
   const getUniqueBatches = () => {
-    const studentBatches = [...new Set(students.map(student => student.academicYear))];
-    const batchObjects = studentBatches.map(year => ({
-      id: year,
-      name: year,
-      startDate: '',
-      endDate: '',
-      status: 'active'
-    })).filter(batch => batch.name); // Filter out empty years
-    
-    // Combine with existing batches from alumni store
-    const allBatches = [...batchObjects, ...batches];
-    
-    // Remove duplicates
-    const uniqueBatches = [];
-    const batchIds = new Set();
-    
-    allBatches.forEach(batch => {
-      if (!batchIds.has(batch.id)) {
-        batchIds.add(batch.id);
-        uniqueBatches.push(batch);
-      }
-    });
-    
-    return uniqueBatches;
+    // Use the actual batches from the store
+    return batches;
   };
 
   const uniqueBatches = getUniqueBatches();
@@ -81,6 +85,7 @@ const BatchManagementPage = () => {
       (student.grNo && student.grNo.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (student.class && student.class.toLowerCase().includes(searchTerm.toLowerCase()));
     
+    // Match by batch name instead of academicYear
     const matchesBatch = !selectedBatch || student.academicYear === selectedBatch;
     const matchesClass = !selectedClass || student.class === selectedClass;
     const matchesSection = !selectedSection || student.section === selectedSection;
@@ -96,15 +101,43 @@ const BatchManagementPage = () => {
 
   const handleCreateBatch = () => {
     if (newBatchData.name && newBatchData.startDate && newBatchData.endDate) {
-      dispatch(addBatch(newBatchData));
+      // Auto-generate ID based on name
+      const batchData = {
+        ...newBatchData,
+        id: `batch-${newBatchData.name.replace('/', '-')}`,
+        classes: ['PG', 'Nursery', 'KG', 'Class 1', 'Class 2', 'Class 3', 'Class 4', 'Class 5', 'Class 6', 'Class 7', 'Class 8', 'Class 9', 'Class 10'],
+        sections: ['A', 'B']
+      };
+      dispatch(addBatch(batchData));
       setShowCreateModal(false);
       setNewBatchData({
         name: '',
         startDate: '',
         endDate: '',
-        status: 'active'
+        status: 'active' // Changed default to 'active'
       });
     }
+  };
+
+  const handleUpdateBatch = () => {
+    if (editingBatch && editingBatch.name && editingBatch.startDate && editingBatch.endDate) {
+      dispatch(updateBatch(editingBatch));
+      setShowEditModal(false);
+      setEditingBatch(null);
+    }
+  };
+
+  const handleDeleteBatch = (batchId) => {
+    if (window.confirm('Are you sure you want to delete this batch? This action cannot be undone.')) {
+      dispatch(deleteBatch(batchId));
+    }
+  };
+
+  // Format date for display
+  const formatDate = (dateString) => {
+    if (!dateString) return 'N/A';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-GB');
   };
 
   if (studentsLoading || batchesLoading) {
@@ -119,7 +152,7 @@ const BatchManagementPage = () => {
     <>
       <PageHeader
         title="Batch Management"
-        subtitle="Manage student batches and view batch information"
+        subtitle="Manage academic years and student batches"
         actionButton={
           <button
             onClick={() => setShowCreateModal(true)}
@@ -193,8 +226,8 @@ const BatchManagementPage = () => {
                   >
                     <option value="">All Batches</option>
                     {uniqueBatches.map((batch) => (
-                      <option key={batch.id} value={batch.id}>
-                        {batch.name || batch.id}
+                      <option key={batch.id} value={batch.name}>
+                        {batch.name}
                       </option>
                     ))}
                   </select>
@@ -292,6 +325,99 @@ const BatchManagementPage = () => {
             </div>
           </div>
 
+          {/* Batches Overview */}
+          <div className="bg-white rounded-lg shadow mb-6">
+            <div className="px-6 py-4 border-b border-gray-200">
+              <h3 className="text-lg font-medium text-gray-900">Academic Batches</h3>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Batch Name
+                    </th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Period
+                    </th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Status
+                    </th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Students
+                    </th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {uniqueBatches.map((batch) => {
+                    // Count students in this batch
+                    const studentCount = students.filter(s => s.academicYear === batch.name).length;
+                    
+                    return (
+                      <tr key={batch.id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm font-medium text-gray-900">{batch.name}</div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm text-gray-900">
+                            {formatDate(batch.startDate)} - {formatDate(batch.endDate)}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            batch.status === 'active' 
+                              ? 'bg-green-100 text-green-800' 
+                              : 'bg-gray-100 text-gray-800' // Changed to gray for completed
+                          }`}>
+                            {batch.status === 'active' ? (
+                              <FaCheck className="mr-1" />
+                            ) : (
+                              <FaTimes className="mr-1" />
+                            )}
+                            {batch.status.charAt(0).toUpperCase() + batch.status.slice(1)}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {studentCount}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                          <button
+                            onClick={() => {
+                              setEditingBatch({...batch});
+                              setShowEditModal(true);
+                            }}
+                            className="text-blue-600 hover:text-blue-900 mr-3"
+                          >
+                            <FaEdit />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteBatch(batch.id)}
+                            className="text-red-600 hover:text-red-900"
+                          >
+                            <FaTrash />
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+              
+              {uniqueBatches.length === 0 && (
+                <div className="text-center py-8">
+                  <FaCalendarAlt className="mx-auto h-12 w-12 text-gray-400" />
+                  <h3 className="mt-2 text-sm font-medium text-gray-900">No batches found</h3>
+                  <p className="mt-1 text-sm text-gray-500">
+                    Create your first batch to get started
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+
           {/* Students Table */}
           <div className="bg-white rounded-lg shadow">
             <div className="overflow-x-auto">
@@ -312,9 +438,6 @@ const BatchManagementPage = () => {
                     </th>
                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Status
-                    </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Actions
                     </th>
                   </tr>
                 </thead>
@@ -347,23 +470,17 @@ const BatchManagementPage = () => {
                         <div className="text-sm text-gray-900">{student.academicYear || 'N/A'}</div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                           student.status === 'studying' 
                             ? 'bg-green-100 text-green-800' 
                             : student.status === 'passed_out' 
-                              ? 'bg-yellow-100 text-yellow-800' 
-                              : 'bg-red-100 text-red-800'
+                              ? 'bg-blue-100 text-blue-800' 
+                              : 'bg-yellow-100 text-yellow-800'
                         }`}>
-                          {student.status === 'studying' ? 'Active' : student.status === 'passed_out' ? 'Passed Out' : student.status || 'N/A'}
+                          {student.status === 'studying' ? 'Studying' : 
+                           student.status === 'passed_out' ? 'Passed Out' : 
+                           student.status.charAt(0).toUpperCase() + student.status.slice(1)}
                         </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        <button
-                          onClick={() => navigate('/students/admission', { state: { studentData: student } })}
-                          className="inline-flex items-center px-3 py-1 border border-gray-300 text-xs font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
-                        >
-                          <FaEdit className="mr-1" /> Edit
-                        </button>
                       </td>
                     </tr>
                   ))}
@@ -398,7 +515,8 @@ const BatchManagementPage = () => {
           </div>
         </>
       ) : (
-        <PromotionManagement />
+        // Pass batches data to PromotionManagement component
+        <PromotionManagement batches={batches} />
       )}
 
       {/* Create Batch Modal */}
@@ -444,9 +562,9 @@ const BatchManagementPage = () => {
                   onChange={(e) => setNewBatchData({...newBatchData, status: e.target.value})}
                   className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                 >
+                  {/* Removed 'upcoming' option */}
                   <option value="active">Active</option>
                   <option value="completed">Completed</option>
-                  <option value="upcoming">Upcoming</option>
                 </select>
               </div>
             </div>
@@ -462,6 +580,73 @@ const BatchManagementPage = () => {
                 className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
               >
                 Create Batch
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Batch Modal */}
+      {showEditModal && editingBatch && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
+            <div className="px-6 py-4 border-b border-gray-200">
+              <h3 className="text-lg font-medium text-gray-900">Edit Batch</h3>
+            </div>
+            <div className="px-6 py-4 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Batch Name</label>
+                <input
+                  type="text"
+                  value={editingBatch.name}
+                  onChange={(e) => setEditingBatch({...editingBatch, name: e.target.value})}
+                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="e.g., 2025-2026"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Start Date</label>
+                <input
+                  type="date"
+                  value={editingBatch.startDate}
+                  onChange={(e) => setEditingBatch({...editingBatch, startDate: e.target.value})}
+                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">End Date</label>
+                <input
+                  type="date"
+                  value={editingBatch.endDate}
+                  onChange={(e) => setEditingBatch({...editingBatch, endDate: e.target.value})}
+                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Status</label>
+                <select
+                  value={editingBatch.status}
+                  onChange={(e) => setEditingBatch({...editingBatch, status: e.target.value})}
+                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                >
+                  {/* Removed 'upcoming' option */}
+                  <option value="active">Active</option>
+                  <option value="completed">Completed</option>
+                </select>
+              </div>
+            </div>
+            <div className="px-6 py-4 bg-gray-50 flex justify-end space-x-3">
+              <button
+                onClick={() => setShowEditModal(false)}
+                className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleUpdateBatch}
+                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              >
+                Update Batch
               </button>
             </div>
           </div>

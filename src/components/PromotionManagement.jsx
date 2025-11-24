@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { updateStudent } from '../store/studentsSlice';
-import { FaUserCheck, FaUserTimes, FaSearch, FaFilter, FaEdit } from 'react-icons/fa';
+import { FaUserCheck, FaUserTimes, FaSearch, FaFilter, FaEdit, FaGraduationCap } from 'react-icons/fa';
 import Pagination from './common/Pagination';
 
-const PromotionManagement = () => {
+const PromotionManagement = ({ batches }) => { // Receive batches as prop
   const dispatch = useDispatch();
   const { students } = useSelector(state => state.students);
   
@@ -12,10 +12,12 @@ const PromotionManagement = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedClass, setSelectedClass] = useState('');
   const [selectedSection, setSelectedSection] = useState('');
+  const [selectedBatch, setSelectedBatch] = useState('');
   const [showPromotionModal, setShowPromotionModal] = useState(false);
   const [promotionPreview, setPromotionPreview] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(10);
+  const [itemsPerPage] = useState(20);
+  const [targetBatch, setTargetBatch] = useState('');
 
   // Get unique classes for dropdown
   const uniqueClasses = [...new Set(students.map(student => student.class))];
@@ -26,6 +28,9 @@ const PromotionManagement = () => {
         .filter(student => student.class === selectedClass)
         .map(student => student.section))]
     : [];
+
+  // Get unique batches for dropdown (only active and completed batches)
+  const uniqueBatches = batches.filter(batch => batch.status === 'active' || batch.status === 'completed');
 
   // Filter students for promotion (only studying students)
   const filteredStudents = students.filter(student => {
@@ -39,8 +44,9 @@ const PromotionManagement = () => {
     
     const matchesClass = !selectedClass || student.class === selectedClass;
     const matchesSection = !selectedSection || student.section === selectedSection;
+    const matchesBatch = !selectedBatch || student.academicYear === selectedBatch;
     
-    return matchesSearch && matchesClass && matchesSection;
+    return matchesSearch && matchesClass && matchesSection && matchesBatch;
   });
 
   // Pagination
@@ -77,6 +83,10 @@ const PromotionManagement = () => {
     const classNumberMatch = currentClass.match(/Class\s+(\d+)/i);
     
     if (!classNumberMatch) {
+      // Handle special cases like PG, Nursery, KG
+      if (currentClass === 'PG') return 'Nursery';
+      if (currentClass === 'Nursery') return 'KG';
+      if (currentClass === 'KG') return 'Class 1';
       return null;
     }
     
@@ -84,7 +94,7 @@ const PromotionManagement = () => {
     
     // Handle special cases
     if (currentNumber >= 10) {
-      return null; // No promotion for classes above 12
+      return null; // No promotion for classes above 10
     }
     
     return `Class ${currentNumber + 1}`;
@@ -114,9 +124,9 @@ const PromotionManagement = () => {
 
   // Execute promotions
   const executePromotions = () => {
-    const currentYear = new Date().getFullYear();
-    const nextYear = currentYear + 1;
-    const newAcademicYear = `${currentYear}-${nextYear}`;
+    // Get target batch (next academic year)
+    const targetBatchObj = batches.find(b => b.id === targetBatch);
+    const targetAcademicYear = targetBatchObj ? targetBatchObj.name : '2025-2026';
     
     selectedStudents.forEach(studentId => {
       const student = students.find(s => s.id === studentId);
@@ -129,7 +139,7 @@ const PromotionManagement = () => {
         dispatch(updateStudent({
           ...student,
           class: nextClass,
-          academicYear: newAcademicYear
+          academicYear: targetAcademicYear
         }));
       } else {
         // Graduate to alumni
@@ -139,7 +149,7 @@ const PromotionManagement = () => {
           classInWhichLeft: student.class,
           dateOfLeaving: new Date().toISOString().split('T')[0],
           reasonOfLeaving: 'Graduated',
-          academicYear: newAcademicYear
+          academicYear: targetAcademicYear
         }));
       }
     });
@@ -147,12 +157,13 @@ const PromotionManagement = () => {
     // Clear selection and close modal
     setSelectedStudents([]);
     setShowPromotionModal(false);
+    setTargetBatch('');
   };
 
   // Reset pagination when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, selectedClass, selectedSection]);
+  }, [searchTerm, selectedClass, selectedSection, selectedBatch]);
 
   return (
     <div className="bg-white rounded-lg shadow">
@@ -192,6 +203,20 @@ const PromotionManagement = () => {
             <div className="flex items-center space-x-2">
               <FaFilter className="text-gray-400" />
               <select
+                value={selectedBatch}
+                onChange={(e) => setSelectedBatch(e.target.value)}
+                className="block w-full pl-3 pr-10 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="">All Batches</option>
+                {uniqueBatches.map((batch) => (
+                  <option key={batch.id} value={batch.name}>{batch.name}</option>
+                ))}
+              </select>
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              <FaFilter className="text-gray-400" />
+              <select
                 value={selectedClass}
                 onChange={(e) => {
                   setSelectedClass(e.target.value);
@@ -225,6 +250,7 @@ const PromotionManagement = () => {
               <button
                 onClick={() => {
                   setSearchTerm('');
+                  setSelectedBatch('');
                   setSelectedClass('');
                   setSelectedSection('');
                 }}
@@ -258,6 +284,9 @@ const PromotionManagement = () => {
               </th>
               <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Class & Section
+              </th>
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Batch
               </th>
               <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Fees Status
@@ -299,6 +328,9 @@ const PromotionManagement = () => {
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="text-sm text-gray-900">{student.class || 'N/A'}</div>
                   <div className="text-sm text-gray-500">Section {student.section || 'N/A'}</div>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <div className="text-sm text-gray-900">{student.academicYear || 'N/A'}</div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="text-sm text-gray-900">
@@ -350,33 +382,54 @@ const PromotionManagement = () => {
             <div className="px-6 py-4 border-b border-gray-200">
               <h3 className="text-lg font-medium text-gray-900">Promotion Preview</h3>
             </div>
-            <div className="px-6 py-4 max-h-96 overflow-y-auto">
-              <p className="text-sm text-gray-500 mb-4">
-                Review the following promotions before confirming:
-              </p>
-              <div className="space-y-3">
-                {promotionPreview.map((student) => (
-                  <div key={student.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-md">
-                    <div>
-                      <div className="font-medium text-gray-900">{student.name}</div>
-                      <div className="text-sm text-gray-500">
-                        {student.currentClass} → {student.nextClass}
-                      </div>
-                    </div>
-                    <div>
-                      {student.willGraduate ? (
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                          Graduate
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                          Promote
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                ))}
+            <div className="px-6 py-4">
+              {/* Target Batch Selection */}
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Target Academic Year</label>
+                <select
+                  value={targetBatch}
+                  onChange={(e) => setTargetBatch(e.target.value)}
+                  className="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="">Select target batch</option>
+                  {uniqueBatches.map((batch) => (
+                    <option key={batch.id} value={batch.id}>
+                      {batch.name} ({batch.status === 'active' ? 'Active' : 'Completed'})
+                    </option>
+                  ))}
+                </select>
               </div>
+              
+              {targetBatch && (
+                <>
+                  <p className="text-sm text-gray-500 mb-4">
+                    Review the following promotions before confirming:
+                  </p>
+                  <div className="space-y-3 max-h-64 overflow-y-auto">
+                    {promotionPreview.map((student) => (
+                      <div key={student.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-md">
+                        <div>
+                          <div className="font-medium text-gray-900">{student.name}</div>
+                          <div className="text-sm text-gray-500">
+                            {student.currentClass} → {student.nextClass}
+                          </div>
+                        </div>
+                        <div>
+                          {student.willGraduate ? (
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                              <FaGraduationCap className="mr-1" /> Graduate
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                              Promote
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
             </div>
             <div className="px-6 py-4 bg-gray-50 flex justify-end space-x-3">
               <button
@@ -387,7 +440,12 @@ const PromotionManagement = () => {
               </button>
               <button
                 onClick={executePromotions}
-                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                disabled={!targetBatch}
+                className={`inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white ${
+                  targetBatch 
+                    ? 'bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500'
+                    : 'bg-gray-400 cursor-not-allowed'
+                }`}
               >
                 Confirm Promotions
               </button>

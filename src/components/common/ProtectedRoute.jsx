@@ -4,7 +4,7 @@ import { Navigate } from 'react-router-dom';
 import { selectHasPermission } from '../../store/usersSlice';
 
 const ProtectedRoute = ({ children, permission, redirectTo = '/unauthorized' }) => {
-  const currentUser = useSelector(state => state.users.currentUser);
+  const currentUser = useSelector(state => state.users?.currentUser);
   const hasPermission = useSelector(state => selectHasPermission(state, permission));
 
   // If not authenticated, redirect to login

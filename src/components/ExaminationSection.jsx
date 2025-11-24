@@ -2,22 +2,25 @@ import React, { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchExams, addExam, updateExam, deleteExam } from '../store/examsSlice';
 import { fetchClasses } from '../store/classesSlice';
-import { fetchStudents } from '../store/studentsSlice'; // Add students import
-import { FaPlus, FaEdit, FaTrash, FaSearch, FaCalendarAlt, FaFileAlt, FaEye, FaCheck } from 'react-icons/fa';
+import { fetchStudents } from '../store/studentsSlice';
+import { fetchMarks } from '../store/marksSlice';
+import { FaPlus, FaEdit, FaTrash, FaSearch, FaCalendarAlt, FaFileAlt, FaEye, FaCheck, FaChartBar } from 'react-icons/fa';
 import ExamSlipGenerator from './examinations/ExamSlipGenerator';
 import ExamResultsTracker from './examinations/ExamResultsTracker';
+import ClassExamResultsView from './examinations/ClassExamResultsView';
 import { getCurrentAcademicYear } from '../utils/dateUtils';
 
 const ExaminationSection = () => {
   const dispatch = useDispatch();
   const { exams, loading, error } = useSelector(state => state.exams);
   const { classes } = useSelector(state => state.classes);
-  const { students } = useSelector(state => state.students); // Add students selector
+  const { students } = useSelector(state => state.students);
+  const { marks } = useSelector(state => state.marks); // Get marks from the marks slice
   
   const [searchTerm, setSearchTerm] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [currentExam, setCurrentExam] = useState(null);
-  const [view, setView] = useState('list'); // 'list', 'detail', 'slips', or 'results'
+  const [view, setView] = useState('list'); // 'list', 'detail', 'slips', 'results', or 'class-results'
   const [selectedExam, setSelectedExam] = useState(null);
   
   const [formData, setFormData] = useState({
@@ -34,8 +37,18 @@ const ExaminationSection = () => {
   useEffect(() => {
     dispatch(fetchExams());
     dispatch(fetchClasses());
-    dispatch(fetchStudents()); // Fetch students to filter classes
+    dispatch(fetchStudents());
+    dispatch(fetchMarks()); // Add fetch marks
   }, [dispatch]);
+
+  // Add effect to log when marks change
+  useEffect(() => {
+    console.log('=== MARKS STATE CHANGED ===');
+    console.log('Marks state:', marks);
+    console.log('Marks data:', marks.marks);
+    console.log('Marks loading:', marks.loading);
+    console.log('Marks error:', marks.error);
+  }, [marks]);
 
   const handleEdit = (exam) => {
     setCurrentExam(exam);
@@ -162,6 +175,16 @@ const ExaminationSection = () => {
 
   return (
     <div className="">
+      <div className="mb-4 p-2 bg-yellow-100 text-yellow-800 text-xs">
+        <p>Debug Info - ExaminationSection:</p>
+        <p>Exams: {exams.length}</p>
+        <p>Students: {students.length}</p>
+        <p>Marks from Redux: {marks.marks ? marks.marks.length : 'undefined'}</p>
+        <p>Marks type: {marks.marks ? typeof marks.marks : 'undefined'}</p>
+        <p>Marks loading: {marks.loading ? 'true' : 'false'}</p>
+        <p>Marks error: {marks.error || 'none'}</p>
+      </div>
+      
       <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Examination Management</h1>
@@ -172,12 +195,20 @@ const ExaminationSection = () => {
                 ? 'Generate exam slips for students'
                 : view === 'results'
                   ? 'Track and analyze exam results'
-                  : `Details for ${selectedExam?.name}`}
+                  : view === 'class-results'
+                    ? 'View class-wise examination results with rankings'
+                    : `Details for ${selectedExam?.name}`}
           </p>
         </div>
         <div className="mt-4 md:mt-0 flex space-x-2">
           {view === 'list' ? (
             <>
+              <button
+                onClick={() => setView('class-results')}
+                className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              >
+                <FaChartBar className="mr-2" /> Class Results
+              </button>
               <button
                 onClick={() => setView('results')}
                 className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
@@ -329,6 +360,33 @@ const ExaminationSection = () => {
       {view === 'results' && (
         <ExamResultsTracker />
       )}
+      {view === 'class-results' && (
+        marks.loading ? (
+          <div className="flex justify-center items-center h-64">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+          </div>
+        ) : marks.error ? (
+          <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded">
+            <div className="flex">
+              <div className="flex-shrink-0">
+                <svg className="h-5 w-5 text-red-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div className="ml-3">
+                <p className="text-sm text-red-700">Error loading marks: {marks.error}</p>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <ClassExamResultsView 
+            exams={filteredExams} // Pass filtered exams instead of all exams
+            students={students}
+            marks={marks} // Pass the marks array directly, not marks.marks
+          />
+        )
+      )}
+
     </div>
   );
 };

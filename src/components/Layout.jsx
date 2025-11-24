@@ -11,6 +11,7 @@ import { fetchClasses } from '../store/classesSlice';
 import { fetchSubsidies } from '../store/subsidiesSlice';
 import { useSchoolFunding } from '../hooks/useSchoolFunding';
 import { usePermissions } from '../hooks/usePermissions';
+import NotificationPanel from './NotificationPanel';
 
 const Layout = ({ children }) => {
   const dispatch = useDispatch();
@@ -277,6 +278,7 @@ const Layout = ({ children }) => {
                 <h1 className="ml-3 text-2xl font-bold text-gray-900">ABC High School</h1>
               </div>
               <div className="flex items-center space-x-4">
+                <NotificationPanel />
                 {currentUser ? (
                   <div className="relative user-menu">
                     <button
