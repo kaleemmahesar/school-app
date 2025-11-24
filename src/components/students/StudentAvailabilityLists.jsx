@@ -243,17 +243,13 @@ const StudentAvailabilityLists = ({ activeTab: propActiveTab,
       const allFilteredStudents = filterStudents(students);
       
       const filteredAvailableStudents = allFilteredStudents.filter(student => {
-        // Available students are those who are studying and have paid all fees
-        const totalFees = parseFloat(student.totalFees) || 0;
-        const feesPaid = parseFloat(student.feesPaid) || 0;
-        return student.status !== 'passed_out' && student.status !== 'left' && feesPaid >= totalFees;
+        // Available students are those who are studying (regardless of fees status)
+        return student.status !== 'passed_out' && student.status !== 'left';
       });
 
       const filteredUnavailableStudents = allFilteredStudents.filter(student => {
-        // Unavailable students are those who have passed out OR studying with pending fees
-        const totalFees = parseFloat(student.totalFees) || 0;
-        const feesPaid = parseFloat(student.feesPaid) || 0;
-        return student.status === 'passed_out' || (student.status !== 'left' && feesPaid < totalFees);
+        // Unavailable students are those who have passed out
+        return student.status === 'passed_out';
       });
 
       const filteredLeftStudents = allFilteredStudents.filter(student => {

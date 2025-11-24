@@ -60,6 +60,16 @@ const BatchManagementPage = () => {
     });
   }, [batches, dispatch]);
 
+  // Set default selected batch to the active batch
+  useEffect(() => {
+    if (batches.length > 0 && !selectedBatch) {
+      const activeBatch = batches.find(batch => batch.status === 'active');
+      if (activeBatch) {
+        setSelectedBatch(activeBatch.name);
+      }
+    }
+  }, [batches, selectedBatch]);
+
   // Get unique academic years from students
   const getUniqueBatches = () => {
     // Use the actual batches from the store
@@ -269,7 +279,7 @@ const BatchManagementPage = () => {
                   <button
                     onClick={() => {
                       setSearchTerm('');
-                      setSelectedBatch('');
+                      // Don't reset selectedBatch to keep active batch selected by default
                       setSelectedClass('');
                       setSelectedSection('');
                     }}

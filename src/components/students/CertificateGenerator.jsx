@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useDispatch } from 'react-redux';
 import { FaCertificate, FaDownload, FaPrint, FaUser, FaSchool, FaClipboardList } from 'react-icons/fa';
-import { updateStudent } from '../../store/studentsSlice';
+import { updateStudent, markStudentAsLeft } from '../../store/studentsSlice';
 import PrintableCertificate from './PrintableCertificate';
 
 const CertificateGenerator = ({ student, onClose }) => {
@@ -58,12 +58,11 @@ const CertificateGenerator = ({ student, onClose }) => {
     if (certificateType === 'leaving') {
       const updatedStudent = {
         ...student,
-        status: 'left',
         leavingDate: issueDate,
         leavingReason: reason
       };
       
-      dispatch(updateStudent(updatedStudent));
+      dispatch(markStudentAsLeft(updatedStudent));
     }
     
     // If generating a pass certificate, update the student status to passed_out

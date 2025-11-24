@@ -604,7 +604,33 @@ export const bulkUpdateChallanStatuses = createAsyncThunkWithToast(
 export const markStudentAsLeft = createAsyncThunkWithToast(
   'students/markStudentAsLeft',
   async (studentData) => {
-    return studentData;
+    // Update the student status to 'left' and add leaving information
+    const updatedStudent = {
+      ...studentData,
+      status: 'left',
+      dateOfLeaving: studentData.leavingDate || new Date().toISOString().split('T')[0],
+      reasonOfLeaving: studentData.leavingReason || 'Left school',
+      classInWhichLeft: studentData.class || '',
+      // Preserve any existing data
+      ...(studentData.dateOfLeaving && { dateOfLeaving: studentData.dateOfLeaving }),
+      ...(studentData.reasonOfLeaving && { reasonOfLeaving: studentData.reasonOfLeaving }),
+      ...(studentData.classInWhichLeft && { classInWhichLeft: studentData.classInWhichLeft })
+    };
+    
+    // Update student in database
+    const response = await fetch(`${API_BASE_URL}/students/${studentData.id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(updatedStudent),
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to mark student as left');
+    }
+    
+    return await response.json();
   },
   {
     successMessage: 'Student marked as left successfully',

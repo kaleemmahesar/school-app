@@ -34,11 +34,6 @@ const StudentManagement = ({ onAddStudent }) => {
       return student.status !== 'left' && student.status !== 'passed_out';
     });
 
-    // Unavailable students (none, since we're changing the logic)
-    const unavailable = students.filter(student => {
-      return student.status === 'passed_out';
-    });
-
     // Left students (left in middle)
     const left = students.filter(student => {
       return student.status === 'left';
@@ -57,7 +52,6 @@ const StudentManagement = ({ onAddStudent }) => {
 
     return {
       available: available.length,
-      unavailable: unavailable.length,
       left: left.length,
       families: familyCount
     };
@@ -120,22 +114,6 @@ const StudentManagement = ({ onAddStudent }) => {
               </div>
             </button>
             <button
-              onClick={() => setActiveTab('unavailable')}
-              className={`whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'unavailable'
-                  ? 'border-yellow-500 text-yellow-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              <div className="flex items-center">
-                <FaUserTimes className="mr-2" />
-                Passed Out
-                <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                  {stats.unavailable}
-                </span>
-              </div>
-            </button>
-            <button
               onClick={() => setActiveTab('left')}
               className={`whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm ${
                 activeTab === 'left'
@@ -173,7 +151,7 @@ const StudentManagement = ({ onAddStudent }) => {
 
       {/* Content based on active tab */}
       <div>
-        {activeTab === 'available' || activeTab === 'unavailable' || activeTab === 'left' ? (
+        {activeTab === 'available' || activeTab === 'left' ? (
           <StudentAvailabilityLists 
             activeTab={activeTab} 
             onFilterChange={handleFilterChange}
