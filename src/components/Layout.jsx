@@ -135,7 +135,6 @@ const Layout = ({ children }) => {
           path: '/students',
           icon: <FaUsers className="mr-2" />,
           dropdown: [
-            { name: 'All Students', path: '/students' },
             { name: 'Attendance', path: '/students/attendance', permission: 'attendance' },
             { name: 'Reports', path: '/students/reports', permission: 'student-reports' },
             { name: 'Marksheets', path: '/marksheets', permission: 'marksheets' },

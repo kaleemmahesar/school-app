@@ -39,18 +39,37 @@ export const selectStudentStats = createSelector(
 
     // Available students (studying - all fees paid)
     const available = students.filter(student => {
+      // Check if monthly challans have been generated
+      const hasMonthlyChallans = student.feesHistory && student.feesHistory.some(challan => challan.type === 'monthly');
       const totalFees = parseFloat(student.totalFees) || 0;
       const feesPaid = parseFloat(student.feesPaid) || 0;
+      
+      // If no monthly challans have been generated, consider fees as paid
+      if (!hasMonthlyChallans) {
+        return true;
+      }
+      
+      // If challans exist, check if all fees have been paid
       return feesPaid >= totalFees;
     });
 
     // Unavailable students (studying - pending fees)
     const unavailable = students.filter(student => {
+      // Check if monthly challans have been generated
+      const hasMonthlyChallans = student.feesHistory && student.feesHistory.some(challan => challan.type === 'monthly');
       const totalFees = parseFloat(student.totalFees) || 0;
       const feesPaid = parseFloat(student.feesPaid) || 0;
-      // Students who are not left but have pending fees
+      
+      // Students who are not left
       const isLeft = student.status === 'left' || student.status === 'passed_out' || 
                     (student.class && student.class.includes('Passed'));
+      
+      // If no monthly challans have been generated, don't mark as unavailable
+      if (!hasMonthlyChallans) {
+        return false;
+      }
+      
+      // If challans exist, check if fees are pending
       return !isLeft && feesPaid < totalFees;
     });
 

@@ -1,13 +1,20 @@
 import React, { useState } from 'react';
 import { useSelector } from 'react-redux';
 import { FaUsers, FaUser, FaSearch, FaFilter } from 'react-icons/fa';
+import Pagination from '../common/Pagination';
 
-const FamilyStudentsList = () => {
-  const { students } = useSelector(state => state.students);
+const FamilyStudentsList = ({ students: propStudents }) => {
+  const { students: reduxStudents } = useSelector(state => state.students);
+  
+  // Use prop students if provided, otherwise use Redux students
+  const students = propStudents || reduxStudents;
+  
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedClass, setSelectedClass] = useState('');
   const [selectedSection, setSelectedSection] = useState('');
   const [selectedFamily, setSelectedFamily] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const familiesPerPage = 3; // Show 3 families per page
 
   // Get unique classes for dropdown
   const uniqueClasses = [...new Set(students.map(student => student.class))];
@@ -21,14 +28,13 @@ const FamilyStudentsList = () => {
 
   // Get unique families
   const uniqueFamilies = [...new Set(students
-    .filter(student => student.familyId)
-    .map(student => student.familyId))]
-    .map(familyId => {
-      const familyStudents = students.filter(s => s.familyId === familyId);
-      const familyHead = familyStudents.find(s => !s.parentId) || familyStudents[0];
+    .filter(student => student.fatherName)
+    .map(student => student.fatherName))]
+    .map(fatherName => {
+      const familyStudents = students.filter(s => s.fatherName === fatherName);
       return {
-        id: familyId,
-        name: `${familyHead.firstName} ${familyHead.lastName} Family`,
+        id: fatherName.toLowerCase().replace(/\s+/g, '_'),
+        name: `${fatherName}'s Family`,
         memberCount: familyStudents.length
       };
     });
@@ -38,16 +44,15 @@ const FamilyStudentsList = () => {
     const familyGroups = {};
     
     students.forEach(student => {
-      const familyId = student.familyId || `unknown-${student.id}`;
+      // Use father's name as the family identifier
+      const familyId = student.fatherName ? student.fatherName.toLowerCase().replace(/\s+/g, '_') : `unknown-${student.id}`;
       
       if (!familyGroups[familyId]) {
         familyGroups[familyId] = {
-          familyInfo: student.familyId ? {
-            id: student.familyId,
-            name: `Family ${student.familyId}`
-          } : {
-            id: `unknown-${student.id}`,
-            name: 'Unknown Family'
+          familyInfo: {
+            id: familyId,
+            name: student.fatherName ? `${student.fatherName}'s Family` : 'Unknown Family',
+            fatherName: student.fatherName || 'Unknown'
           },
           members: []
         };
@@ -56,10 +61,18 @@ const FamilyStudentsList = () => {
       familyGroups[familyId].members.push(student);
     });
     
-    // Enhance family info with head of family
+    // Sort members within each family by age (oldest first)
     Object.values(familyGroups).forEach(familyGroup => {
-      const familyHead = familyGroup.members.find(member => !member.parentId) || familyGroup.members[0];
-      familyGroup.familyInfo.name = `${familyHead.firstName} ${familyHead.lastName} Family`;
+      familyGroup.members.sort((a, b) => {
+        // Assuming we have a dateOfBirth field, sort oldest first
+        if (a.dateOfBirth && b.dateOfBirth) {
+          return new Date(a.dateOfBirth) - new Date(b.dateOfBirth);
+        }
+        return 0;
+      });
+      
+      // Set the head of family as the first member (oldest)
+      const familyHead = familyGroup.members[0];
       familyGroup.familyInfo.head = familyHead;
     });
     
@@ -100,6 +113,13 @@ const FamilyStudentsList = () => {
   };
 
   const filteredFamilies = filterFamilies();
+
+  // Get current families to display
+  const indexOfLastFamily = currentPage * familiesPerPage;
+  const indexOfFirstFamily = indexOfLastFamily - familiesPerPage;
+  const currentFamilies = Object.entries(filteredFamilies).slice(indexOfFirstFamily, indexOfLastFamily);
+  const totalFamilies = Object.entries(filteredFamilies).length;
+  const totalPages = Math.ceil(totalFamilies / familiesPerPage);
 
   return (
     <>
@@ -185,7 +205,7 @@ const FamilyStudentsList = () => {
         {/* Family Groups */}
         <div className="space-y-6">
           {Object.entries(filteredFamilies).length > 0 ? (
-            Object.entries(filteredFamilies).map(([familyId, familyGroup]) => (
+            currentFamilies.map(([familyId, familyGroup]) => (
               <div key={familyId} className="border border-gray-200 rounded-lg overflow-hidden">
                 <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
                   <div className="flex items-center justify-between">
@@ -242,6 +262,17 @@ const FamilyStudentsList = () => {
             </div>
           )}
         </div>
+
+        {/* Pagination */}
+        {totalFamilies > familiesPerPage && (
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={totalFamilies}
+            itemsPerPage={familiesPerPage}
+            onPageChange={setCurrentPage}
+          />
+        )}
       </div>
     </>
   );

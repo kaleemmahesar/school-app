@@ -183,14 +183,14 @@ const AdmissionFormPage = () => {
       dispatch(addStudent(submissionData));
     }
     
-    // Navigate back to students list
-    navigate('/students');
+    // Navigate back to batches page
+    navigate('/');
   };
 
   const handleDelete = () => {
     if (isEditMode && studentData) {
       dispatch(deleteStudent(studentData.id));
-      navigate('/students');
+      navigate('/');
     }
   };
 
@@ -282,11 +282,11 @@ const AdmissionFormPage = () => {
         subtitle="Add new student information"
         actionButton={
           <button
-            onClick={() => navigate('/students')}
+            onClick={() => navigate('/')}
             className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
           >
             <FaArrowLeft className="mr-2 h-4 w-4" />
-            Back to Students
+            Back to Batches
           </button>
         }
       />

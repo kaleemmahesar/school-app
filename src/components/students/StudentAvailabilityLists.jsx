@@ -11,17 +11,22 @@ const StudentAvailabilityLists = ({ activeTab: propActiveTab,
                                   onFilterChange,
                                   parentSearchTerm,
                                   parentSelectedClass,
-                                  parentSelectedSection }) => {
+                                  parentSelectedSection,
+                                  students: propStudents,
+                                  isCompletedBatch }) => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const { students } = useSelector(state => state.students);
+  const { students: reduxStudents } = useSelector(state => state.students);
+  
+  // Use prop students if provided, otherwise use Redux students
+  const students = propStudents || reduxStudents;
   
   const [searchTerm, setSearchTerm] = useState(parentSearchTerm || '');
   const [selectedClass, setSelectedClass] = useState(parentSelectedClass || '');
   const [selectedSection, setSelectedSection] = useState(parentSelectedSection || '');
   const [localActiveTab, setLocalActiveTab] = useState('available'); // 'available', 'unavailable', or 'left'
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 8;
+  const itemsPerPage = 20;
 
   // Use prop activeTab if provided, otherwise use local state
   const activeTab = propActiveTab !== undefined && propActiveTab !== null ? propActiveTab : localActiveTab;
@@ -46,8 +51,12 @@ const StudentAvailabilityLists = ({ activeTab: propActiveTab,
   // Categorize students based on certificate status
   const categorizeStudents = () => {
     return students.reduce((acc, student) => {
-      // Students who have passed out (generated pass certificate)
-      if (student.status === 'passed_out') {
+      // For completed batches, passed_out students should be treated as available
+      if (isCompletedBatch && student.status === 'passed_out') {
+        acc.available.push(student);
+      }
+      // Students who have passed out (generated pass certificate) - for non-completed batches
+      else if (student.status === 'passed_out') {
         acc.unavailable.push(student);
       } 
       // Students who left in middle (generated leaving certificate)
@@ -450,14 +459,20 @@ const StudentAvailabilityLists = ({ activeTab: propActiveTab,
                       {parseFloat(student.totalFees || 0) > parseFloat(student.admissionFees || 0) && (
                         <div className="mt-1">
                           <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-                            parseFloat(student.feesPaid || 0) >= parseFloat(student.totalFees || 0) 
-                              ? 'bg-green-100 text-green-800' 
-                              : 'bg-yellow-100 text-yellow-800'
+                            // Check if monthly challans have been generated
+                            student.feesHistory && student.feesHistory.some(challan => challan.type === 'monthly')
+                              ? parseFloat(student.feesPaid || 0) >= parseFloat(student.totalFees || 0) 
+                                ? 'bg-green-100 text-green-800' 
+                                : 'bg-yellow-100 text-yellow-800'
+                              : 'bg-gray-100 text-gray-800' // No challans generated yet
                           }`}>
                             Monthly Fees: {
-                              parseFloat(student.feesPaid || 0) >= parseFloat(student.totalFees || 0) 
-                                ? 'Paid' 
-                                : 'Pending'
+                              // Check if monthly challans have been generated
+                              student.feesHistory && student.feesHistory.some(challan => challan.type === 'monthly')
+                                ? parseFloat(student.feesPaid || 0) >= parseFloat(student.totalFees || 0) 
+                                  ? 'Paid' 
+                                  : 'Pending'
+                                : 'Not Generated'
                             }
                           </span>
                         </div>

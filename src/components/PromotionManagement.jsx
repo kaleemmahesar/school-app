@@ -334,9 +334,13 @@ const PromotionManagement = ({ batches }) => { // Receive batches as prop
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="text-sm text-gray-900">
-                    {parseFloat(student.feesPaid || 0) >= parseFloat(student.totalFees || 0) 
-                      ? <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Fees Paid</span>
-                      : <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">Fees Pending</span>
+                    {
+                      // Check if monthly challans have been generated
+                      student.feesHistory && student.feesHistory.some(challan => challan.type === 'monthly')
+                        ? parseFloat(student.feesPaid || 0) >= parseFloat(student.totalFees || 0) 
+                          ? <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Fees Paid</span>
+                          : <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">Fees Pending</span>
+                        : <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">No Challans</span>
                     }
                   </div>
                 </td>

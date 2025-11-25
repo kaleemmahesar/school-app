@@ -107,8 +107,12 @@ const ExaminationCheckList = () => {
 
   // Check promotion eligibility
   const checkPromotionEligibility = (student) => {
-    // In a real implementation, this would check if student is eligible for promotion
-    const feesPaid = parseFloat(student.feesPaid) >= parseFloat(student.totalFees);
+    // Check if monthly challans have been generated
+    const hasMonthlyChallans = student.feesHistory && student.feesHistory.some(challan => challan.type === 'monthly');
+    const feesPaid = hasMonthlyChallans 
+      ? parseFloat(student.feesPaid) >= parseFloat(student.totalFees)
+      : true; // If no challans, consider fees as paid
+    
     const examMarks = hasExamMarks(student.id);
     
     if (feesPaid && examMarks) {
@@ -272,8 +276,13 @@ const ExaminationCheckList = () => {
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredStudents.map((student) => {
+                // Check if monthly challans have been generated
+                const hasMonthlyChallans = student.feesHistory && student.feesHistory.some(challan => challan.type === 'monthly');
+                const feesPaid = hasMonthlyChallans 
+                  ? parseFloat(student.feesPaid) >= parseFloat(student.totalFees)
+                  : true; // If no challans, consider fees as paid
+                
                 const examMarks = hasExamMarks(student.id);
-                const feesPaid = parseFloat(student.feesPaid) >= parseFloat(student.totalFees);
                 
                 return (
                   <tr key={student.id} className="hover:bg-gray-50 transition-colors">
@@ -302,11 +311,15 @@ const ExaminationCheckList = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        feesPaid
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-yellow-100 text-yellow-800'
+                        hasMonthlyChallans
+                          ? feesPaid
+                            ? 'bg-green-100 text-green-800'
+                            : 'bg-yellow-100 text-yellow-800'
+                          : 'bg-gray-100 text-gray-800'
                       }`}>
-                        {feesPaid ? 'Paid' : 'Pending'}
+                        {hasMonthlyChallans
+                          ? feesPaid ? 'Paid' : 'Pending'
+                          : 'No Challans'}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">

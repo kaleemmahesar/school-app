@@ -38,12 +38,16 @@ function App() {
           <Routes>
             <Route path="/login" element={<LoginPage />} />
             <Route path="/unauthorized" element={<UnauthorizedPage />} />
-            <Route path="/" element={<Layout><Dashboard /></Layout>} />
-            <Route path="/students" element={
+            <Route path="/" element={
+              <ProtectedRoute permission="students">
+                <Layout><BatchManagementPage /></Layout>
+              </ProtectedRoute>
+            } />
+            {/* <Route path="/students" element={
               <ProtectedRoute permission="students">
                 <Layout><StudentsSection /></Layout>
               </ProtectedRoute>
-            } />
+            } /> */}
             <Route path="/students/admission" element={
               <ProtectedRoute permission="students">
                 <Layout><AdmissionPage /></Layout>
