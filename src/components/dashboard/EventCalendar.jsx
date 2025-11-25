@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { FaCalendarAlt, FaChevronLeft, FaChevronRight, FaPlus, FaTimes, FaPrint } from 'react-icons/fa';
+import { FaCalendarAlt, FaChevronLeft, FaChevronRight, FaPlus, FaTimes, FaPrint, FaShare, FaWhatsapp } from 'react-icons/fa';
 import { fetchSchoolInfo } from '../../store/settingsSlice';
 import { API_BASE_URL } from '../../utils/apiConfig';
 
@@ -19,6 +19,8 @@ const EventCalendar = () => {
   });
   const [showPrintView, setShowPrintView] = useState(false);
   const [editingEventId, setEditingEventId] = useState(null);
+  const [showShareOptions, setShowShareOptions] = useState(false);
+  const [savedEvent, setSavedEvent] = useState(null);
   
   // Fetch school info on component mount
   useEffect(() => {
@@ -217,6 +219,16 @@ const EventCalendar = () => {
 
   // Handle date click
   const handleDateClick = (date) => {
+    // Don't allow adding events for past dates (before today)
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Reset time part for comparison
+    const selectedDate = new Date(date);
+    selectedDate.setHours(0, 0, 0, 0); // Reset time part for comparison
+    
+    if (selectedDate < today) {
+      return; // Don't allow selecting past dates
+    }
+    
     // Get events for this date to check if it's a holiday or vacation
     const dayEvents = getEventsForDate(date);
     const hasHolidayOrVacation = dayEvents.some(event => 
@@ -349,11 +361,11 @@ const EventCalendar = () => {
       }
       
       if (response.ok) {
-        const savedEvent = await response.json();
+        const savedEventData = await response.json();
         // Convert date string back to Date object for local state
         const formattedEvent = {
-          ...savedEvent,
-          date: new Date(savedEvent.date)
+          ...savedEventData,
+          date: new Date(savedEventData.date)
         };
         
         if (editingEventId) {
@@ -362,6 +374,9 @@ const EventCalendar = () => {
         } else {
           // Add new event to state
           setEvents(prev => [...prev, formattedEvent]);
+          // Set saved event for sharing
+          setSavedEvent(formattedEvent);
+          setShowShareOptions(true);
         }
         
         setShowEventModal(false);
@@ -381,6 +396,52 @@ const EventCalendar = () => {
     setTimeout(() => {
       window.print();
     }, 500);
+  };
+  
+  // Generate WhatsApp share link for event
+  const generateWhatsAppShareLink = () => {
+    if (!savedEvent) return '';
+    
+    // Format event details for WhatsApp message
+    let message = `*School Event Notification*\n\n`;
+    message += `📅 *Event:* ${savedEvent.title}\n`;
+    message += `🗓️ *Date:* ${savedEvent.date.toLocaleDateString()}\n`;
+    
+    if (savedEvent.startTime) {
+      message += `⏰ *Time:* ${savedEvent.startTime}`;
+      if (savedEvent.endTime) {
+        message += ` - ${savedEvent.endTime}`;
+      }
+      message += `\n`;
+    }
+    
+    if (savedEvent.description) {
+      message += `📝 *Details:* ${savedEvent.description}\n`;
+    }
+    
+    message += `\nPlease mark your calendars!`;
+    
+    // Encode the message for URL
+    const encodedMessage = encodeURIComponent(message);
+    
+    // Return WhatsApp web URL
+    return `https://web.whatsapp.com/send?text=${encodedMessage}`;
+  };
+  
+  // Open WhatsApp for sharing
+  const shareOnWhatsApp = () => {
+    const whatsappUrl = generateWhatsAppShareLink();
+    if (whatsappUrl) {
+      window.open(whatsappUrl, '_blank');
+      setShowShareOptions(false);
+      setSavedEvent(null);
+    }
+  };
+  
+  // Close share options without sharing
+  const closeShareOptions = () => {
+    setShowShareOptions(false);
+    setSavedEvent(null);
   };
 
   // Print view component
@@ -482,6 +543,7 @@ const EventCalendar = () => {
           }
           
           const dayEvents = getEventsForDate(date);
+          const userEvents = dayEvents.filter(event => event.type === 'event');
           const isToday = date.toDateString() === new Date().toDateString();
           const hasHolidayOrVacation = dayEvents.some(event => 
             event.type === 'holiday' || event.type === 'vacation'
@@ -494,19 +556,25 @@ const EventCalendar = () => {
               className={`h-16 border border-gray-100 rounded p-1 relative ${
                 isToday ? 'bg-blue-50 border-blue-200' : 
                 hasHolidayOrVacation ? 'bg-gray-100 cursor-not-allowed' : 
+                date < new Date(new Date().setHours(0, 0, 0, 0)) ? 'bg-gray-50 cursor-not-allowed' : 
+                userEvents.length > 0 ? 'bg-blue-50' : 
                 'hover:bg-gray-50 cursor-pointer'
               }`}
             >
               <div className={`text-sm font-medium ${
                 isToday ? 'text-blue-600' : 
                 hasHolidayOrVacation ? 'text-gray-400' : 
+                date < new Date(new Date().setHours(0, 0, 0, 0)) ? 'text-gray-400' : 
                 'text-gray-700'
               }`}>
                 {date.getDate()}
                 {hasHolidayOrVacation && (
                   <span className="absolute top-0 right-0 text-[8px] text-red-500">●</span>
                 )}
-                {!hasHolidayOrVacation && (
+                {date < new Date(new Date().setHours(0, 0, 0, 0)) && (
+                  <span className="absolute top-0 right-0 text-[8px] text-gray-400">●</span>
+                )}
+                {!hasHolidayOrVacation && date >= new Date(new Date().setHours(0, 0, 0, 0)) && (
                   <button className="absolute top-0 left-0 p-1 text-gray-400 hover:text-gray-600"></button>
                 )}
               </div>
@@ -526,6 +594,20 @@ const EventCalendar = () => {
                         {event.startTime}
                         {event.endTime && `-${event.endTime}`}
                       </b>
+                    )}
+                    {event.type === 'event' && (
+                      <div className="flex justify-end mt-1">
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSavedEvent(event);
+                            setShowShareOptions(true);
+                          }}
+                          className="text-green-600 hover:text-green-800"
+                          title="Share event"
+                        >
+                        </button>
+                      </div>
                     )}
                   </div>
                 ))}
@@ -667,6 +749,86 @@ const EventCalendar = () => {
               >
                 {editingEventId ? 'Update Event' : 'Save Event'}
               </button>
+              {editingEventId && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    // Find the event being edited
+                    const eventToShare = events.find(e => e.id === editingEventId);
+                    if (eventToShare) {
+                      setSavedEvent(eventToShare);
+                      setShowShareOptions(true);
+                      setShowEventModal(false);
+                    }
+                  }}
+                  className="inline-flex items-center px-4 py-2 border border-green-300 text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                >
+                  <FaShare className="mr-2" />
+                  Share
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* WhatsApp Share Modal */}
+      {showShareOptions && savedEvent && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+            <div className="px-6 py-4 border-b border-gray-200">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-medium text-gray-900">
+                  Share Event
+                </h3>
+                <button 
+                  onClick={closeShareOptions}
+                  className="text-gray-400 hover:text-gray-500"
+                >
+                  <FaTimes />
+                </button>
+              </div>
+            </div>
+            
+            <div className="px-6 py-4">
+              <div className="text-center mb-4">
+                <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100">
+                  <FaWhatsapp className="h-6 w-6 text-green-600" />
+                </div>
+                <h3 className="text-lg font-medium text-gray-900 mt-2">Share via WhatsApp</h3>
+                <p className="text-sm text-gray-500 mt-1">
+                  Share event details with parents group on WhatsApp
+                </p>
+              </div>
+              
+              <div className="bg-gray-50 rounded-lg p-4 mb-4">
+                <h4 className="font-medium text-gray-900">{savedEvent.title}</h4>
+                <p className="text-sm text-gray-600 mt-1">
+                  {savedEvent.date.toLocaleDateString()}
+                  {savedEvent.startTime && ` at ${savedEvent.startTime}${savedEvent.endTime ? ` - ${savedEvent.endTime}` : ''}`}
+                </p>
+                {savedEvent.description && (
+                  <p className="text-sm text-gray-600 mt-2">{savedEvent.description}</p>
+                )}
+              </div>
+              
+              <div className="flex justify-center space-x-3">
+                <button
+                  type="button"
+                  onClick={closeShareOptions}
+                  className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={shareOnWhatsApp}
+                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                >
+                  <FaWhatsapp className="mr-2" />
+                  Share on WhatsApp
+                </button>
+              </div>
             </div>
           </div>
         </div>

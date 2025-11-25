@@ -225,7 +225,7 @@ const AttendanceManagement = () => {
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(10); // Adjust as needed
+  const [itemsPerPage] = useState(40); // Adjust as needed
 
   // Calculate pagination values
   const totalPages = Math.ceil(filteredStudents.length / itemsPerPage);
@@ -259,6 +259,15 @@ const AttendanceManagement = () => {
       '2025-11-09', // Iqbal Day
       '2025-12-25'  // Quaid-e-Azam Day
     ];
+  }, [schoolInfo]);
+  
+  // Get weekend days from settings or use default (Sunday)
+  const weekendDays = React.useMemo(() => {
+    if (schoolInfo && schoolInfo.weekendDays && Array.isArray(schoolInfo.weekendDays)) {
+      return schoolInfo.weekendDays;
+    }
+    // Default to Sunday only
+    return [0];
   }, [schoolInfo]);
   
   // Get vacations from settings or use default
@@ -409,8 +418,8 @@ const AttendanceManagement = () => {
                 key={schoolInfo ? `loaded-${JSON.stringify(schoolInfo.holidays || [])}` : "loading"}
                 selected={selectedDate ? new Date(selectedDate) : new Date()}
                 onChange={(date) => {
-                  // Check if selected date is Sunday (0 = Sunday)
-                  if (date.getDay() === 0) return;
+                  // Check if selected date is a weekend day
+                  if (weekendDays.includes(date.getDay())) return;
                   
                   // Check if selected date is a holiday
                   const dateString = date.toISOString().split('T')[0];
@@ -422,8 +431,8 @@ const AttendanceManagement = () => {
                   setSelectedDate(date.toISOString().split('T')[0]);
                 }}
                 filterDate={(date) => {
-                  // Disable Sundays
-                  if (date.getDay() === 0) return false;
+                  // Disable weekend days
+                  if (weekendDays.includes(date.getDay())) return false;
                   
                   // Disable school holidays
                   const dateString = date.toISOString().split('T')[0];
@@ -435,19 +444,19 @@ const AttendanceManagement = () => {
                   return true;
                 }}
                 dayClassName={(date) => {
-                  // Add special styling for Sundays, holidays, and vacation periods
+                  // Add special styling for weekend days, holidays, and vacation periods
                   const dateString = date.toISOString().split('T')[0];
                   let classes = '';
                   
-                  // Check if it's a Sunday
-                  if (date.getDay() === 0) {
+                  // Check if it's a weekend day
+                  if (weekendDays.includes(date.getDay())) {
                     classes += 'react-datepicker__day--disabled ';
                   }
                   
                   // Check if it's a holiday (using the same logic as filterDate)
                   // Ensure schoolHolidays is properly loaded before checking
                   if (schoolHolidays && Array.isArray(schoolHolidays) && schoolHolidays.includes(dateString)) {
-                    classes += 'react-datepicker__day--disabled '; // Use the same class as Sundays
+                    classes += 'react-datepicker__day--disabled '; // Use the same class as weekend days
                   }
                   
                   // Check if it's in a vacation period (using the same logic as filterDate)
@@ -455,8 +464,8 @@ const AttendanceManagement = () => {
                     classes += 'react-datepicker__day--disabled ';
                   }
                   
-                  // Check if it's a weekend (Saturday or Sunday)
-                  if (date.getDay() === 0 || date.getDay() === 6) {
+                  // Check if it's a weekend (for styling purposes)
+                  if (weekendDays.includes(date.getDay())) {
                     classes += 'react-datepicker__day--weekend ';
                   }
                   
@@ -466,7 +475,7 @@ const AttendanceManagement = () => {
                 placeholderText="Select Date"
               />
             </div>
-            <p className="mt-1 text-xs text-gray-500">Note: Sundays, holidays, and vacation periods are disabled as school is closed</p>
+            <p className="mt-1 text-xs text-gray-500">Note: Weekend days, holidays, and vacation periods are disabled as school is closed</p>
           </div>
           
           <div>

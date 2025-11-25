@@ -23,7 +23,8 @@ const ChallanModals = ({
   paymentData,
   setPaymentData,
   submitPayment,
-  detailViewStudent
+  detailViewStudent,
+  batches // Add batches prop
 }) => {
   // Get student's monthly fees when student is selected
   const getStudentMonthlyFees = (studentId) => {
@@ -117,6 +118,48 @@ const ChallanModals = ({
     submitBulkGenerate(bulkGenerateData);
   };
 
+  // Check if a month is within a batch's date range
+  const isMonthInBatchRange = (month, batch) => {
+    if (!month || !batch || !batch.startDate || !batch.endDate) return true;
+    
+    try {
+      // Parse the month (YYYY-MM format)
+      const [year, monthIndex] = month.split('-').map(Number);
+      const monthStart = new Date(year, monthIndex - 1, 1); // First day of the month
+      const monthEnd = new Date(year, monthIndex, 0); // Last day of the month
+      
+      // Parse batch dates
+      const batchStart = new Date(batch.startDate);
+      const batchEnd = new Date(batch.endDate);
+      
+      // Check if the month overlaps with the batch period
+      return monthStart <= batchEnd && monthEnd >= batchStart;
+    } catch (error) {
+      console.error('Error checking month in batch range:', error);
+      return true; // Allow if there's an error
+    }
+  };
+
+  // Get the student's batch
+  const getStudentBatch = (studentId) => {
+    if (!studentId) return null;
+    const student = students.find(s => s.id === studentId);
+    if (!student || !student.academicYear) return null;
+    
+    // Find the batch that matches the student's academic year
+    return batches.find(batch => batch.name === student.academicYear);
+  };
+
+  // Check if the selected month is valid for the student's batch
+  const isMonthValidForStudentBatch = (month, studentId) => {
+    if (!month || !studentId) return true;
+    
+    const batch = getStudentBatch(studentId);
+    if (!batch) return true; // Allow if no batch found
+    
+    return isMonthInBatchRange(month, batch);
+  };
+
   return (
     <>
       {/* Payment Modal */}
@@ -185,7 +228,18 @@ const ChallanModals = ({
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md">
             <h3 className="text-xl font-semibold text-gray-900 mb-4">Generate New Challan</h3>
-            <form onSubmit={submitChallan} className="space-y-4">
+            <form onSubmit={(e) => {
+              // Validate month against batch range before submitting
+              if (challanData.studentId && challanData.month) {
+                const isValid = isMonthValidForStudentBatch(challanData.month, challanData.studentId);
+                if (!isValid) {
+                  e.preventDefault();
+                  alert('Selected month is outside the student\'s batch period. Please select a month within the batch dates.');
+                  return;
+                }
+              }
+              submitChallan(e);
+            }} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Student</label>
                 <div className="relative">
@@ -216,6 +270,12 @@ const ChallanModals = ({
                     required
                   />
                 </div>
+                {/* Show warning if month is outside batch range */}
+                {challanData.studentId && challanData.month && !isMonthValidForStudentBatch(challanData.month, challanData.studentId) && (
+                  <p className="mt-1 text-xs text-red-600 bg-red-50 p-2 rounded border border-red-100">
+                    Warning: Selected month is outside the student's batch period. Please select a month within the batch dates.
+                  </p>
+                )}
               </div>
               
               <div>
@@ -277,6 +337,7 @@ const ChallanModals = ({
                 <button
                   type="submit"
                   className="inline-flex items-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700"
+                  disabled={challanData.studentId && challanData.month && !isMonthValidForStudentBatch(challanData.month, challanData.studentId)}
                 >
                   <FaReceipt className="mr-2" /> Generate Challan
                 </button>

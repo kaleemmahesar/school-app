@@ -5,6 +5,7 @@ import { useSchoolFunding } from '../hooks/useSchoolFunding';
 import FundingConditional from './common/FundingConditional';
 import NGOFundingInfo from './common/NGOFundingInfo';
 import { addCanteenIncome, addSponsorshipIncome } from '../store/incomeSlice';
+import { fetchBatches } from '../store/alumniSlice';
 import FinancialReportPrintView from './FinancialReportPrintView';
 import * as XLSX from 'xlsx-js-style';
 
@@ -14,10 +15,13 @@ const FinancialReporting = () => {
   const { subsidies } = useSelector(state => state.subsidies);
   const { expenses } = useSelector(state => state.expenses);
   const { staff } = useSelector(state => state.staff);
-  const { canteenIncome: canteenIncomeData, sponsorshipIncome: sponsorshipIncomeData } = useSelector(state => state.income);
+  const { batches } = useSelector(state => state.alumni);
+  const incomeState = useSelector(state => state.income) || {};
+  const canteenIncomeData = incomeState.canteenIncome || [];
+  const sponsorshipIncomeData = incomeState.sponsorshipIncome || [];
   const { isNGOSchool } = useSchoolFunding();
   
-  const [reportPeriod, setReportPeriod] = useState('monthly'); // monthly, daily, yearly, overall, custom
+  const [reportPeriod, setReportPeriod] = useState('overall'); // monthly, daily, yearly, overall, custom
   const [dateRange, setDateRange] = useState({ start: '', end: '' });
   const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7)); // YYYY-MM
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
@@ -27,8 +31,14 @@ const FinancialReporting = () => {
   const [reportGenerated, setReportGenerated] = useState(false);
   const [selectedQuarter, setSelectedQuarter] = useState(''); 
   const [selectedReportYear, setSelectedReportYear] = useState('');
+  const [selectedBatch, setSelectedBatch] = useState('');
 
-  // Get unique quarters and years from subsidies data
+  // Fetch batches when component mounts
+useEffect(() => {
+  dispatch(fetchBatches());
+}, [dispatch]);
+
+// Get unique quarters and years from subsidies data
 useEffect(() => {
   const quarters = [...new Set(subsidies.map(s => s.quarter).filter(Boolean))].sort();
   const years = [...new Set(subsidies.map(s => s.year).filter(Boolean))].sort().reverse();
@@ -37,6 +47,17 @@ useEffect(() => {
   if (quarters.length > 0 && !selectedQuarter) setSelectedQuarter(quarters[0]);
   if (years.length > 0 && !selectedReportYear) setSelectedReportYear(years[0]);
 }, [subsidies]);
+
+// Set default batch to the active batch
+useEffect(() => {
+  if (batches.length > 0 && !selectedBatch) {
+    const activeBatch = batches.find(batch => batch.status === 'active');
+    if (activeBatch) {
+      setSelectedBatch(activeBatch.name);
+    }
+  }
+}, [batches, selectedBatch]);
+  
   // Set default date range based on selected period
   useEffect(() => {
     const today = new Date();
@@ -95,106 +116,112 @@ useEffect(() => {
   };
   
   // Filter data based on date range
-  const filterDataByDate = (data) => {
-  // For NGO schools using quarter filtering
-  if (isNGOSchool && (selectedQuarter || selectedReportYear)) {
-    return data.filter(item => {
-      // If no quarter/year selected, show all
-      if (!selectedQuarter && !selectedReportYear) return true;
-      
-      // For subsidy data, filter by quarter and year fields
-      if (item.quarter !== undefined && item.year !== undefined) {
-        // Filter by selected quarter
-        if (selectedQuarter && item.quarter !== selectedQuarter) return false;
+  const filterDataByDate = (data, isStudentData = false) => {
+    // For student data, filter by selected batch first
+    let filteredData = data;
+    if (isStudentData && selectedBatch) {
+      filteredData = data.filter(student => student.academicYear === selectedBatch);
+    }
+
+    // For NGO schools using quarter filtering
+    if (isNGOSchool && (selectedQuarter || selectedReportYear)) {
+      return filteredData.filter(item => {
+        // If no quarter/year selected, show all
+        if (!selectedQuarter && !selectedReportYear) return true;
         
-        // Filter by selected year
-        if (selectedReportYear && item.year !== parseInt(selectedReportYear)) return false;
-        
-        return true;
-      } 
-      // For expense data, filter by date within the quarter
-      else if (item.date) {
-        const itemDate = new Date(item.date);
-        
-        // Check if date is valid
-        if (isNaN(itemDate.getTime())) return false;
-        
-        // Filter by selected year
-        if (selectedReportYear && itemDate.getFullYear() !== parseInt(selectedReportYear)) return false;
-        
-        // Filter by selected quarter
-        if (selectedQuarter) {
-          const month = itemDate.getMonth() + 1; // getMonth() returns 0-11
-          const quarterMonths = {
-            'Q1': [1, 2, 3],
-            'Q2': [4, 5, 6],
-            'Q3': [7, 8, 9],
-            'Q4': [10, 11, 12]
-          };
+        // For subsidy data, filter by quarter and year fields
+        if (item.quarter !== undefined && item.year !== undefined) {
+          // Filter by selected quarter
+          if (selectedQuarter && item.quarter !== selectedQuarter) return false;
           
-          if (!quarterMonths[selectedQuarter].includes(month)) return false;
+          // Filter by selected year
+          if (selectedReportYear && item.year !== parseInt(selectedReportYear)) return false;
+          
+          return true;
+        } 
+        // For expense data, filter by date within the quarter
+        else if (item.date) {
+          const itemDate = new Date(item.date);
+          
+          // Check if date is valid
+          if (isNaN(itemDate.getTime())) return false;
+          
+          // Filter by selected year
+          if (selectedReportYear && itemDate.getFullYear() !== parseInt(selectedReportYear)) return false;
+          
+          // Filter by selected quarter
+          if (selectedQuarter) {
+            const month = itemDate.getMonth() + 1; // getMonth() returns 0-11
+            const quarterMonths = {
+              'Q1': [1, 2, 3],
+              'Q2': [4, 5, 6],
+              'Q3': [7, 8, 9],
+              'Q4': [10, 11, 12]
+            };
+            
+            if (!quarterMonths[selectedQuarter].includes(month)) return false;
+          }
+          
+          return true;
         }
-        
-        return true;
-      }
-      // For staff data, we want to include the staff member if any of their salary payments
-      // fall within the selected quarter/year, but we need to filter the salaryHistory
-      else if (item.salaryHistory) {
-        // We need to check if any salary payment matches the criteria
-        let hasMatchingPayment = false;
-        
-        if (selectedReportYear || selectedQuarter) {
-          hasMatchingPayment = item.salaryHistory.some(salaryRecord => {
-            if (salaryRecord.status === 'paid' && salaryRecord.paymentDate) {
-              const paymentDate = new Date(salaryRecord.paymentDate);
-              
-              // Check if date is valid
-              if (isNaN(paymentDate.getTime())) return false;
-              
-              // Filter by selected year
-              if (selectedReportYear && paymentDate.getFullYear() !== parseInt(selectedReportYear)) return false;
-              
-              // Filter by selected quarter
-              if (selectedQuarter) {
-                const month = paymentDate.getMonth() + 1; // getMonth() returns 0-11
-                const quarterMonths = {
-                  'Q1': [1, 2, 3],
-                  'Q2': [4, 5, 6],
-                  'Q3': [7, 8, 9],
-                  'Q4': [10, 11, 12]
-                };
+        // For staff data, we want to include the staff member if any of their salary payments
+        // fall within the selected quarter/year, but we need to filter the salaryHistory
+        else if (item.salaryHistory) {
+          // We need to check if any salary payment matches the criteria
+          let hasMatchingPayment = false;
+          
+          if (selectedReportYear || selectedQuarter) {
+            hasMatchingPayment = item.salaryHistory.some(salaryRecord => {
+              if (salaryRecord.status === 'paid' && salaryRecord.paymentDate) {
+                const paymentDate = new Date(salaryRecord.paymentDate);
                 
-                if (!quarterMonths[selectedQuarter].includes(month)) return false;
+                // Check if date is valid
+                if (isNaN(paymentDate.getTime())) return false;
+                
+                // Filter by selected year
+                if (selectedReportYear && paymentDate.getFullYear() !== parseInt(selectedReportYear)) return false;
+                
+                // Filter by selected quarter
+                if (selectedQuarter) {
+                  const month = paymentDate.getMonth() + 1; // getMonth() returns 0-11
+                  const quarterMonths = {
+                    'Q1': [1, 2, 3],
+                    'Q2': [4, 5, 6],
+                    'Q3': [7, 8, 9],
+                    'Q4': [10, 11, 12]
+                  };
+                  
+                  if (!quarterMonths[selectedQuarter].includes(month)) return false;
+                }
+                
+                return true;
               }
-              
-              return true;
-            }
-            return false;
-          });
-        } else {
-          // If no quarter/year selected, show all staff
-          hasMatchingPayment = true;
+              return false;
+            });
+          } else {
+            // If no quarter/year selected, show all staff
+            hasMatchingPayment = true;
+          }
+          
+          return hasMatchingPayment;
         }
         
-        return hasMatchingPayment;
-      }
-      
-      // For other data types, show all when quarter filtering is active
-      return true;
+        // For other data types, show all when quarter filtering is active
+        return true;
+      });
+    }
+    
+    // Existing date range filtering for traditional schools
+    if (!dateRange.start && !dateRange.end) return filteredData;
+    
+    const startDate = dateRange.start ? new Date(dateRange.start) : null;
+    const endDate = dateRange.end ? new Date(dateRange.end) : null;
+    
+    return filteredData.filter(item => {
+      if (!item.date) return true;
+      const itemDate = new Date(item.date);
+      return (!startDate || itemDate >= startDate) && (!endDate || itemDate <= endDate);
     });
-  }
-  
-  // Existing date range filtering for traditional schools
-  if (!dateRange.start && !dateRange.end) return data;
-  
-  const startDate = dateRange.start ? new Date(dateRange.start) : null;
-  const endDate = dateRange.end ? new Date(dateRange.end) : null;
-  
-  return data.filter(item => {
-    if (!item.date) return true;
-    const itemDate = new Date(item.date);
-    return (!startDate || itemDate >= startDate) && (!endDate || itemDate <= endDate);
-  });
 };
   
   // Get period description for display
@@ -228,10 +255,9 @@ useEffect(() => {
   };
   
   // Calculate financial summaries based on selected filters
-  // Calculate financial summaries based on selected filters
 const calculateFinancialSummary = () => {
-  // Filter data by date range
-  const filteredStudents = students;
+  // Filter data by date range and batch
+  const filteredStudents = filterDataByDate(students, true); // true indicates student data
   const filteredSubsidies = filterDataByDate(subsidies);
   const filteredExpenses = filterDataByDate(expenses);
   const filteredCanteenIncome = filterDataByDate(canteenIncomeData);
@@ -242,6 +268,7 @@ const calculateFinancialSummary = () => {
   let tuitionFees = 0;
   let admissionFees = 0;
   let otherFees = 0; // For fines and other miscellaneous fees
+  let fineAmount = 0; // Specific fine amount tracking
   let totalSubsidiesReceived = 0;
   
   // Calculate fees collected (only for traditional schools)
@@ -249,17 +276,32 @@ const calculateFinancialSummary = () => {
     filteredStudents.forEach(student => {
       (student.feesHistory || []).forEach(challan => {
         if (challan.status === 'paid' && challan.amount) {
-          const challanDate = challan.date ? new Date(challan.date) : null;
-          const isInDateRange = (!dateRange.start || !challanDate || challanDate >= new Date(dateRange.start)) && 
-                                (!dateRange.end || !challanDate || challanDate <= new Date(dateRange.end));
+          // For "overall" report period, include all paid challans regardless of date
+          // For other periods, apply date filtering
+          let includeChallan = false;
           
-          if (isInDateRange) {
+          if (reportPeriod === 'overall') {
+            // Include all paid challans for overall report
+            includeChallan = true;
+          } else {
+            // Apply date range filtering for other report periods
+            const challanDate = challan.date ? new Date(challan.date) : null;
+            const isInDateRange = (!dateRange.start || !challanDate || challanDate >= new Date(dateRange.start)) && 
+                                  (!dateRange.end || !challanDate || challanDate <= new Date(dateRange.end));
+            includeChallan = isInDateRange;
+          }
+          
+          if (includeChallan) {
             if (challan.type === 'admission') {
               admissionFees += challan.amount;
             } else if (challan.type === 'monthly') {
               tuitionFees += challan.amount;
+            } else if (challan.type === 'fine') {
+              // Specifically track fine amounts
+              fineAmount += challan.amount;
+              otherFees += challan.amount;
             } else {
-              // For other types like fines
+              // For other types like miscellaneous fees
               otherFees += challan.amount;
             }
           }
@@ -391,6 +433,7 @@ const calculateFinancialSummary = () => {
     tuitionFees,
     admissionFees,
     otherFees,
+    fineAmount, // Include specific fine amount
     totalSponsorshipIncome,
     totalCanteenIncome,
     totalSubsidiesReceived,
@@ -436,12 +479,12 @@ const calculateFinancialSummary = () => {
   const exportToXLSX = () => {
     try {
       // Get filtered data
-      const filteredStudents = students;
+      const filteredStudents = filterDataByDate(students, true); // true indicates student data
       const filteredSubsidies = filterDataByDate(subsidies);
       const filteredExpenses = filterDataByDate(expenses);
       const filteredCanteenIncome = filterDataByDate(canteenIncomeData);
       const filteredSponsorshipIncome = filterDataByDate(sponsorshipIncomeData);
-      const filteredStaff = staff;
+      const filteredStaff = filterDataByDate(staff);
 
       // Create workbook
       const wb = XLSX.utils.book_new();
@@ -463,7 +506,8 @@ const calculateFinancialSummary = () => {
         ["Category", "Amount (PKR)"],
         ["Tuition Fees", financialSummary.tuitionFees],
         ["Admission Fees", financialSummary.admissionFees],
-        ["Other Fees", financialSummary.otherFees],
+        ["Fine Amount", financialSummary.fineAmount],
+        ["Other Fees", financialSummary.otherFees - financialSummary.fineAmount],
         ["Canteen Income", financialSummary.totalCanteenIncome],
         ["Sponsorship Income", financialSummary.totalSponsorshipIncome],
         ...(isNGOSchool
@@ -869,13 +913,9 @@ const calculateFinancialSummary = () => {
 
       filteredStaff.forEach((staffMember) => {
         (staffMember.salaryHistory || []).forEach((salaryRecord) => {
-          if (
-            salaryRecord.status === "paid" &&
-            (!dateRange.start ||
-              new Date(salaryRecord.paymentDate) >= new Date(dateRange.start)) &&
-            (!dateRange.end ||
-              new Date(salaryRecord.paymentDate) <= new Date(dateRange.end))
-          ) {
+          if (salaryRecord.status === "paid") {
+            // For NGO schools with quarter filtering, we've already filtered the staff members
+            // For traditional schools, we've already filtered by date range
             staffData.push([
               `${staffMember.firstName} ${staffMember.lastName}`,
               staffMember.position || "",
@@ -1015,6 +1055,23 @@ const calculateFinancialSummary = () => {
           <div className="md:col-span-2 bg-white rounded shadow-sm">
             <div className="p-3">
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
+                
+                {/* Batch Filter */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Batch</label>
+                  <select
+                    className="block w-full border border-gray-300 rounded text-sm p-1.5 focus:ring-blue-500 focus:border-blue-500"
+                    value={selectedBatch}
+                    onChange={(e) => setSelectedBatch(e.target.value)}
+                  >
+                    <option value="">All Batches</option>
+                    {batches.map(batch => (
+                      <option key={batch.id} value={batch.name}>
+                        {batch.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
                 
                 <FundingConditional showFor="ngo">
   <div className="grid grid-cols-2 gap-2">
@@ -1187,6 +1244,14 @@ const calculateFinancialSummary = () => {
                   <span className="text-gray-600">Tuition</span>
                   <span className="font-medium">{formatCurrency(financialSummary.tuitionFees + financialSummary.admissionFees)}</span>
                 </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">Fines</span>
+                  <span className="font-medium">{formatCurrency(financialSummary.fineAmount)}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">Other Fees</span>
+                  <span className="font-medium">{formatCurrency(financialSummary.otherFees - financialSummary.fineAmount)}</span>
+                </div>
               </FundingConditional>
               
               <FundingConditional showFor="ngo">
@@ -1262,6 +1327,16 @@ const calculateFinancialSummary = () => {
                     <div className="flex justify-between items-center">
                       <p className="text-sm text-gray-600">Admission</p>
                       <p className="text-sm font-medium text-green-600">{formatCurrency(financialSummary.admissionFees)}</p>
+                    </div>
+                    
+                    <div className="flex justify-between items-center">
+                      <p className="text-sm text-gray-600">Fines</p>
+                      <p className="text-sm font-medium text-green-600">{formatCurrency(financialSummary.fineAmount)}</p>
+                    </div>
+                    
+                    <div className="flex justify-between items-center">
+                      <p className="text-sm text-gray-600">Other Fees</p>
+                      <p className="text-sm font-medium text-green-600">{formatCurrency(financialSummary.otherFees - financialSummary.fineAmount)}</p>
                     </div>
                   </FundingConditional>
                   

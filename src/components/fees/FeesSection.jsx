@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchStudents, generateChallan, bulkGenerateChallans, bulkUpdateChallanStatuses, payFees } from '../../store/studentsSlice';
+import { fetchBatches } from '../../store/alumniSlice';
 import { FaEye, FaReceipt, FaCheck, FaDollarSign, FaPrint, FaUser, FaUsers, FaInfoCircle, FaPlus, FaChartBar, FaExclamation } from 'react-icons/fa';
 import FeesHeader from './FeesHeader';
 import FeesStats from './FeesStats';
@@ -23,6 +24,7 @@ import WhatsAppFeeReminder from './WhatsAppFeeReminder';
 const FeesSection = () => {
   const dispatch = useDispatch();
   const { students, loading, error } = useSelector(state => state.students);
+  const { batches } = useSelector(state => state.alumni);
   const { classes } = useSelector(state => state.classes);
   const { parents } = useSelector(state => state.parents);
   const { isNGOSchool } = useSchoolFunding();
@@ -70,6 +72,7 @@ const FeesSection = () => {
 
   useEffect(() => {
     dispatch(fetchStudents());
+    dispatch(fetchBatches());
   }, [dispatch]);
 
   // Set current academic year as default batch
@@ -398,6 +401,29 @@ const FeesSection = () => {
       return;
     }
     
+    // Check if the selected month is valid for the student's batch
+    if (student.academicYear && challanData.month) {
+      const batch = batches.find(b => b.name === student.academicYear);
+      if (batch && batch.startDate && batch.endDate) {
+        // Parse the month (YYYY-MM format)
+        const [year, monthIndex] = challanData.month.split('-').map(Number);
+        const monthStart = new Date(year, monthIndex - 1, 1); // First day of the month
+        const monthEnd = new Date(year, monthIndex, 0); // Last day of the month
+        
+        // Parse batch dates
+        const batchStart = new Date(batch.startDate);
+        const batchEnd = new Date(batch.endDate);
+        
+        // Check if the month overlaps with the batch period
+        const isMonthValid = monthStart <= batchEnd && monthEnd >= batchStart;
+        
+        if (!isMonthValid) {
+          alert(`Selected month is outside the student's batch period (${batch.startDate} to ${batch.endDate}). Please select a month within the batch dates.`);
+          return;
+        }
+      }
+    }
+    
     try {
       // Dispatch the action to generate the challan
       const result = await dispatch(generateChallan({
@@ -509,6 +535,29 @@ const FeesSection = () => {
         alert('No students found for the selected criteria.');
       }
       return;
+    }
+    
+    // Check if the selected month is valid for the batch
+    if (selectedBatch && data.month) {
+      const batch = batches.find(b => b.name === selectedBatch);
+      if (batch && batch.startDate && batch.endDate) {
+        // Parse the month (YYYY-MM format)
+        const [year, monthIndex] = data.month.split('-').map(Number);
+        const monthStart = new Date(year, monthIndex - 1, 1); // First day of the month
+        const monthEnd = new Date(year, monthIndex, 0); // Last day of the month
+        
+        // Parse batch dates
+        const batchStart = new Date(batch.startDate);
+        const batchEnd = new Date(batch.endDate);
+        
+        // Check if the month overlaps with the batch period
+        const isMonthValid = monthStart <= batchEnd && monthEnd >= batchStart;
+        
+        if (!isMonthValid) {
+          alert(`Selected month is outside the batch period (${batch.startDate} to ${batch.endDate}). Please select a month within the batch dates.`);
+          return;
+        }
+      }
     }
     
     // Use valid student IDs for challan generation
@@ -1006,6 +1055,7 @@ const FeesSection = () => {
         setPaymentData={setPaymentData}
         submitPayment={submitPayment}
         detailViewStudent={detailViewStudent}
+        batches={batches}
       />
 
       <div className="">

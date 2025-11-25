@@ -5,7 +5,7 @@ import { fetchStudents } from '../store/studentsSlice';
 import { fetchBatches, addBatch, updateBatch, deleteBatch } from '../store/alumniSlice';
 import PageHeader from './common/PageHeader';
 import PromotionManagement from './PromotionManagement';
-import { FaPlus, FaSearch, FaFilter, FaUsers, FaCalendarAlt, FaUserGraduate, FaEdit, FaDownload, FaPrint, FaCheck, FaTimes, FaTrash, FaUserCheck, FaUserTimes } from 'react-icons/fa';
+import { FaPlus, FaSearch, FaFilter, FaUsers, FaCalendarAlt, FaUserGraduate, FaEdit, FaDownload, FaPrint, FaCheck, FaTimes, FaTrash, FaUserCheck, FaUserTimes, FaList } from 'react-icons/fa';
 import Pagination from './common/Pagination';
 import StudentAvailabilityLists from './students/StudentAvailabilityLists';
 import FamilyStudentsList from './students/FamilyStudentsList';
@@ -22,6 +22,7 @@ const BatchManagementPage = () => {
   const [selectedSection, setSelectedSection] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showBatchesModal, setShowBatchesModal] = useState(false);
   const [activeTab, setActiveTab] = useState('students'); // 'students' or 'promotion'
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
@@ -81,13 +82,17 @@ const BatchManagementPage = () => {
 
   const uniqueBatches = getUniqueBatches();
 
-  // Get unique classes for dropdown
-  const uniqueClasses = [...new Set(students.map(student => student.class))];
-
-  // Get sections for selected class
-  const classSections = selectedClass 
+  // Get unique classes for dropdown based on selected batch
+  const uniqueClasses = selectedBatch 
     ? [...new Set(students
-        .filter(student => student.class === selectedClass)
+        .filter(student => student.academicYear === selectedBatch)
+        .map(student => student.class))]
+    : [];
+
+  // Get sections for selected class and batch
+  const classSections = selectedClass && selectedBatch
+    ? [...new Set(students
+        .filter(student => student.class === selectedClass && student.academicYear === selectedBatch)
         .map(student => student.section))]
     : [];
 
@@ -246,9 +251,112 @@ const BatchManagementPage = () => {
         }
       />
 
+      {/* Batch Filter Section - Moved to top */}
+      {/* <div className="bg-white shadow rounded-lg p-4 mb-4">
+        <div className="flex flex-col md:flex-row md:items-center gap-3">
+          <div className="flex items-center space-x-2">
+            <label className="text-sm font-medium text-gray-700">Batch:</label>
+            <div className="flex items-center">
+              <select
+                value={selectedBatch}
+                onChange={(e) => {
+                  setSelectedBatch(e.target.value);
+                  // Reset class and section filters when batch changes
+                  setSelectedClass('');
+                  setSelectedSection('');
+                }}
+                className="block w-full pl-3 pr-10 py-1.5 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="">All Batches</option>
+                {uniqueBatches.map((batch) => (
+                  <option key={batch.id} value={batch.name}>
+                    {batch.name}
+                  </option>
+                ))}
+              </select>
+              <button
+                onClick={() => setShowBatchesModal(true)}
+                className="ml-2 inline-flex items-center px-2 py-1.5 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-1 focus:ring-offset-1 focus:ring-blue-500"
+              >
+                <FaList className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+          
+          <div className="flex-grow"></div>
+          
+          <div className="relative flex-grow max-w-md">
+            <div className="absolute inset-y-0 left-0 pl-2 flex items-center pointer-events-none">
+              <FaSearch className="h-4 w-4 text-gray-400" />
+            </div>
+            <input
+              type="text"
+              placeholder="Search by student name, GR No, or class..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="block w-full pl-8 pr-3 py-1.5 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500"
+            />
+          </div>
+        </div>
+      </div> */}
+
+      {/* Student Filters - Only shown when a batch is selected */}
+      {/* {selectedBatch && (
+        <div className="bg-white shadow rounded-lg p-3 mb-4">
+          <div className="flex flex-col md:flex-row md:items-center gap-3">
+            <div className="flex flex-wrap gap-2">
+              <div className="flex items-center space-x-1">
+                <FaFilter className="text-gray-400 text-sm" />
+                <select
+                  value={selectedClass}
+                  onChange={(e) => {
+                    setSelectedClass(e.target.value);
+                    setSelectedSection(''); // Reset section when class changes
+                  }}
+                  className="block w-full pl-2 pr-8 py-1.5 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="">All Classes</option>
+                  {uniqueClasses.map((cls) => (
+                    <option key={cls} value={cls}>{cls}</option>
+                  ))}
+                </select>
+              </div>
+              
+              <div className="flex items-center space-x-1">
+                <FaFilter className="text-gray-400 text-sm" />
+                <select
+                  value={selectedSection}
+                  onChange={(e) => setSelectedSection(e.target.value)}
+                  disabled={!selectedClass}
+                  className="block w-full pl-2 pr-8 py-1.5 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="">All Sections</option>
+                  {classSections.map((section) => (
+                    <option key={section} value={section}>{section}</option>
+                  ))}
+                </select>
+              </div>
+              
+              <div className="flex items-center space-x-1">
+                <button
+                  onClick={() => {
+                    setSearchTerm('');
+                    setSelectedClass('');
+                    setSelectedSection('');
+                  }}
+                  className="inline-flex items-center px-2 py-1.5 border border-gray-300 shadow-sm text-xs font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-1 focus:ring-offset-1 focus:ring-blue-500"
+                >
+                  Clear Filters
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )} */}
+
       {/* Tabs - Made more compact */}
       <div className="bg-white shadow rounded-lg mb-4">
-        <div className="border-b border-gray-200">
+        <div className="border-b border-gray-200 flex justify-between">
           <nav className="-mb-px flex">
             <button
               onClick={() => setActiveTab('students')}
@@ -277,231 +385,41 @@ const BatchManagementPage = () => {
               </div>
             </button>
           </nav>
+          <div className="flex items-center space-x-2 px-4">
+            <label className="text-sm font-medium text-gray-700">Batch:</label>
+            <div className="flex items-center">
+              <select
+                value={selectedBatch}
+                onChange={(e) => {
+                  setSelectedBatch(e.target.value);
+                  // Reset class and section filters when batch changes
+                  setSelectedClass('');
+                  setSelectedSection('');
+                }}
+                className="block w-full pl-3 pr-10 py-1.5 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="">All Batches</option>
+                {uniqueBatches.map((batch) => (
+                  <option key={batch.id} value={batch.name}>
+                    {batch.name}
+                  </option>
+                ))}
+              </select>
+              <button
+                onClick={() => setShowBatchesModal(true)}
+                className="ml-2 inline-flex items-center px-2 py-1.5 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-1 focus:ring-offset-1 focus:ring-blue-500"
+              >
+                <FaList className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
       {activeTab === 'students' ? (
         <>
-          {/* Filters - Made more compact */}
-          <div className="bg-white shadow rounded-lg p-3 mb-4">
-            <div className="flex flex-col md:flex-row md:items-center gap-3">
-              <div className="relative flex-grow max-w-md">
-                <div className="absolute inset-y-0 left-0 pl-2 flex items-center pointer-events-none">
-                  <FaSearch className="h-4 w-4 text-gray-400" />
-                </div>
-                <input
-                  type="text"
-                  placeholder="Search by student name, GR No, or class..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="block w-full pl-8 pr-3 py-1.5 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500"
-                />
-              </div>
-              
-              <div className="flex flex-wrap gap-2">
-                <div className="flex items-center space-x-1">
-                  <FaFilter className="text-gray-400 text-sm" />
-                  <select
-                    value={selectedBatch}
-                    onChange={(e) => setSelectedBatch(e.target.value)}
-                    className="block w-full pl-2 pr-8 py-1.5 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500"
-                  >
-                    <option value="">All Batches</option>
-                    {uniqueBatches.map((batch) => (
-                      <option key={batch.id} value={batch.name}>
-                        {batch.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                
-                <div className="flex items-center space-x-1">
-                  <FaFilter className="text-gray-400 text-sm" />
-                  <select
-                    value={selectedClass}
-                    onChange={(e) => {
-                      setSelectedClass(e.target.value);
-                      setSelectedSection(''); // Reset section when class changes
-                    }}
-                    className="block w-full pl-2 pr-8 py-1.5 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500"
-                  >
-                    <option value="">All Classes</option>
-                    {uniqueClasses.map((cls) => (
-                      <option key={cls} value={cls}>{cls}</option>
-                    ))}
-                  </select>
-                </div>
-                
-                <div className="flex items-center space-x-1">
-                  <FaFilter className="text-gray-400 text-sm" />
-                  <select
-                    value={selectedSection}
-                    onChange={(e) => setSelectedSection(e.target.value)}
-                    disabled={!selectedClass}
-                    className="block w-full pl-2 pr-8 py-1.5 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500"
-                  >
-                    <option value="">All Sections</option>
-                    {classSections.map((section) => (
-                      <option key={section} value={section}>{section}</option>
-                    ))}
-                  </select>
-                </div>
-                
-                <div className="flex items-center space-x-1">
-                  <button
-                    onClick={() => {
-                      setSearchTerm('');
-                      // Don't reset selectedBatch to keep active batch selected by default
-                      setSelectedClass('');
-                      setSelectedSection('');
-                    }}
-                    className="inline-flex items-center px-2 py-1.5 border border-gray-300 shadow-sm text-xs font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-1 focus:ring-offset-1 focus:ring-blue-500"
-                  >
-                    Clear Filters
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Batch Summary */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
-            <div className="bg-white rounded-lg shadow p-4">
-              <div className="flex items-center">
-                <div className="p-2 bg-blue-100 rounded-full mr-3">
-                  <FaUsers className="h-5 w-5 text-blue-600" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-medium text-gray-500">Total Students</h3>
-                  <p className="text-lg font-bold text-gray-900">{filteredStudents.length}</p>
-                </div>
-              </div>
-            </div>
-            
-            <div className="bg-white rounded-lg shadow p-4">
-              <div className="flex items-center">
-                <div className="p-2 bg-green-100 rounded-full mr-3">
-                  <FaCalendarAlt className="h-5 w-5 text-green-600" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-medium text-gray-500">Active Batches</h3>
-                  <p className="text-lg font-bold text-gray-900">
-                    {uniqueBatches.filter(b => b.status === 'active').length}
-                  </p>
-                </div>
-              </div>
-            </div>
-            
-            <div className="bg-white rounded-lg shadow p-4">
-              <div className="flex items-center">
-                <div className="p-2 bg-purple-100 rounded-full mr-3">
-                  <FaUsers className="h-5 w-5 text-purple-600" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-medium text-gray-500">Classes</h3>
-                  <p className="text-lg font-bold text-gray-900">
-                    {uniqueClasses.length}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Batches Overview */}
-          <div className="bg-white rounded-lg shadow mb-4">
-            <div className="px-4 py-3 border-b border-gray-200">
-              <h3 className="text-md font-medium text-gray-900">Academic Batches</h3>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th scope="col" className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Batch Name
-                    </th>
-                    <th scope="col" className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Period
-                    </th>
-                    <th scope="col" className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Status
-                    </th>
-                    <th scope="col" className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Students
-                    </th>
-                    <th scope="col" className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200 text-sm">
-                  {uniqueBatches.map((batch) => {
-                    // Count students in this batch
-                    const studentCount = students.filter(s => s.academicYear === batch.name).length;
-                    
-                    return (
-                      <tr key={batch.id} className="hover:bg-gray-50">
-                        <td className="px-4 py-2 whitespace-nowrap">
-                          <div className="text-sm font-medium text-gray-900">{batch.name}</div>
-                        </td>
-                        <td className="px-4 py-2 whitespace-nowrap">
-                          <div className="text-xs text-gray-900">
-                            {formatDate(batch.startDate)} - {formatDate(batch.endDate)}
-                          </div>
-                        </td>
-                        <td className="px-4 py-2 whitespace-nowrap">
-                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-                            batch.status === 'active' 
-                              ? 'bg-green-100 text-green-800' 
-                              : 'bg-gray-100 text-gray-800'
-                          }`}>
-                            {batch.status === 'active' ? (
-                              <FaCheck className="mr-1" />
-                            ) : (
-                              <FaTimes className="mr-1" />
-                            )}
-                            {batch.status.charAt(0).toUpperCase() + batch.status.slice(1)}
-                          </span>
-                        </td>
-                        <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">
-                          {studentCount}
-                        </td>
-                        <td className="px-4 py-2 whitespace-nowrap text-sm font-medium">
-                          <button
-                            onClick={() => {
-                              setEditingBatch({...batch});
-                              setShowEditModal(true);
-                            }}
-                            className="text-blue-600 hover:text-blue-900 mr-2"
-                          >
-                            <FaEdit />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteBatch(batch.id)}
-                            className="text-red-600 hover:text-red-900"
-                          >
-                            <FaTrash />
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-              
-              {uniqueBatches.length === 0 && (
-                <div className="text-center py-6">
-                  <FaCalendarAlt className="mx-auto h-8 w-8 text-gray-400" />
-                  <h3 className="mt-1 text-sm font-medium text-gray-900">No batches found</h3>
-                  <p className="mt-1 text-xs text-gray-500">
-                    Create your first batch to get started
-                  </p>
-                </div>
-              )}
-            </div>
-          </div>
-
           {/* Student List Tabs - Made more compact */}
-          <div className="bg-white shadow rounded-lg mb-4">
+          <div className="bg-white shadow">
             <div className="border-b border-gray-200">
               <nav className="-mb-px flex flex-wrap space-x-4 px-3">
                 <button
@@ -705,6 +623,146 @@ const BatchManagementPage = () => {
                 className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
               >
                 Update Batch
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Batches List Modal */}
+      {showBatchesModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[80vh] overflow-y-auto">
+            <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+              <h3 className="text-lg font-medium text-gray-900">Academic Batches</h3>
+              <button 
+                onClick={() => setShowBatchesModal(false)}
+                className="text-gray-400 hover:text-gray-500"
+              >
+                <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="px-6 py-4">
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th scope="col" className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Batch Name
+                      </th>
+                      <th scope="col" className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Period
+                      </th>
+                      <th scope="col" className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Status
+                      </th>
+                      <th scope="col" className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Total Students
+                      </th>
+                      <th scope="col" className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Available
+                      </th>
+                      <th scope="col" className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Left
+                      </th>
+                      <th scope="col" className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Graduated
+                      </th>
+                      <th scope="col" className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200 text-sm">
+                    {uniqueBatches.map((batch) => {
+                      // Count students in this batch
+                      const batchStudents = students.filter(s => s.academicYear === batch.name);
+                      const totalStudents = batchStudents.length;
+                      
+                      // Calculate student statistics for this batch
+                      const availableStudents = batchStudents.filter(s => s.status !== 'left' && s.status !== 'passed_out').length;
+                      const leftStudents = batchStudents.filter(s => s.status === 'left').length;
+                      const graduatedStudents = batchStudents.filter(s => s.status === 'passed_out').length;
+                      
+                      return (
+                        <tr key={batch.id} className="hover:bg-gray-50">
+                          <td className="px-4 py-2 whitespace-nowrap">
+                            <div className="text-sm font-medium text-gray-900">{batch.name}</div>
+                          </td>
+                          <td className="px-4 py-2 whitespace-nowrap">
+                            <div className="text-xs text-gray-900">
+                              {formatDate(batch.startDate)} - {formatDate(batch.endDate)}
+                            </div>
+                          </td>
+                          <td className="px-4 py-2 whitespace-nowrap">
+                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                              batch.status === 'active' 
+                                ? 'bg-green-100 text-green-800' 
+                                : 'bg-gray-100 text-gray-800'
+                            }`}>
+                              {batch.status === 'active' ? (
+                                <FaCheck className="mr-1" />
+                              ) : (
+                                <FaTimes className="mr-1" />
+                              )}
+                              {batch.status.charAt(0).toUpperCase() + batch.status.slice(1)}
+                            </span>
+                          </td>
+                          <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">
+                            {totalStudents}
+                          </td>
+                          <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">
+                            {availableStudents}
+                          </td>
+                          <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">
+                            {leftStudents}
+                          </td>
+                          <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">
+                            {graduatedStudents}
+                          </td>
+                          <td className="px-4 py-2 whitespace-nowrap text-sm font-medium">
+                            <button
+                              onClick={() => {
+                                setEditingBatch({...batch});
+                                setShowEditModal(true);
+                                setShowBatchesModal(false);
+                              }}
+                              className="text-blue-600 hover:text-blue-900 mr-2"
+                            >
+                              <FaEdit />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteBatch(batch.id)}
+                              className="text-red-600 hover:text-red-900"
+                            >
+                              <FaTrash />
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+                
+                {uniqueBatches.length === 0 && (
+                  <div className="text-center py-6">
+                    <FaCalendarAlt className="mx-auto h-8 w-8 text-gray-400" />
+                    <h3 className="mt-1 text-sm font-medium text-gray-900">No batches found</h3>
+                    <p className="mt-1 text-xs text-gray-500">
+                      Create your first batch to get started
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="px-6 py-4 bg-gray-50 flex justify-end">
+              <button
+                onClick={() => setShowBatchesModal(false)}
+                className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              >
+                Close
               </button>
             </div>
           </div>

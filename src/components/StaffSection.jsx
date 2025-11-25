@@ -121,9 +121,9 @@ const StaffSection = () => {
   };
 
   const filteredStaff = staff.filter(member =>
-    member.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    member.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    member.position.toLowerCase().includes(searchTerm.toLowerCase())
+    (member.firstName && member.firstName.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (member.lastName && member.lastName.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (member.position && member.position.toLowerCase().includes(searchTerm.toLowerCase()))
   ).sort((a, b) => {
     // Sort by date of joining in descending order (newest first)
     return new Date(b.dateOfJoining) - new Date(a.dateOfJoining);

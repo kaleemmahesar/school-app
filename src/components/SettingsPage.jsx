@@ -20,6 +20,9 @@ const SettingsPage = () => {
     summer: { start: '', end: '' },
     winter: { start: '', end: '' }
   });
+  
+  // Add state for weekend configuration
+  const [weekendDays, setWeekendDays] = useState([0]); // Default to Sunday (0)
 
   // Initialize form with school info
   useEffect(() => {
@@ -52,6 +55,14 @@ const SettingsPage = () => {
           summer: { start: '2025-06-01', end: '2025-07-31' },
           winter: { start: '2025-12-20', end: '2026-01-05' }
         });
+      }
+      
+      // Set weekend days from schoolInfo or default to Sunday
+      if (schoolInfo.weekendDays && Array.isArray(schoolInfo.weekendDays)) {
+        setWeekendDays(schoolInfo.weekendDays);
+      } else {
+        // Default to Sunday only
+        setWeekendDays([0]);
       }
     }
   }, [schoolInfo]);
@@ -100,6 +111,19 @@ const SettingsPage = () => {
       }
     }));
   };
+  
+  // Handle weekend day changes
+  const handleWeekendDayChange = (day) => {
+    setWeekendDays(prev => {
+      if (prev.includes(day)) {
+        // Remove day if already selected
+        return prev.filter(d => d !== day);
+      } else {
+        // Add day if not selected
+        return [...prev, day];
+      }
+    });
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -109,11 +133,12 @@ const SettingsPage = () => {
         typeof holiday === 'string' ? { title: '', date: holiday } : holiday
       ).filter(holiday => holiday.date); // Filter out empty dates
       
-      // Update school info including holidays and vacations
+      // Update school info including holidays, vacations, and weekend days
       await dispatch(updateSchoolInfo({
         ...formData,
         holidays: formattedHolidays,
-        vacations
+        vacations,
+        weekendDays // Add weekend days to the settings
       })).unwrap();
     } catch (err) {
       console.error('Failed to update school info:', err);
@@ -144,6 +169,9 @@ const SettingsPage = () => {
       summer: { start: '2025-06-01', end: '2025-07-31' },
       winter: { start: '2025-12-20', end: '2026-01-05' }
     });
+    
+    // Reset weekend days to default (Sunday only)
+    setWeekendDays([0]);
   };
 
   const getLevelDescription = (level) => {
@@ -154,6 +182,17 @@ const SettingsPage = () => {
       default: return 'Primary School (Grades 1-5)';
     }
   };
+  
+  // Days of the week mapping
+  const daysOfWeek = [
+    { value: 0, label: 'Sunday' },
+    { value: 1, label: 'Monday' },
+    { value: 2, label: 'Tuesday' },
+    { value: 3, label: 'Wednesday' },
+    { value: 4, label: 'Thursday' },
+    { value: 5, label: 'Friday' },
+    { value: 6, label: 'Saturday' }
+  ];
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -287,6 +326,43 @@ const SettingsPage = () => {
                       Enable Kindergarten class
                     </p>
                   </div>
+                </div>
+              </div>
+
+              {/* Weekend Configuration Section */}
+              <div className="border-t border-gray-200 pt-6">
+                <h3 className="text-md font-medium text-gray-900 mb-4 flex items-center">
+                  <FaCalendarAlt className="mr-2 text-purple-500" />
+                  Weekend Days
+                </h3>
+                <p className="text-sm text-gray-500 mb-4">
+                  Select which days of the week the school is closed. Students will not be marked as absent on these days.
+                </p>
+                
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  {daysOfWeek.map((day) => (
+                    <div 
+                      key={day.value}
+                      className={`border rounded-lg p-3 cursor-pointer transition-colors ${
+                        weekendDays.includes(day.value)
+                          ? 'border-purple-500 bg-purple-50' 
+                          : 'border-gray-300 hover:border-gray-400'
+                      }`}
+                      onClick={() => handleWeekendDayChange(day.value)}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium text-gray-700">{day.label}</span>
+                        {weekendDays.includes(day.value) ? 
+                          <FaToggleOn className="text-purple-500 text-xl" /> : 
+                          <FaToggleOff className="text-gray-400 text-xl" />
+                        }
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                
+                <div className="mt-4 text-sm text-gray-500">
+                  <p>Selected weekend days: {weekendDays.map(day => daysOfWeek.find(d => d.value === day)?.label).join(', ') || 'None'}</p>
                 </div>
               </div>
 

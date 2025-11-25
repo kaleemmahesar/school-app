@@ -456,7 +456,7 @@ const StudentAvailabilityLists = ({ activeTab: propActiveTab,
                       <div className="text-sm text-gray-900">{student.class}</div>
                       <div className="text-sm text-gray-500">Section {student.section}</div>
                       {/* Show fees status for monthly fees only */}
-                      {parseFloat(student.totalFees || 0) > parseFloat(student.admissionFees || 0) && (
+                      {/* {parseFloat(student.totalFees || 0) > parseFloat(student.admissionFees || 0) && (
                         <div className="mt-1">
                           <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
                             // Check if monthly challans have been generated
@@ -476,7 +476,7 @@ const StudentAvailabilityLists = ({ activeTab: propActiveTab,
                             }
                           </span>
                         </div>
-                      )}
+                      )} */}
                     </div>
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap">
@@ -506,7 +506,7 @@ const StudentAvailabilityLists = ({ activeTab: propActiveTab,
                   <FaUserTimes className="mx-auto h-8 w-8 text-gray-400" />
                 }
               </div>
-              <h3 className="mt-2 text-sm font-medium text-gray-900">
+              <h3 className="mt-2 text-lg font-medium text-gray-900">
                 No {activeTab === 'unavailable' ? 'passed out' : activeTab === 'left' ? 'left in middle' : activeTab} students found
               </h3>
               <p className="mt-1 text-sm text-gray-500">
